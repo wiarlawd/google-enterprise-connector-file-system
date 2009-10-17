@@ -44,3 +44,4 @@ Google recommends that you use the installer for installing the connector. You m
 
       }}}
       Please make sure that all the shell scripts (with ".sh" as extension) have execute permissions.
+    *  If you do not have the connector manager installed, follow these steps
