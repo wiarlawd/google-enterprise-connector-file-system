@@ -18,15 +18,15 @@ Google recommends that you use the installer for installing the connector. You m
   # Go to $CATALINA_HOME\bin directory.
     * For Windows edit *Add the following lines in the start of the file:
       {{{
-          Add the following lines in the start of the file:
-          set JRE_HOME=<JRE_HOME>
-          set PATH=%PATH%;
+      Add the following lines in the start of the file:
+      set JRE_HOME=<JRE_HOME>
+      set PATH=%PATH%;
    
-          Add the following lines just before "rem Set standard command for invoking Java":
-          rem Google Enterpise Connector Logging
-          set CONNECTOR_LOGGING=%CATALINA_HOME%\webapps\connector-manager\WEB-INF\lib\connector-logging.jar
-          if not exist "%CONNECTOR_LOGGING%" goto noConnectorLogging
-          set CLASSPATH=%CLASSPATH%;%CONNECTOR_LOGGING%
-          :noConnectorLogging
-     }}} 
+      Add the following lines just before "rem Set standard command for invoking Java":
+      rem Google Enterpise Connector Logging
+      set CONNECTOR_LOGGING=%CATALINA_HOME%\webapps\connector-manager\WEB-INF\lib\connector-logging.jar
+      if not exist "%CONNECTOR_LOGGING%" goto noConnectorLogging
+      set CLASSPATH=%CLASSPATH%;%CONNECTOR_LOGGING%
+      :noConnectorLogging
+      }}} 
     * For Linux edit *setclasspath.sh*
