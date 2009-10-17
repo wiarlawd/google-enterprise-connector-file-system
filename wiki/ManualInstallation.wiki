@@ -45,3 +45,10 @@ Google recommends that you use the installer for installing the connector. You m
       }}}
       Please make sure that all the shell scripts (with ".sh" as extension) have execute permissions.
   # If you do not have the connector manager installed, follow these steps
+    * Start a web browser and navigate to http://code.google.com/p/google-enterprise-connector-manager/downloads/list
+    * Download the correct binary distribution compressed file for your platform
+    * unpack the binary distribution
+    * copy the connector-manager.war to $CATALINA_HOME/webapps directory
+    * Start Tomcat so that the connector manager gets deployed. To confirm that the connector manager has been properly deployed under Tomcat confirm that a directory with the name connector-manager has been created under $CATALINA_HOME/webapps directory
+Also you can check for http://localhost:8080/connector-manager/testConnectivity which will displays the connectivity status or http://localhost:8080/connector-manager/startUp which will display a message indicating the successful deployment of Connector Manager
+    * Shut down the Tomcat to start with the further steps.
