@@ -30,3 +30,17 @@ Google recommends that you use the installer for installing the connector. You m
       :noConnectorLogging
       }}} 
     * For Linux edit *setclasspath.sh*
+      {{{
+      Add the following lines in the start of the file:
+      export JRE_HOME=<JRE_HOME>
+      export PATH="$PATH":"$JRE_HOME"/bin
+     
+      Add the following lines just before "# OSX hack to CLASSPATH":
+      # Google Enterpise Connector Logging
+      CONNECTOR_LOGGING="$CATALINA_HOME"/webapps/connector-manager/WEB-INF/lib/connector-logging.jar
+      if [ -f "$CONNECTOR_LOGGING ]; then
+      CLASSPATH="$CLASSPATH":"$CONNECTOR_LOGGING"
+      fi
+
+      }}}
+      Please make sure that all the shell scripts (with ".sh" as extension) have execute permissions.
