@@ -1,0 +1,34 @@
+Welcome to the Google Enterprise Connector for file systems
+
+The Google Enterprise connector framework enables Google search
+appliances to search and serve documents stored in non-Web
+repositories, such as enterprise content management systems.
+An enterprise content management (ECM) system provides a central
+repository for large numbers of documents.
+
+The Google Enterprise Connector for file systems
+enables the appliance to traverse documents and attachments on
+a windows share.
+
+The Google Enterprise Connector for file systems 
+communicates with the windows server hosting the share with the
+JCIFS library (The Java CIFS Client Library).
+
+Documentation Links
+
+* Developer Introduction to the Google Enterprise Connector Framework
+http://code.google.com/apis/searchappliance/documentation/46/connector_dev/connector-framework.html
+
+* JCIFS documentation is available at
+http://jcifs.samba.org/
+
+Licensing
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+In addition this product includes a number of open source components.
+The license files for each included component is provided in this
+distribution under the License directory.
+
+
