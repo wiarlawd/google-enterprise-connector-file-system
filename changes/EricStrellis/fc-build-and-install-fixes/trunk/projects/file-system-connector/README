@@ -1,0 +1,34 @@
+Welcome to the Google Enterprise Connector for file systems
+
+Steps to build Google Enterprise Connector for File Systems 2009
+================================================================================
+1. Ensure that you have Apache Ant installed on your system. If not,
+   you can get it from http://ant.apache.org/bindownload.cgi
+
+2. Ensure you have Connector Manager on your system. From
+   http://code.google.com/p/google-enterprise-connector-manager/downloads/list.
+   choose connector-manager-2.0.2-src.zip.  
+   2b) Unpack the zip file. (unzip connector-manager-2.0.2-src.zip). The contents
+       will go into a new sub directory of your current directory called 
+       connector-manager-2.0.2-src.
+   2c) Change directory to connector-manager-2.0.2-src.
+   2d) Build the connector manager (ant connector-manager).
+
+3. While still in the connector-manager-2.0.2-src directory create a
+   google-enterprise-connector-filesystem.properties file in your home directory.  
+   
+   For Unix enter
+     echo "connector-manager-projects.dir=$PWD" > ~/google-enterprise-connector-filesystem.properties 
+
+   For Windows
+     echo connector-manager-projects.dir=%CD% > "%HOMEPATH%\google-enterprise-connector-filesystem.properties"
+
+4. Change directory to projects/file-system-connector. Execute "ant jar_prod"
+   to build the file system connector jar file
+   build/prod/jar/connector-filesystem.jar.
+
+5. To verify your set up run "ant run_tests". If you see 'BUILD SUCCESSFUL'
+   at the end of the output your setup is correct.
+
+
+
