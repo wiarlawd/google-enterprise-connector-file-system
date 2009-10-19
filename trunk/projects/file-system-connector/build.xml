@@ -126,7 +126,7 @@
     <mkdir dir="${classes-tests.dir}/com/google/enterprise/connector/filesystem/config"/>
 
     <copy todir="${classes-tests.dir}/com/google/enterprise/connector/filesystem/config" >
-      <fileset dir="${config.dir}"/>
+      <fileset dir="${config.dir}" excludes="**/*.properties" />
     </copy>
 
     <junit printsummary="yes" haltonfailure="yes">
@@ -157,7 +157,11 @@
   <target name="jar_prod" description="filesystem-connector-jar" 
           depends="compile_prod">
     <copy todir="${build-prod-config.dir}">
-      <fileset dir="${config.dir}" />
+      <fileset dir="${config.dir}" excludes="**/*.properties" />
+    </copy>
+
+    <copy todir="${classes-prod.dir}/com/google/enterprise/connector/filesystem/config" >
+      <fileset dir="${config.dir}" excludes="**/*.xml" />
     </copy>
 
     <tstamp />
