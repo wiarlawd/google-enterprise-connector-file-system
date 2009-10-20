@@ -49,6 +49,25 @@ Google recommends that you use the installer for installing the connector. You m
     * Download the correct binary distribution compressed file for your platform
     * unpack the binary distribution
     * copy the connector-manager.war to $CATALINA_HOME/webapps directory
-    * Start Tomcat so that the connector manager gets deployed. To confirm that the connector manager has been properly deployed under Tomcat confirm that a directory with the name connector-manager has been created under $CATALINA_HOME/webapps directory
-Also you can check for http://localhost:8080/connector-manager/testConnectivity which will displays the connectivity status or http://localhost:8080/connector-manager/startUp which will display a message indicating the successful deployment of Connector Manager
+    * Start Tomcat so that the connector manager gets deployed. 
+    * To confirm that the connector manager has been properly deployed under Tomcat confirm that a directory with the name connector-manager has been created under $CATALINA_HOME/webapps directory
     * Shut down the Tomcat to start with the further steps.
+  # In a browser goto http://code.google.com/p/google-enterprise-connector-file-system/downloads/list and download the binary distribution of your choice.
+  # Unzip the downloaded file into an empty root distribution directory.
+  # Copy connector-filesystem.jar from the root distribution directory to the $CATALINA_HOME/webapps/connector-manager/WEB-INF/lib directory.
+  # Copy the files in the Lib directory under the root distribution directory to the $CATALINA_HOME/webapps/connector-manager/WEB-INF/lib directory.
+  # Edit the file $CATALINA_HOME/bin/catalina.bat (catalina.sh on Linux): 
+    {{{
+       Change the line:
+         set JAVA_OPTS=%JAVA_OPTS% -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager -Djava.util.logging.config.file="%CATALINA_BASE%\conf\logging.properties"
+       To:
+         set JAVA_OPTS=%JAVA_OPTS% -Djava.util.logging.manager=java.util.logging.LogManager -Djava.util.logging.config.file="%CATALINA_BASE%\webapps\connector-manager\WEB-INF\classes\logging.properties"
+
+       For Linux use a Unix path and $CATALINA_BASE 
+    }}}
+  # In the $CATALINA_HOME/webapps/connector-manager/WEB-INF directory, create a directory or called classes.
+  # Copy the file logging.properties file from the Config directory in the root distribution directory to the new $CATALINA_HOME/webapps/connector-manager/WEB-INF/classes directory.
+  # Start the Tomcat server.
+  # To confirm whether the Tomcat server has started correctly and the connector is installed, navigate to the $CATALINA_HOME/webapps/connector-manager/WEB-INF/connectors directory, and verify that the $CATALINA_HOME/webapps/connector-manager/WEB-INF/connectors/FileConnectorType directory exists.
+
+    
