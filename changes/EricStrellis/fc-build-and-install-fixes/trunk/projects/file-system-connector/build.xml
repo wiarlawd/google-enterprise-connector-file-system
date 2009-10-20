@@ -202,7 +202,7 @@
   <target name="download_filesystem_connector" depends="jar_prod" >
     <property name="connector-filesystem-src.zip" value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
     <zip destfile="${connector-filesystem-src.zip}" >
-      <zipfileset dir="." prefix="projects/file-system-connector" 
+      <zipfileset dir="." prefix="connector-filesystem-${version}/projects/file-system-connector" 
         includes="${readme.file}, ${copying.file}, ${release_notes.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
     </zip>
 
