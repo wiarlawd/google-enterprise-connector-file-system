@@ -37,6 +37,7 @@
   <property name="license-prod.dir" value="License" />
 
   <property name="config.dir" value="config" />
+  <property name="logging-properties.file" value="${config.dir}/logging.properties" />
   <property name="thirdparty-prod-jar.dir" location="third_party/prod" />
 
   <property name="copying.file" value="COPYING" />
@@ -201,7 +202,7 @@
   <target name="download_filesystem_connector" depends="jar_prod" >
     <property name="connector-filesystem-src.zip" value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
     <zip destfile="${connector-filesystem-src.zip}" >
-      <zipfileset dir="." prefix="connector-filesystem-${version}" 
+      <zipfileset dir="." prefix="connector-filesystem-${version}/projects/file-system-connector" 
         includes="${readme.file}, ${copying.file}, ${release_notes.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
     </zip>
 
@@ -209,7 +210,7 @@
     
     <copy file="${jar-prod.file}" tofile="${file-connector-jar-zip.file}"/>
     <copy file="${copying.file}" tofile="${file-connector-copying-zip.file}"/>
-
+    <copy file="${logging-properties.file}" todir="${config-zip.dir}" />
     <copy todir="${lib-zip.dir}">
       <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
     </copy>
