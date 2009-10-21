@@ -38,7 +38,7 @@ this Connector Manager please refer to the help links on the
 
 Once the Connector Manager has been registered you can configure the File System Connector
 itself. For general information on registering connectors please refer to the 
-'Connector Administration->Connectors' screen on your GSA.
+help links on the 'Connector Administration->Connectors' screen on your GSA.
 
 
 The File System Connector configuration includes URL patterns. These patterns
