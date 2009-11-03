@@ -111,4 +111,9 @@ class ChangeQueue implements ChangeSource {
   public Change getNextChange() {
     return todo.poll();
   }
+
+  /** Makes empty by removing all references from data structure. */  
+  void clear() {
+    todo.clear();
+  }
 }

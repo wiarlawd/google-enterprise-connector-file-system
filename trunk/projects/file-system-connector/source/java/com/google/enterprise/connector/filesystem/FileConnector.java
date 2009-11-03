@@ -14,10 +14,12 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.AuthenticationManager;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.Connector;
 import com.google.enterprise.connector.spi.ConnectorShutdownAware;
 import com.google.enterprise.connector.spi.Session;
+import com.google.enterprise.connector.spi.TraversalManager;
 
 import java.util.logging.Logger;
 
@@ -25,12 +27,13 @@ import java.util.logging.Logger;
  * An implementation of the SPI Connector interface for files.
  *
  */
-public class FileConnector implements Connector, ConnectorShutdownAware {
+public class FileConnector implements Connector, ConnectorShutdownAware, Session {
   private static final Logger LOG = Logger.getLogger(FileConnector.class.getName());
 
-  private final FileSession session;
-
+  private final FileFetcher fetcher;
+  private final AuthorizationManager authorizationManager;
   private final FileSystemMonitorManager fileSystemMonitorManager;
+  private FileTraversalManager traversalManager = null;
 
   /**
    * Creates a file connector.
@@ -41,11 +44,13 @@ public class FileConnector implements Connector, ConnectorShutdownAware {
    */
   public FileConnector(FileFetcher fetcher, AuthorizationManager authorizationManager,
       FileSystemMonitorManager fileSystemMonitorManager) {
-    session = new FileSession(fetcher, authorizationManager, fileSystemMonitorManager);
+    this.fetcher = fetcher;
+    this.authorizationManager = authorizationManager;
     this.fileSystemMonitorManager = fileSystemMonitorManager;
   }
 
-  public static Credentials newCredentials(String domainName, String userName, String password) {
+  public static Credentials newCredentials(String domainName, String userName,
+      String password) {
     Credentials credentials;
     if (userName == null || (userName.length() == 0)) {
       credentials = null;
@@ -53,21 +58,6 @@ public class FileConnector implements Connector, ConnectorShutdownAware {
       credentials = new Credentials(domainName, userName, password);
     }
     return credentials;
-  }
-
-  /* @Override */
-  public Session login() {
-    return session;
-  }
-
-  /**
-   * Delete the snapshot directory for this connector.
-   */
-  /* @Override */
-  public void delete() {
-    LOG.info("Deleting connector");
-    fileSystemMonitorManager.clean();
-    LOG.info("Connector deletion complete");
   }
 
   /**
@@ -79,5 +69,51 @@ public class FileConnector implements Connector, ConnectorShutdownAware {
     LOG.info("Shutting down connector");
     fileSystemMonitorManager.stop();
     LOG.info("Connector shutdown complete");
+  }
+
+  /**
+   * Delete the snapshot and persist directory for this connector.
+   * Invokes shutdown() first.
+   */
+  /* @Override */
+  public void delete() {
+    LOG.info("Deleting connector");
+    shutdown();
+    fileSystemMonitorManager.clean();
+    LOG.info("Connector deletion complete");
+  }
+
+  /* @Override */
+  public Session login() {
+    return this;
+  }
+
+  /* @Override */
+  public AuthenticationManager getAuthenticationManager() {
+    return null;
+  }
+
+  /* @Override */
+  public AuthorizationManager getAuthorizationManager() {
+    return authorizationManager;
+  }
+
+  /**
+   * Creates and returns a TraversalManager which can start and
+   * resume traversals. Getting a traversal manager invalidates
+   * previously acquired TraversalManagers.  This operation
+   * has the expense of stopping current crawls, forcing them
+   * to be restarted (at initial or resume points) when further docs
+   * are requested via returned TraversalManager.
+   */
+  /* @Override */
+  public synchronized TraversalManager getTraversalManager() {
+    if (null != traversalManager) {
+      fileSystemMonitorManager.stop();
+      traversalManager.deactivate();
+      traversalManager = null;
+    }
+    traversalManager = new FileTraversalManager(fetcher, fileSystemMonitorManager);
+    return traversalManager;
   }
 }

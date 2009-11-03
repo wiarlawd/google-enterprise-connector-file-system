@@ -18,17 +18,44 @@ import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.util.Arrays;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Fake TraversalContext that implements the functions needed for testing.
  */
 public class FakeTraversalContext  implements TraversalContext {
+  public static final long DEFAULT_MAXIMUM_DOCUMENT_SIZE = 3000000L;
+  private final long maxDocumentSize;
+
+  static final String TAR_DOT_GZ_EXTENSION = "tar.gz";
+  private static final String TAR_DOT_GZ_MIME_TYPE = "application/x-gzip";
+
+  AtomicBoolean allowAllMimeTypes = new AtomicBoolean();
+
+  FakeTraversalContext() {
+    this(DEFAULT_MAXIMUM_DOCUMENT_SIZE);
+  }
+
+  FakeTraversalContext(long maxDocumentSize) {
+    this.maxDocumentSize = maxDocumentSize;
+  }
+
   public long maxDocumentSize() {
-    throw new UnsupportedOperationException();
+    return maxDocumentSize;
+  }
+
+  void allowAllMimeTypes(boolean newValue) {
+    allowAllMimeTypes.set(newValue);
   }
 
   public int mimeTypeSupportLevel(String mimeType) {
-    throw new UnsupportedOperationException();
+    if (allowAllMimeTypes.get()) {
+      return 1;
+    } else if (TAR_DOT_GZ_MIME_TYPE.equals(mimeType)) {
+      return -1;
+    } else {
+      return 1;
+    }
   }
 
   /**

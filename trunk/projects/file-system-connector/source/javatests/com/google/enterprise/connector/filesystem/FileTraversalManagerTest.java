@@ -74,6 +74,7 @@ public class FileTraversalManagerTest extends TestCase {
     queue = new MockChangeQueue(fileFactory, root, BATCH_COUNT * BATCH_SIZE + EXTRA);
     fileSystemMonitorManager = new FakeFileSystemMonitorManager(queue, this);
     tm = new FileTraversalManager(fileFetcher, fileSystemMonitorManager);
+    tm.setTraversalContext(new FakeTraversalContext());
     tm.setBatchHint(BATCH_SIZE);
   }
 
@@ -93,17 +94,24 @@ public class FileTraversalManagerTest extends TestCase {
     runTraversal(null);
   }
 
-  private  void runTraversal(String checkpoint) throws RepositoryException {
+  private void runTraversal(String checkpoint) throws RepositoryException {
     fileSystemMonitorManager.getCheckpointAndChangeQueue().setMaximumQueueSize(BATCH_SIZE);
     DocumentList docs = null;
     if (checkpoint == null){
       docs =  tm.startTraversal();
+      assertEquals(1, fileSystemMonitorManager.getStartCount());
+      // start calls stop, in case things were running, because CM doesn't always.
+      assertEquals(1, fileSystemMonitorManager.getStopCount());
+      // clean is called after stop is called, for same reason as stop is called.
+      assertEquals(1, fileSystemMonitorManager.getCleanCount());
     } else {
       docs = tm.resumeTraversal(checkpoint);
+      assertEquals(1, fileSystemMonitorManager.getStartCount());
+      // resume doesn't call stop. 
+      assertEquals(0, fileSystemMonitorManager.getStopCount());
+      // Doesn't call clean. 
+      assertEquals(0, fileSystemMonitorManager.getCleanCount());
     }
-    assertEquals(1, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
 
     for (int k = 0; k < BATCH_SIZE; ++k) {
       Document doc = docs.nextDocument();

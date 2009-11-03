@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+//import java.util.logging.Logger;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code jcifs.smb.SmbFile}.
@@ -40,6 +41,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   public static final String FILE_SYSTEM_TYPE = "smb";
   private final SmbFile delegate;
   private final boolean stripDomainFromAces;
+  private final boolean isUncForm;
+  //private static final Logger LOG = Logger.getLogger(SmbReadonlyFile.class.getName());
 
   /**
    * @param path see {@code jcifs.org.SmbFile} for path syntax.
@@ -48,13 +51,17 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    *        group names in the {@link Acl} returned by {@link #getAcl()} and if
    *        false domains will be included in the form
    *        {@literal domainName\\userOrGroupName}.
+   * @param underUncStartPath whether start path was given in UNC form
+   *
    * @throws RepositoryDocumentException if the path is malformed
    */
-  public SmbReadonlyFile(String path, Credentials credentials, boolean stripDomainFromAces)
+  public SmbReadonlyFile(String path, Credentials credentials,
+      boolean stripDomainFromAces, boolean underUncStartPath)
       throws RepositoryDocumentException {
     try {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
       this.stripDomainFromAces = stripDomainFromAces;
+      this.isUncForm = underUncStartPath;
     } catch (MalformedURLException e) {
       throw new RepositoryDocumentException("malformed SMB path: " + path, e);
     }
@@ -69,9 +76,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    *        false domains will be included in the form
    *        {@literal domainName\\userOrGroupName}.
    */
-  private SmbReadonlyFile(SmbFile smbFile, boolean stripDomainFromAces) {
+  private SmbReadonlyFile(SmbFile smbFile, boolean stripDomainFromAces,
+      boolean isUncForm) {
     this.delegate = smbFile;
     this.stripDomainFromAces = stripDomainFromAces;
+    this.isUncForm = isUncForm;
   }
 
   /* @Override */
@@ -107,6 +116,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     }
   }
 
+  /* @Override */
   public Acl getAcl() throws IOException {
     SmbAclBuilder builder = new SmbAclBuilder(delegate, stripDomainFromAces);
     return builder.build();
@@ -150,7 +160,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     }
     List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {
-      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces));
+      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces, isUncForm));
     }
     Collections.sort(result, new Comparator<SmbReadonlyFile>() {
       /* @Override */
@@ -168,6 +178,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     } catch (SmbException e) {
       throw new IOException("failed to get last modified time for " + getPath(), e);
     }
+  }
+
+  /* @Override */
+  public long length() throws IOException {
+    return isRegularFile() ? delegate.length() : 0L;
   }
 
   @Override
@@ -198,5 +213,13 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       return false;
     }
     return true;
+  }
+
+  public boolean acceptedBy(FilePatternMatcher matcher) {
+    if (isUncForm) {
+      return matcher.acceptName(delegate.getUncPath());
+    } else {
+      return matcher.acceptName(delegate.getPath());
+    }
   }
 }

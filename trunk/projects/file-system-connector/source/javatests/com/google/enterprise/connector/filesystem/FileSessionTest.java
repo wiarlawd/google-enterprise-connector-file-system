@@ -15,17 +15,16 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.TraversalManager;
+import com.google.enterprise.connector.spi.Session;
 
 import junit.framework.TestCase;
 
 import java.io.IOException;
 import java.util.Arrays;
 
-/**
- */
+/** Test Session aspect of FileConnector. */
 public class FileSessionTest extends TestCase {
-  private FileSession session;
+  private Session session;
   private FileFetcher fetcher;
   private ChangeSource changes;
   private FileAuthorizationManager authz;
@@ -40,16 +39,17 @@ public class FileSessionTest extends TestCase {
     changes = new ChangeQueue(100, 10);
     authz = new FileAuthorizationManager();
     fileSystemMonitorManager = new FakeFileSystemMonitorManager(changes, this);
-    session = new FileSession(fetcher, authz, fileSystemMonitorManager);
+    session = new FileConnector(fetcher, authz, fileSystemMonitorManager);
   }
-  public void testAuthn() {
+
+  public void testAuthn() throws RepositoryException {
     assertNull(session.getAuthenticationManager());
     assertEquals(0, fileSystemMonitorManager.getStartCount());
     assertEquals(0, fileSystemMonitorManager.getStopCount());
     assertEquals(0, fileSystemMonitorManager.getCleanCount());
   }
 
-  public void testAuthz() {
+  public void testAuthz() throws RepositoryException {
     assertEquals(authz, session.getAuthorizationManager());
     assertEquals(0, fileSystemMonitorManager.getStartCount());
     assertEquals(0, fileSystemMonitorManager.getStopCount());
@@ -57,7 +57,8 @@ public class FileSessionTest extends TestCase {
   }
 
   public void testTraversal() throws RepositoryException {
-    TraversalManager tm = session.getTraversalManager();
+    FileTraversalManager tm = (FileTraversalManager) session.getTraversalManager();
+    tm.setTraversalContext(new FakeTraversalContext());
     assertNotNull(tm);
     assertEquals(0, fileSystemMonitorManager.getStartCount());
     assertEquals(0, fileSystemMonitorManager.getStopCount());
@@ -65,17 +66,17 @@ public class FileSessionTest extends TestCase {
 
     tm.startTraversal();
     assertEquals(1, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
+    assertEquals(1, fileSystemMonitorManager.getStopCount());
+    assertEquals(1, fileSystemMonitorManager.getCleanCount());
 
     tm.resumeTraversal(null);
     assertEquals(1, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
+    assertEquals(1, fileSystemMonitorManager.getStopCount());
+    assertEquals(1, fileSystemMonitorManager.getCleanCount());
 
     tm.startTraversal();
-    assertEquals(1, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
+    assertEquals(2, fileSystemMonitorManager.getStartCount());
+    assertEquals(2, fileSystemMonitorManager.getStopCount());
+    assertEquals(2, fileSystemMonitorManager.getCleanCount());
   }
 }

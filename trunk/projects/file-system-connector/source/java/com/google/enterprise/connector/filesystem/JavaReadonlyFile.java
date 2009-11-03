@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -90,6 +90,11 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
   }
 
   /* @Override */
+  public long length() {
+    return delegate.isFile() ? delegate.length() : 0L;
+  }
+
+  /* @Override */
   public List<JavaReadonlyFile> listFiles() throws IOException {
     File[] files = delegate.listFiles();
     if (files == null) {
@@ -146,5 +151,9 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
       return false;
     }
     return true;
+  }
+
+  public boolean acceptedBy(FilePatternMatcher matcher) {
+    return matcher.acceptName(getPath());
   }
 }

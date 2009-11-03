@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,6 +13,8 @@
 // limitations under the License.
 
 package com.google.enterprise.connector.filesystem;
+
+import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -137,6 +139,10 @@ public class FileSystemMonitor implements Runnable {
 
   private final String name;
 
+  private final TraversalContext traversalContext;
+
+  private final MimeTypeFinder mimeTypeFinder;
+
   /**
    * Minimum interval in ms between identical checksums for a file to be deemed
    * "stable". This should be at least several times the granularity of the
@@ -153,15 +159,19 @@ public class FileSystemMonitor implements Runnable {
    * @param snapshotStore where snapshots are stored
    * @param callback client callback
    * @param checksumGenerator object to generate checksums
+   * @param matcher for accepting and rejecting filenames
+   * @param traversalContext null means accept any size/mime-type
    */
   public FileSystemMonitor(String name, ReadonlyFile<?> root, SnapshotStore snapshotStore,
-      Callback callback, ChecksumGenerator checksumGenerator, FilePatternMatcher matcher) {
+      Callback callback, ChecksumGenerator checksumGenerator, FilePatternMatcher matcher,
+      TraversalContext traversalContext) {
     this.name = name;
     this.root = root;
     this.snapshotStore = snapshotStore;
-    this.callback = callback;
+    this.callback = new FilteringCallback(callback);
     this.checksumGenerator = checksumGenerator;
     this.matcher = matcher;
+    this.traversalContext = traversalContext;
 
     // The default clock just uses the current time.
     this.clock = new Clock() {
@@ -170,6 +180,8 @@ public class FileSystemMonitor implements Runnable {
         return System.currentTimeMillis();
       }
     };
+
+    this.mimeTypeFinder = new MimeTypeFinder();
   }
 
   /**
@@ -273,7 +285,7 @@ public class FileSystemMonitor implements Runnable {
       SnapshotRecord rec = new SnapshotRecord(fileOrDir, "", clock.getTime(), false);
       snapshotWriter.write(rec);
       processDirectory(fileOrDir);
-    } else if (matcher.accept(fileOrDir)) {
+    } else if (fileOrDir.acceptedBy(matcher)) {
       processFile(fileOrDir);
     }
   }
@@ -310,6 +322,10 @@ public class FileSystemMonitor implements Runnable {
   private void processFile(ReadonlyFile<?> file) throws IOException, InterruptedException,
       SnapshotReaderException, SnapshotWriterException {
     processDeletes(file);
+
+    if ((traversalContext != null) && (traversalContext.maxDocumentSize() < file.length())) {
+      return;
+    }
 
     // At this point 'current' >= 'file', or possibly current == null if
     // we've processed the previous snapshot entirely.
@@ -388,9 +404,7 @@ public class FileSystemMonitor implements Runnable {
     processDeletes(dir);
 
     if (current != null && current.getPath().equals(dir.getPath())) {
-      if (current.getFileType() == SnapshotRecord.Type.DIR) {
-        // TODO: compare ACLs.
-      } else {
+      if (current.getFileType() == SnapshotRecord.Type.FILE) {
         // This directory used to be a file.
         callback.deletedFile(current, getCheckpoint());
         callback.newDirectory(dir, getCheckpoint());
@@ -402,6 +416,92 @@ public class FileSystemMonitor implements Runnable {
 
     for (ReadonlyFile<?> f : dir.listFiles()) {
       processFileOrDir(f);
+    }
+  }
+
+  /**
+   * Callback for filtering files that do not have supported mime types.
+   * <p>
+   * Determining a file's mime type can be an expensive operation and
+   * require reading the file. To avoid computing the mime type for every file
+   * on every pass we add files with unsupported mime types to the snapshot.
+   * This allows us to cheaply ignore the file on future passes based on an
+   * inexpensive time stamp check. This class filters files with unsupported
+   * mime types to avoid sending them on to the GSA.
+   * <p>
+   * Possible improvements
+   * <ol>
+   * <li>Store a flag in the snapshot to indicate the file has not been sent to
+   * the GSA. This would enhance the usefulness of the snapshot as a recode of
+   * the content of the GSA.
+   * <li>Store the mime type in the {@link Change} to avoid recomputing the
+   * value in {@link FileFetcher}. This requires detecting modifications to the
+   * file between the time the mime type is added to the change and the time the
+   * file is sent to the GSA. There is already a race related to the fact
+   * computing the mime type and reading the file are not atomic.
+   * </ol>
+   */
+  private class FilteringCallback implements Callback {
+    private final Callback delegate;
+    FilteringCallback(Callback delegate) {
+      this.delegate = delegate;
+    }
+
+    public void changedDirectoryMetadata(FileInfo dir, MonitorCheckpoint mcp)
+        throws InterruptedException {
+      delegate.changedDirectoryMetadata(dir, mcp);
+    }
+
+    public void changedFileContent(FileInfo fileInfo, MonitorCheckpoint mcp)
+        throws InterruptedException {
+      if (isMimeTypeSupported(fileInfo)) {
+        delegate.changedFileContent(fileInfo, mcp);
+      } else {
+        delegate.deletedFile(fileInfo, mcp);
+      }
+    }
+
+    public void changedFileMetadata(FileInfo fileInfo, MonitorCheckpoint mcp) {
+      throw new UnsupportedOperationException();
+    }
+
+    public void deletedDirectory(FileInfo dir, MonitorCheckpoint mcp) throws InterruptedException {
+      delegate.deletedDirectory(dir, mcp);
+    }
+
+    public void deletedFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException {
+      delegate.deletedFile(file, mcp);
+    }
+
+    public void newDirectory(FileInfo dir, MonitorCheckpoint mcp) throws InterruptedException {
+      delegate.newDirectory(dir, mcp);
+    }
+
+    public void newFile(FileInfo fileInfo, MonitorCheckpoint mcp) throws InterruptedException {
+      if (isMimeTypeSupported(fileInfo)) {
+        delegate.newFile(fileInfo, mcp);
+      }
+    }
+
+    public void passComplete(MonitorCheckpoint mcp) throws InterruptedException {
+      delegate.passComplete(mcp);
+    }
+
+    private boolean isMimeTypeSupported(FileInfo f) {
+      if (traversalContext == null) {
+        return true;
+      }
+      try {
+        String mimeType = mimeTypeFinder.find(traversalContext, f.getPath(),
+            new FileInfoInputStreamFactory(f));
+        return traversalContext.mimeTypeSupportLevel(mimeType) > 0;
+      } catch (IOException ioe) {
+        // Note the GSA will filter files with unsuported mime types so by
+        // sending the file we may expend computer resources but will avoid
+        // incorrectly dropping files.
+        LOG.warning("Failed to determine mime type for " + f.getPath());
+        return true;
+      }
     }
   }
 }

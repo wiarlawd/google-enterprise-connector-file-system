@@ -38,7 +38,7 @@ public interface ChecksumGenerator {
 
   /**
    * @param input
-   * @return a checksum for the bytes of {@code input}.
+   * @return a checksum for the UTF_8 bytes of {@code input}.
    */
   String getChecksum(String input);
 }

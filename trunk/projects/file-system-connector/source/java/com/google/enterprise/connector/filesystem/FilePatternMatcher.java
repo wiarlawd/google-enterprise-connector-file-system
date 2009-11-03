@@ -17,6 +17,8 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.labs.matcher.PatternMatcher;
 import com.google.common.labs.matcher.UrlMatcher;
 
+//import java.util.logging.Logger;
+
 /**
  * A matcher for file paths.
  *
@@ -24,6 +26,8 @@ import com.google.common.labs.matcher.UrlMatcher;
  *
  */
 public class FilePatternMatcher {
+  //private static final Logger LOG = Logger.getLogger(FilePatternMatcher.class.getName());
+
   private final PatternMatcher exclude;
   private final PatternMatcher include;
 
@@ -60,11 +64,7 @@ public class FilePatternMatcher {
     }
   }
 
-  /**
-   * @param file
-   * @return true if {@code file} matches.
-   */
-  public boolean accept(ReadonlyFile<?> file) {
-    return include.matches(file.getPath()) && !exclude.matches(file.getPath());
+  public boolean acceptName(String instance) {
+    return include.matches(instance) && !exclude.matches(instance);
   }
 }
