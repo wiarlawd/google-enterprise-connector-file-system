@@ -143,6 +143,8 @@ public class FileSystemMonitor implements Runnable {
 
   private final MimeTypeFinder mimeTypeFinder;
 
+  private final FileSink fileSink;
+
   /**
    * Minimum interval in ms between identical checksums for a file to be deemed
    * "stable". This should be at least several times the granularity of the
@@ -164,7 +166,7 @@ public class FileSystemMonitor implements Runnable {
    */
   public FileSystemMonitor(String name, ReadonlyFile<?> root, SnapshotStore snapshotStore,
       Callback callback, ChecksumGenerator checksumGenerator, FilePatternMatcher matcher,
-      TraversalContext traversalContext) {
+      TraversalContext traversalContext, FileSink fileSink) {
     this.name = name;
     this.root = root;
     this.snapshotStore = snapshotStore;
@@ -182,6 +184,7 @@ public class FileSystemMonitor implements Runnable {
     };
 
     this.mimeTypeFinder = new MimeTypeFinder();
+    this.fileSink = fileSink;
   }
 
   /**
@@ -287,6 +290,8 @@ public class FileSystemMonitor implements Runnable {
       processDirectory(fileOrDir);
     } else if (fileOrDir.acceptedBy(matcher)) {
       processFile(fileOrDir);
+    } else {
+      fileSink.add(fileOrDir, FileFilterReason.PATTERN_MISMATCH);
     }
   }
 
@@ -324,6 +329,7 @@ public class FileSystemMonitor implements Runnable {
     processDeletes(file);
 
     if ((traversalContext != null) && (traversalContext.maxDocumentSize() < file.length())) {
+      fileSink.add(file, FileFilterReason.TOO_BIG);
       return;
     }
 
@@ -494,7 +500,11 @@ public class FileSystemMonitor implements Runnable {
       try {
         String mimeType = mimeTypeFinder.find(traversalContext, f.getPath(),
             new FileInfoInputStreamFactory(f));
-        return traversalContext.mimeTypeSupportLevel(mimeType) > 0;
+        boolean isSupported = traversalContext.mimeTypeSupportLevel(mimeType) > 0;
+        if (!isSupported) {
+          fileSink.add(f, FileFilterReason.UNSUPPORTED_MIME_TYPE);
+        }
+        return isSupported;
       } catch (IOException ioe) {
         // Note the GSA will filter files with unsuported mime types so by
         // sending the file we may expend computer resources but will avoid

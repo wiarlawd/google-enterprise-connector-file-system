@@ -21,6 +21,8 @@ import junit.framework.TestCase;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Tests for the {@link FileSystemMonitor}
@@ -109,23 +111,58 @@ public class FileSystemMonitorTest extends TestCase {
     }
   }
 
+  private static class TestSink implements FileSink {
+    private final List<FileFilterReason> reasons = new ArrayList<FileFilterReason>();
+
+    /* @Override */
+    public void add(FileInfo fileInfo, FileFilterReason reason) {
+      reasons.add(reason);
+    }
+
+    int count(FileFilterReason countMe) {
+      int result = 0;
+      for (FileFilterReason reason : reasons) {
+        if (reason.equals(countMe)) {
+          result++;
+        }
+      }
+      return result;
+    }
+
+    int count() {
+      return reasons.size();
+    }
+
+    void clear() {
+      reasons.clear();
+    }
+  }
+
   private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator,
-      FilePatternMatcher myMatcher, TraversalContext traversalContext) {
+      FilePatternMatcher myMatcher, TraversalContext traversalContext,
+      FileSink fileSink) {
     return new FileSystemMonitor("name", root, store, visitor, generator,
-        myMatcher, traversalContext);
+        myMatcher, traversalContext, fileSink);
   }
 
   private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
     return newFileSystemMonitor(checksumGenerator, myMatcher,
-        new FakeTraversalContext());
+        new FakeTraversalContext(), new LoggingFileSink());
   }
 
   private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator) {
-    return newFileSystemMonitor(generator, matcher, new FakeTraversalContext());
+    return newFileSystemMonitor(generator, matcher, new FakeTraversalContext(),
+        new LoggingFileSink());
   }
 
   private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext) {
-    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext);
+    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
+        new LoggingFileSink());
+  }
+
+  private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext,
+      FileSink fileSink) {
+    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext, fileSink);
   }
 
   @Override
@@ -266,22 +303,32 @@ public class FileSystemMonitorTest extends TestCase {
   private static final String BIG_CONTENT = mkBigContent();
 
   public void testSomeFilesTooBig() throws Exception {
-    monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length() - 1));
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length() - 1),
+        sink);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     visitor.reset();
-    for (int ix = 0; ix < 4; ix++) {
+    final int bigCount = 4;
+    for (int ix = 0; ix < bigCount; ix++) {
       root.addFile("big-file" + ix, BIG_CONTENT);
     }
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
+    assertEquals(bigCount, sink.count());
+    assertEquals(bigCount, sink.count(FileFilterReason.TOO_BIG));
   }
 
   public void testAllFilesTooBig() throws Exception {
-    monitor = newFileSystemMonitor(new FakeTraversalContext(0));
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(0), sink);
     runMonitorAndCheck(baseDirs, 0, 0, 0, 0, 0, 0);
+    assertEquals(baseFiles, sink.count());
+    assertEquals(baseFiles, sink.count(FileFilterReason.TOO_BIG));
   }
 
   public void testMaximumSize() {
-    monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length()));
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length()),
+        sink);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     visitor.reset();
     final int count = 4;
@@ -289,6 +336,7 @@ public class FileSystemMonitorTest extends TestCase {
       root.addFile("big-file" + ix, BIG_CONTENT);
     }
     runMonitorAndCheck(0, count, 0, 0, 0, 0, 0);
+    assertEquals(0, sink.count());
   }
 
   public void testSmallFileBecomesBig() {
@@ -318,10 +366,13 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testAddNotSupportedMimeType() {
-    monitor = newFileSystemMonitor(matcher);
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(), sink);
     root.addFile("unsupported." + FakeTraversalContext.TAR_DOT_GZ_EXTENSION,
         "not a real zip file");
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
+    assertEquals(1, sink.count());
+    assertEquals(1, sink.count(FileFilterReason.UNSUPPORTED_MIME_TYPE));
   }
 
   public void testSupportedToNotSupportedMimeType() {

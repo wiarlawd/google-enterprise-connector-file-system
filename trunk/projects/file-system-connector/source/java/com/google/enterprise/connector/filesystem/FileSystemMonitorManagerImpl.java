@@ -35,6 +35,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   /** Maximum time to wait for background threads to terminate (in ms). */
   private static final long MAX_SHUTDOWN_MS = 5000;
 
+  private static final FileSink FILE_SINK = new LoggingFileSink();
+
   private static final Logger LOG = Logger.getLogger(FileSystemMonitorManagerImpl.class.getName());
 
   /**
@@ -132,7 +134,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     }
 
     // TODO: Load whatever monitor checkpoint states there are.
-    // Map<String, MonitorCheckpoint> monitorPoints 
+    // Map<String, MonitorCheckpoint> monitorPoints
     //    = checkpointAndChangeQueue.getMonitorRestartPoints();
     // TODO: Pass available loaded checkpoint states to monitors.
 
@@ -215,7 +217,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
 
     FileSystemMonitor monitor =
         new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.getCallback(),
-            checksumGenerator, filePatternMatcher, traversalContext);
+            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK);
     return new Thread(monitor);
   }
 
