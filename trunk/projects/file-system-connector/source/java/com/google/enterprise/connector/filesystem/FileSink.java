@@ -24,3 +24,4 @@ interface FileSink {
    */
   public void add(FileInfo fileInfo, FileFilterReason reason);
 }
+
