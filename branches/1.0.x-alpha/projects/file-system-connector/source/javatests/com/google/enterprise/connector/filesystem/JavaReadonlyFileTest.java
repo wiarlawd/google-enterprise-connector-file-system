@@ -82,6 +82,13 @@ public class JavaReadonlyFileTest extends TestCase {
     assertFalse(new JavaReadonlyFile(readonlyRoot.getPath() + "foobar").canRead());
   }
 
+  public void testLength() {
+    assertEquals(0L, readonlyRoot.length());
+    assertEquals(FILE_ONE_CONTENTS.length(), readonlyFile1.length());
+    // Length of file that does not exist.
+    assertEquals(0L, readonlyTest2.length());
+  }
+
   public void testGetDisplayUrl() {
     assertEquals(readonlyRoot.getPath(), readonlyRoot.getDisplayUrl());
     assertEquals(readonlyFile1.getPath(), readonlyFile1.getDisplayUrl());

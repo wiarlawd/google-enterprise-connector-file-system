@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-
+import java.util.Map;
 
 /**
  * Test for {@Link CheckpointAndChangeQueue}.
@@ -69,6 +69,11 @@ public class CheckpointAndChangeQueueTest extends TestCase {
           new MonitorCheckpoint("monitorName", ix, ix, ix));
     }
 
+    static Change newChange(int ix, String monitorName) {
+      return new Change(Change.Action.ADD_FILE, "mOcK", PREFIX + ix,
+          new MonitorCheckpoint(monitorName, ix, ix, ix));
+    }
+
     @Override
     public Change getNextChange() {
       return pending.poll();
@@ -78,6 +83,10 @@ public class CheckpointAndChangeQueueTest extends TestCase {
       int got = Integer.parseInt(c.getPath().substring(PREFIX.length()));
       assertEquals(expected, got);
     }
+  }
+
+  private static Change newChange(int ix, String monitorName) {
+    return MockChangeSource.newChange(ix, monitorName);
   }
 
   private boolean deleteDir(File dir) {
@@ -517,6 +526,137 @@ public class CheckpointAndChangeQueueTest extends TestCase {
        assertTrue(1 >= persistDir.listFiles().length);
     }
     assertTrue(1 == persistDir.listFiles().length);
+  }
 
+  public void testTrackingMonitorState() throws IOException {
+    final String MON_A = "A Monitor";
+    final String MON_B = "I am mon B";
+    ChangeSource changeSource = new MockChangeSource(Arrays.asList(new Change[] {
+        newChange(0, MON_A), newChange(0, MON_B), newChange(1, MON_A),
+        newChange(1, MON_B), newChange(2, MON_B), newChange(2, MON_A)
+    }));
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    q.setMaximumQueueSize(2);
+    String checkpoint = null;
+    q.start(checkpoint);
+
+    List<CheckpointAndChange> batch = q.resume(checkpoint);
+    Map<String, MonitorCheckpoint> monPoints = q.getMonitorRestartPoints();
+    assertEquals(2, monPoints.size());
+    assertTrue(monPoints.containsKey(MON_A));
+    assertTrue(monPoints.containsKey(MON_B));
+    assertEquals(0, monPoints.get(MON_A).getOffset1());
+    assertEquals(0, monPoints.get(MON_B).getOffset1());
+    assertEquals(0, monPoints.get(MON_A).getOffset2());
+    assertEquals(0, monPoints.get(MON_B).getOffset2());
+    checkpoint = batch.get(0).getCheckpoint().toString();
+    batch = q.resume(checkpoint);
+    monPoints = q.getMonitorRestartPoints();
+    assertEquals(2, monPoints.size());
+    assertTrue(monPoints.containsKey(MON_A));
+    assertTrue(monPoints.containsKey(MON_B));
+    assertEquals(1, monPoints.get(MON_A).getOffset1());
+    assertEquals(0, monPoints.get(MON_B).getOffset1());
+    assertEquals(1, monPoints.get(MON_A).getOffset2());
+    assertEquals(0, monPoints.get(MON_B).getOffset2());
+    // Can do it again.
+    batch = q.resume(checkpoint);
+    monPoints = q.getMonitorRestartPoints();
+    assertEquals(2, monPoints.size());
+    assertTrue(monPoints.containsKey(MON_A));
+    assertTrue(monPoints.containsKey(MON_B));
+    assertEquals(1, monPoints.get(MON_A).getOffset1());
+    assertEquals(0, monPoints.get(MON_B).getOffset1());
+    assertEquals(1, monPoints.get(MON_A).getOffset2());
+    assertEquals(0, monPoints.get(MON_B).getOffset2());
+  }
+
+  public void testTrackingMoreMonitorStates() throws IOException {
+    final String MON_A = "A Monitor";
+    final String MON_B = "I am mon B";
+    final String MON_C = "C me";
+    final String MON_D = "D is for diploma";
+    final String MON_E = "Um.....eeee";
+    ChangeSource changeSource = new MockChangeSource(Arrays.asList(new Change[] {
+        newChange(0, MON_A), newChange(0, MON_B), newChange(1, MON_A),
+        newChange(0, MON_C), newChange(0, MON_D), newChange(0, MON_E),
+        newChange(1, MON_C), newChange(1, MON_D), newChange(1, MON_E),
+        newChange(1, MON_B), newChange(2, MON_B), newChange(2, MON_A),
+        newChange(2, MON_E), newChange(2, MON_C), newChange(2, MON_D),
+    }));
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    q.setMaximumQueueSize(15);
+    String checkpoint = null;
+    q.start(checkpoint);
+    List<CheckpointAndChange> batch = q.resume(checkpoint);
+    Map<String, MonitorCheckpoint> monPoints = q.getMonitorRestartPoints();
+    assertEquals(5, monPoints.size());
+    assertTrue(monPoints.containsKey(MON_A));
+    assertTrue(monPoints.containsKey(MON_B));
+    assertTrue(monPoints.containsKey(MON_C));
+    assertTrue(monPoints.containsKey(MON_D));
+    assertTrue(monPoints.containsKey(MON_E));
+  }
+
+  public void testRecoveryOfMonitorState() throws IOException {
+    File persistDirSeed = testDirectoryManager.makeDirectory("queue-to-stop");
+    Map<String, MonitorCheckpoint> monPoints = null;
+
+    String checkpoint = null;
+    { /* Make recovery file that finishes 2nd batch. */
+      ChangeSource changeSource = new MockChangeSource(6);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirSeed);
+      q.setMaximumQueueSize(2);
+      q.start(checkpoint);
+      List<CheckpointAndChange> firstBatch = q.resume(checkpoint);
+      checkpoint = firstBatch.get(1).getCheckpoint().toString();
+      List<CheckpointAndChange> secondBatch = q.resume(checkpoint);
+      checkpoint = secondBatch.get(1).getCheckpoint().toString();
+      q.resume(checkpoint);
+      monPoints = q.getMonitorRestartPoints();
+      File recoveryFiles[] = persistDirSeed.listFiles();
+      assertEquals(1, recoveryFiles.length);
+      File recoveryFile = recoveryFiles[0];
+      recoveryFile.renameTo(new File(persistDir, recoveryFile.getName()));
+    }
+
+    ChangeSource changeSource = new MockChangeSource(6);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    q.setMaximumQueueSize(2);
+    q.start(checkpoint);
+    // Note: It's important that q.resume(checkpoint) is not called.
+    // That is start(checkpoint) loads the persisted monitor state.
+    assertEquals(monPoints, q.getMonitorRestartPoints());
+  }
+
+  public void testRecoveryOfMonitorStateInPartialResume() throws IOException {
+    File persistDirSeed = testDirectoryManager.makeDirectory("queue-to-stop");
+    Map<String, MonitorCheckpoint> monPoints = null;
+
+    String checkpoint = null;
+    { /* Make recovery file that finishes 2nd batch. */
+      ChangeSource changeSource = new MockChangeSource(6);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirSeed);
+      q.setMaximumQueueSize(2);
+      q.start(checkpoint);
+      List<CheckpointAndChange> firstBatch = q.resume(checkpoint);
+      checkpoint = firstBatch.get(1).getCheckpoint().toString();
+      List<CheckpointAndChange> secondBatch = q.resume(checkpoint);
+      checkpoint = secondBatch.get(0).getCheckpoint().toString();
+      q.resume(checkpoint);
+      monPoints = q.getMonitorRestartPoints();
+      File recoveryFiles[] = persistDirSeed.listFiles();
+      assertEquals(1, recoveryFiles.length);
+      File recoveryFile = recoveryFiles[0];
+      recoveryFile.renameTo(new File(persistDir, recoveryFile.getName()));
+    }
+
+    ChangeSource changeSource = new MockChangeSource(6);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    q.setMaximumQueueSize(2);
+    q.start(checkpoint);
+    // Note: It's important that q.resume(checkpoint) is not called.
+    // That is start(checkpoint) loads the persisted monitor state.
+    assertEquals(monPoints, q.getMonitorRestartPoints());
   }
 }

@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,4 +51,22 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>> extends FileInfo {
    * Returns the display url for this file.
    */
   public String getDisplayUrl();
+
+  /**
+   * Returns true if this {@link ReadonlyFile} matches the supplied
+   * pattern for the purposes of resolving include and exclude
+   * patterns.
+   * <p>
+   * The rules for determining what exactly to compare to the file
+   * pattern depends on the semantics of the {@link ReadonlyFile}.
+   * Please refer to concrete implementations for specific behaviors.
+   */
+  public boolean acceptedBy(FilePatternMatcher matcher);
+
+  /**
+   * If {@link #isRegularFile()} returns true this returns the length of the
+   * file in bytes. Otherwise this returns 0L.
+   * @throws IOException
+   */
+  public long length() throws IOException;
 }

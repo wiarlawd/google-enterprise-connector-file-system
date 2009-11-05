@@ -506,7 +506,7 @@ public class FileConnectorType implements ConnectorType {
         }
         try {
           ReadonlyFile<?> file = pathParser.getFile(path, credentials);
-          if (filePatternMatcher.accept(file)) {
+          if (file.acceptedBy(filePatternMatcher)) {
             LOG.info("start path acceptable: " + path);
           } else {
             LOG.info("start path excluded: " + path);

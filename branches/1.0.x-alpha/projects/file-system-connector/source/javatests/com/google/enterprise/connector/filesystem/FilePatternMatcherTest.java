@@ -29,12 +29,17 @@ public class FilePatternMatcherTest extends TestCase {
     String[] include = new String[] {"smb://foo.com/", "/foo/bar/"};
     String[] exclude = new String[] {"smb://foo.com/secret/", "/foo/bar/hidden/"};
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
-    assertTrue(matcher.accept(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, false)));
-    assertTrue(matcher.accept(new JavaReadonlyFile(new File("/foo/bar/baz.txt"))));
-    assertFalse(matcher.accept(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, false)));
-    assertFalse(matcher
-        .accept(new SmbReadonlyFile("smb://foo.com/secret/private_key", credentials, false)));
-    assertFalse(matcher.accept(new JavaReadonlyFile(new File("/foo/bar/hidden/porn.png"))));
-    assertFalse(matcher.accept(new JavaReadonlyFile(new File("/bar/foo/public/knowledge"))));
+    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, false, false)
+        .acceptedBy(matcher));
+    assertTrue(new JavaReadonlyFile(new File("/foo/bar/baz.txt"))
+        .acceptedBy(matcher));
+    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, false, false)
+        .acceptedBy(matcher));
+    assertFalse(new SmbReadonlyFile("smb://foo.com/secret/private_key",
+        credentials, false, false).acceptedBy(matcher));
+    assertFalse(new JavaReadonlyFile(new File("/foo/bar/hidden/porn.png"))
+        .acceptedBy(matcher));
+    assertFalse(new JavaReadonlyFile(new File("/bar/foo/public/knowledge"))
+        .acceptedBy(matcher));
   }
 }

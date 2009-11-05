@@ -131,4 +131,9 @@ class MonitorCheckpoint {
     }
     return true;
   }
+
+  @Override
+  public String toString() {
+    return getJson().toString();
+  }
 }

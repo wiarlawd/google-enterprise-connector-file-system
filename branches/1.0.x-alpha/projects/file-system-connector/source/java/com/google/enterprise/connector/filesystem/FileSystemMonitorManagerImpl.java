@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,11 +29,13 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * {@link FileSystemMonitor} implementation.
+ * {@link FileSystemMonitorManager} implementation.
  */
 public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   /** Maximum time to wait for background threads to terminate (in ms). */
   private static final long MAX_SHUTDOWN_MS = 5000;
+
+  private static final FileSink FILE_SINK = new LoggingFileSink();
 
   private static final Logger LOG = Logger.getLogger(FileSystemMonitorManagerImpl.class.getName());
 
@@ -72,6 +75,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   /** Mapping from start path to monitor. */
   private final Map<String, Thread> monitors =
       Collections.synchronizedMap(new HashMap<String, Thread>());
+  private boolean isRunning = false;  // Monitor threads start in off state.
   private final File snapshotDir;
   private final ChecksumGenerator checksumGenerator;
   private final PathParser pathParser;
@@ -99,7 +103,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   }
 
   /* @Override */
-  public void stop() {
+  public synchronized void stop() {
     for (Thread thread : monitors.values()) {
       thread.interrupt();
     }
@@ -115,18 +119,13 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       }
     }
     monitors.clear();
+    changeQueue.clear();
+    this.isRunning = false;
   }
 
-  /* @Override */
-  public void start(boolean resume, String checkpoint) throws RepositoryException {
-    // TODO: Improve thread safety. Use Executor.
-    if (monitors.size() > 0) {
-      stop();
-    }
-
-    if (!resume) {
-      clean();
-    }
+  /** Go from "cold" to "warm" including CheckpointAndChangeQueue. */
+  public void start(String checkpoint, TraversalContext traversalContext)
+      throws RepositoryException {
 
     try {
       checkpointAndChangeQueue.start(checkpoint);
@@ -134,15 +133,28 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       throw new RepositoryException("Failed starting CheckpointAndChangeQueue.", e);
     }
 
-    startMonitorThreads(resume);
+    // TODO: Load whatever monitor checkpoint states there are.
+    // Map<String, MonitorCheckpoint> monitorPoints
+    //    = checkpointAndChangeQueue.getMonitorRestartPoints();
+    // TODO: Pass available loaded checkpoint states to monitors.
+
+    MonitorCheckpoint theCurrentMonitorPoint = null;
+    if (checkpoint != null) {
+      theCurrentMonitorPoint = SnapshotStore.LAST_FULL_SNAPSHOT_CHECKPOINT;
+    }
+
+    // TODO: Pass points per monitor.
+    startMonitorThreads(theCurrentMonitorPoint, traversalContext);
+    isRunning = true;
   }
 
   /* @Override */
-  public void clean() {
+  public synchronized void clean() {
     LOG.info("Cleaning snapshot directory: " + snapshotDir.getAbsolutePath());
     if (!delete(snapshotDir)) {
       LOG.warning("failed to delete snapshot directory: " + snapshotDir.getAbsolutePath());
     }
+    checkpointAndChangeQueue.clean();
   }
 
   /* @Override */
@@ -157,7 +169,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   }
 
   /* @Override */
-  public CheckpointAndChangeQueue getCheckpointAndChangeQueue() {
+  public synchronized CheckpointAndChangeQueue getCheckpointAndChangeQueue() {
     return checkpointAndChangeQueue;
   }
 
@@ -182,8 +194,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    * @throws RepositoryDocumentException if {@code startPath} is not readable,
    *         or if there is any problem reading or writing snapshots.
    */
-  private Thread newMonitorThread(String startPath, MonitorCheckpoint checkpoint)
-      throws RepositoryDocumentException {
+  private Thread newMonitorThread(String startPath, MonitorCheckpoint checkpoint,
+      TraversalContext traversalContext) throws RepositoryDocumentException {
     ReadonlyFile<?> root = pathParser.getFile(startPath, credentials);
     if (root == null) {
       throw new RepositoryDocumentException("failed to open start path: " + startPath);
@@ -205,7 +217,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
 
     FileSystemMonitor monitor =
         new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.getCallback(),
-            checksumGenerator, filePatternMatcher);
+            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK);
     return new Thread(monitor);
   }
 
@@ -215,7 +227,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    * @throws RepositoryDocumentException if any of the threads cannot be
    *         started.
    */
-  private void startMonitorThreads(boolean resume) throws RepositoryDocumentException {
+  private void startMonitorThreads(MonitorCheckpoint monPoint, TraversalContext traversalContext)
+      throws RepositoryDocumentException {
     for (String rawStartPath : startPaths) {
       String startPath = rawStartPath.trim();
 
@@ -224,8 +237,9 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
         continue;
       }
 
-      Thread monitorThread = newMonitorThread(startPath,
-          resume ? SnapshotStore.LAST_FULL_SNAPSHOT_CHECKPOINT : null);
+      // TODO: Update checkpoint logic as part of correcting pruning logic.
+      Thread monitorThread = newMonitorThread(startPath, monPoint, traversalContext);
+
       monitors.put(startPath, monitorThread);
 
       LOG.info("starting monitor for <" + startPath + ">");
@@ -233,5 +247,9 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       monitorThread.setDaemon(true);
       monitorThread.start();
     }
+  }
+
+  public synchronized boolean isRunning() {
+    return isRunning;
   }
 }

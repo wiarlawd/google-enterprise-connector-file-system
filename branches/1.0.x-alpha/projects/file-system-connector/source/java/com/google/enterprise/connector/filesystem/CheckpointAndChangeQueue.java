@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,8 +29,10 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -52,16 +54,19 @@ class CheckpointAndChangeQueue {
   private static final Charset UTF_8 = Charset.forName("UTF-8");
   private static final String SENTINAL = "SENTINAL";
   private static final String RECOVERY_FILE_PREFIX = "recovery.";
+  private static final String QUEUE_JSON_TAG = "Q";
+  private static final String MONITOR_STATE_JSON_TAG = "MON";
 
   private final AtomicInteger maximumQueueSize = new AtomicInteger(DEFAULT_MAXIMUM_QUEUE_SIZE);
   private final List<CheckpointAndChange> checkpointAndChangeList;
   private final ChangeSource changeSource;
   private volatile FileConnectorCheckpoint lastCheckpoint;
   private final File persistDir;  // place to persist enqueued values
+  private MonitorRestartState monitorPoints = new MonitorRestartState();
 
   /** Convenient way to log some IOException instances. */
   private static class LoggingIoException extends IOException {
-    LoggingIoException(String msg) { 
+    LoggingIoException(String msg) {
       super(msg);
       LOG.severe(msg);
     }
@@ -101,9 +106,13 @@ class CheckpointAndChangeQueue {
 
   CheckpointAndChangeQueue(ChangeSource changeSource, File persistDir) {
     this.changeSource = changeSource;
-    this.checkpointAndChangeList =
-        Collections.synchronizedList(new ArrayList<CheckpointAndChange>(maximumQueueSize.get()));
+    this.checkpointAndChangeList
+        = Collections.synchronizedList(new ArrayList<CheckpointAndChange>(maximumQueueSize.get()));
     this.persistDir = persistDir;
+    ensurePersistDirExists();
+  }
+
+  void ensurePersistDirExists() {
     if (!persistDir.exists()) {
       boolean made = persistDir.mkdirs();
       if (!made) {
@@ -111,6 +120,44 @@ class CheckpointAndChangeQueue {
       }
     } else if (!persistDir.isDirectory()) {
       throw new IllegalStateException("Not a directory: " + persistDir.getAbsolutePath());
+    }
+  }
+
+  /** Keeps checkpoint information for all known FileSystemMonitors. */
+  private static class MonitorRestartState {
+    /* Maps monitor's name onto its restart MonitorCheckpoint. */
+    HashMap<String, MonitorCheckpoint> points;
+
+    MonitorRestartState() {
+      points = new HashMap<String,MonitorCheckpoint>();
+    }
+
+    MonitorRestartState(JSONObject persisted) throws JSONException {
+      this();
+      if (persisted.length() > 0) {
+        for (String key : JSONObject.getNames(persisted) ) {
+          JSONObject value = persisted.getJSONObject(key);
+          MonitorCheckpoint monPoint = new MonitorCheckpoint(value);
+          points.put(monPoint.getMonitorName(), monPoint);
+        }
+      }
+    }
+
+    JSONObject getJson() throws JSONException {
+      JSONObject result = new JSONObject();
+      for (MonitorCheckpoint monPoint : points.values()) {
+        result.put(monPoint.getMonitorName(), monPoint.getJson());
+      }
+      return result;
+    }
+
+    void updateOnGuaranteed(List<CheckpointAndChange> checkpointAndChangeList) {
+      for (CheckpointAndChange guaranteed : checkpointAndChangeList) {
+        Change change = guaranteed.getChange();
+        MonitorCheckpoint monitorCheckpoint = change.getMonitorCheckpoint();
+        String monitorName = monitorCheckpoint.getMonitorName();
+        points.put(monitorName, monitorCheckpoint);
+      }
     }
   }
 
@@ -164,7 +211,7 @@ class CheckpointAndChangeQueue {
     // TODO(pjo): Move more recovery logic into this class.
   }
 
-  private JSONArray readPersistedQueue(RecoveryFile file) throws IOException {
+  private JSONObject readPersistedState(RecoveryFile file) throws IOException {
     // TODO(pjo): Move this method into RecoveryFile.
     String contents = readEntireUtf8File(file);
     if (!contents.endsWith(SENTINAL)) {
@@ -172,8 +219,8 @@ class CheckpointAndChangeQueue {
     } else {
       contents = contents.substring(0, contents.length() - SENTINAL.length());
       try {
-        JSONArray jsonQueue = new JSONArray(contents);
-        return jsonQueue;
+        JSONObject json = new JSONObject(contents);
+        return json;
       } catch (JSONException e) {
         throw new IOException("Failed reading persisted JSON queue.", e);
       }
@@ -184,7 +231,7 @@ class CheckpointAndChangeQueue {
   private boolean isComplete(RecoveryFile recoveryFile) {
     // TODO(pjo): Move this method into RecoveryFile.
     try {
-      readPersistedQueue(recoveryFile);
+      readPersistedState(recoveryFile);
       return true;
     } catch(IOException e) {
       return false;
@@ -197,7 +244,7 @@ class CheckpointAndChangeQueue {
     FileOutputStream outStream = new FileOutputStream(recoveryFile);
     Writer writer = new OutputStreamWriter(outStream, UTF_8);
     try {
-      JSONArray queueJson = getJson();
+      JSONObject queueJson = getJson();
       try {
         queueJson.write(writer);
       } catch (JSONException e) {
@@ -213,12 +260,15 @@ class CheckpointAndChangeQueue {
 
   private void loadUpFromRecoveryState(RecoveryFile file) throws IOException {
     // TODO(pjo): Move this method into RecoveryFile.
-    JSONArray jsonQueue = readPersistedQueue(file);
+    JSONObject json = readPersistedState(file);
     try {
+      JSONArray jsonQueue = json.getJSONArray(QUEUE_JSON_TAG);
       for (int i = 0; i < jsonQueue.length(); i++) {
         JSONObject chnch = jsonQueue.getJSONObject(i);
         checkpointAndChangeList.add(new CheckpointAndChange(chnch));
       }
+      JSONObject jsonMonPoints = json.getJSONObject(MONITOR_STATE_JSON_TAG);
+      monitorPoints = new MonitorRestartState(jsonMonPoints);
     } catch (JSONException e) {
       throw new IOException("Failed reading persisted JSON queue.", e);
     }
@@ -229,17 +279,19 @@ class CheckpointAndChangeQueue {
     File files[] = persistDir.listFiles();
     ArrayList<RecoveryFile> recoveryFiles = new ArrayList<RecoveryFile>();
     for (int i = 0; i < files.length; i++) {
-      recoveryFiles.add(new RecoveryFile(files[i].getAbsolutePath())); 
+      recoveryFiles.add(new RecoveryFile(files[i].getAbsolutePath()));
     }
     return recoveryFiles.toArray(new RecoveryFile[0]);
   }
 
   /**
    * Initialize to start processing from after the passed in checkpoint
-   * or from the beginning if the passed in checkpoint is null.
+   * or from the beginning if the passed in checkpoint is null.  Part of
+   * making FileSystemMonitorManager go from "cold" to "warm".
    */
   synchronized void start(String checkpointString) throws IOException {
     LOG.info("Starting CheckpointAndChangeQueue from " + checkpointString);
+    ensurePersistDirExists();
     checkpointAndChangeList.clear();
     lastCheckpoint = constructLastCheckpoint(checkpointString);
     if (null == checkpointString) {
@@ -247,6 +299,8 @@ class CheckpointAndChangeQueue {
     } else {
       RecoveryFile current = removeExcessRecoveryState();
       loadUpFromRecoveryState(current);
+      monitorPoints.updateOnGuaranteed(checkpointAndChangeList);
+      // TODO: Figure out if the above call is needed.
     }
   }
 
@@ -270,6 +324,7 @@ class CheckpointAndChangeQueue {
     loadUpFromChangeSource();
     try {
       writeRecoveryState();
+      monitorPoints.updateOnGuaranteed(checkpointAndChangeList);
     } finally {
       // TODO: Enahnce with mechanism that remembers
       // information about recovery files to avoid re-reading.
@@ -286,7 +341,11 @@ class CheckpointAndChangeQueue {
     return Collections.unmodifiableList(checkpointAndChangeList);
   }
 
-  private JSONArray getJson() {
+  synchronized Map<String, MonitorCheckpoint> getMonitorRestartPoints() {
+    return new HashMap<String, MonitorCheckpoint>(monitorPoints.points);
+  }
+
+  private JSONArray getQueueAsJsonArray() {
     JSONArray jsonQueue = new JSONArray();
     for (CheckpointAndChange guaranteed : checkpointAndChangeList) {
       JSONObject encodedGuaranteedChange = guaranteed.getJson();
@@ -295,16 +354,38 @@ class CheckpointAndChangeQueue {
     return jsonQueue;
   }
 
+  private JSONObject getJson() {
+    JSONObject result = new JSONObject();
+    try {
+      result.put(QUEUE_JSON_TAG, getQueueAsJsonArray());
+      result.put(MONITOR_STATE_JSON_TAG, monitorPoints.getJson());
+      return result;
+    } catch (JSONException e) {
+      // Should never happen.
+      throw new RuntimeException("internal error: failed to create JSON", e);
+    }
+  }
+
   private void removeCompletedChanges(String checkpointString) {
     if (checkpointString == null) {
       return;
     } else {
-      FileConnectorCheckpoint checkpoint =
-          FileConnectorCheckpoint.fromJsonString(checkpointString);
-      for (Iterator<CheckpointAndChange> iterator = checkpointAndChangeList.iterator();
-           iterator.hasNext()
-           && iterator.next().getCheckpoint().compareTo(checkpoint) <= 0;) {
-        iterator.remove();
+      FileConnectorCheckpoint checkpoint
+          = FileConnectorCheckpoint.fromJsonString(checkpointString);
+      Iterator<CheckpointAndChange> iterator = checkpointAndChangeList.iterator();
+      boolean keepRemoving = true;
+      while (keepRemoving && iterator.hasNext()) {
+        CheckpointAndChange current = iterator.next();
+        boolean pending = current.getCheckpoint().compareTo(checkpoint) > 0;
+        if (pending) {
+          // Current Change is not completed; first pending; stop removing.
+          keepRemoving = false;
+        } else {
+          // Has been sent.  Remove it.
+          iterator.remove();
+          // Monitors can consider these changes sent too.
+          // monitorPoints.updateOnCompleted(current.getChange());
+        }
       }
     }
   }
@@ -391,6 +472,19 @@ class CheckpointAndChangeQueue {
     }
     if (0 != failedToDelete.size()) {
       throw new IOException("Failed to delete: " + failedToDelete);
+    }
+  }
+
+  void clean() {
+    try {
+      removeAllRecoveryState();
+    } catch (IOException e) {
+      LOG.severe("Failure: " + e);
+    }
+
+    if (!persistDir.delete()) {
+      String errmsg = "Failed to delete: " + persistDir.getAbsolutePath();
+      LOG.severe(errmsg);
     }
   }
 }

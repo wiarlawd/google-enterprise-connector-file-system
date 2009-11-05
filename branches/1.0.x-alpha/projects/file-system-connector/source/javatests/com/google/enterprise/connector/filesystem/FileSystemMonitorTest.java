@@ -14,13 +14,18 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.TraversalContext;
+
 import junit.framework.TestCase;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
+ * Tests for the {@link FileSystemMonitor}
  */
 public class FileSystemMonitorTest extends TestCase {
   private FileSystemMonitor monitor;
@@ -106,6 +111,60 @@ public class FileSystemMonitorTest extends TestCase {
     }
   }
 
+  private static class TestSink implements FileSink {
+    private final List<FileFilterReason> reasons = new ArrayList<FileFilterReason>();
+
+    /* @Override */
+    public void add(FileInfo fileInfo, FileFilterReason reason) {
+      reasons.add(reason);
+    }
+
+    int count(FileFilterReason countMe) {
+      int result = 0;
+      for (FileFilterReason reason : reasons) {
+        if (reason.equals(countMe)) {
+          result++;
+        }
+      }
+      return result;
+    }
+
+    int count() {
+      return reasons.size();
+    }
+
+    void clear() {
+      reasons.clear();
+    }
+  }
+
+  private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator,
+      FilePatternMatcher myMatcher, TraversalContext traversalContext,
+      FileSink fileSink) {
+    return new FileSystemMonitor("name", root, store, visitor, generator,
+        myMatcher, traversalContext, fileSink);
+  }
+
+  private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
+    return newFileSystemMonitor(checksumGenerator, myMatcher,
+        new FakeTraversalContext(), new LoggingFileSink());
+  }
+
+  private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator) {
+    return newFileSystemMonitor(generator, matcher, new FakeTraversalContext(),
+        new LoggingFileSink());
+  }
+
+  private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext) {
+    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
+        new LoggingFileSink());
+  }
+
+  private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext,
+      FileSink fileSink) {
+    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext, fileSink);
+  }
+
   @Override
   public void setUp() throws Exception {
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
@@ -128,8 +187,7 @@ public class FileSystemMonitorTest extends TestCase {
     String[] exclude = new String[] {};
 
     matcher = new FilePatternMatcher(include, exclude);
-    monitor = new FileSystemMonitor("name", root, store, visitor, checksumGenerator, matcher);
-  }
+   }
 
   @Override
   public void tearDown() {
@@ -210,10 +268,12 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testFirstScan() {
+    monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
   }
 
   public void testNoChangeScan() {
+    monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     visitor.reset();
     // A rescan should checksum all files again, but find no changes.
@@ -221,6 +281,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testFileAddition() {
+    monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     visitor.reset();
     root.addFile("new-file", "");
@@ -231,7 +292,128 @@ public class FileSystemMonitorTest extends TestCase {
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
+  private static String mkBigContent() {
+    StringBuilder b = new StringBuilder();
+    for (int ix = 0; ix < 500; ix++) {
+      b.append(Integer.toString(ix % 10));
+    }
+    return b.toString();
+  }
+
+  private static final String BIG_CONTENT = mkBigContent();
+
+  public void testSomeFilesTooBig() throws Exception {
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length() - 1),
+        sink);
+    runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
+    visitor.reset();
+    final int bigCount = 4;
+    for (int ix = 0; ix < bigCount; ix++) {
+      root.addFile("big-file" + ix, BIG_CONTENT);
+    }
+    runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
+    assertEquals(bigCount, sink.count());
+    assertEquals(bigCount, sink.count(FileFilterReason.TOO_BIG));
+  }
+
+  public void testAllFilesTooBig() throws Exception {
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(0), sink);
+    runMonitorAndCheck(baseDirs, 0, 0, 0, 0, 0, 0);
+    assertEquals(baseFiles, sink.count());
+    assertEquals(baseFiles, sink.count(FileFilterReason.TOO_BIG));
+  }
+
+  public void testMaximumSize() {
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length()),
+        sink);
+    runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
+    visitor.reset();
+    final int count = 4;
+    for (int ix = 0; ix < count; ix++) {
+      root.addFile("big-file" + ix, BIG_CONTENT);
+    }
+    runMonitorAndCheck(0, count, 0, 0, 0, 0, 0);
+    assertEquals(0, sink.count());
+  }
+
+  public void testSmallFileBecomesBig() {
+    final long maxSize = BIG_CONTENT.length() - 1;
+    monitor = newFileSystemMonitor(new FakeTraversalContext(maxSize));
+    final String smallContent = "small";
+    assertTrue(smallContent.length() < maxSize);
+    MockReadonlyFile smallToBig = root.addFile("smallToBig.txt", smallContent);
+    runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
+    visitor.reset();
+
+    smallToBig.setFileContents(BIG_CONTENT);
+    runMonitorAndCheck(0, 0, 0, 1, 0, 0, 0);
+  }
+
+  public void testBigFileBecomesSmall() {
+    final long maxSize = BIG_CONTENT.length() - 1;
+    monitor = newFileSystemMonitor(new FakeTraversalContext(maxSize));
+    MockReadonlyFile bigToSmall = root.addFile("smallToBig.txt", BIG_CONTENT);
+    runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
+    visitor.reset();
+
+    final String smallContent = "small";
+    assertTrue(smallContent.length() < maxSize);
+    bigToSmall.setFileContents(smallContent);
+    runMonitorAndCheck(0, 1, 0, 0, 0, 0, 0);
+  }
+
+  public void testAddNotSupportedMimeType() {
+    TestSink sink = new TestSink();
+    monitor = newFileSystemMonitor(new FakeTraversalContext(), sink);
+    root.addFile("unsupported." + FakeTraversalContext.TAR_DOT_GZ_EXTENSION,
+        "not a real zip file");
+    runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
+    assertEquals(1, sink.count());
+    assertEquals(1, sink.count(FileFilterReason.UNSUPPORTED_MIME_TYPE));
+  }
+
+  public void testSupportedToNotSupportedMimeType() {
+    FakeTraversalContext traversalContext = new FakeTraversalContext();
+    traversalContext.allowAllMimeTypes(true);
+    monitor = newFileSystemMonitor(traversalContext);
+    MockReadonlyFile unsupportedAfterUpdate = root.addFile(
+        "unsupportedAfterUpdate." + FakeTraversalContext.TAR_DOT_GZ_EXTENSION,
+        "not a real zip file");
+    runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
+
+    traversalContext.allowAllMimeTypes(false);
+    visitor.reset();
+    unsupportedAfterUpdate.setFileContents("new fake tar.gz");
+    runMonitorAndCheck(0, 0, 0, 1, 0, 0, 0);
+  }
+
+  public void testNotSupportedToSupportedMimeType() {
+    FakeTraversalContext traversalContext = new FakeTraversalContext();
+    monitor = newFileSystemMonitor(traversalContext);
+    MockReadonlyFile supportedAfterUpdate = root.addFile(
+        "unsupportedAfterUpdate." + FakeTraversalContext.TAR_DOT_GZ_EXTENSION,
+        "not a real zip file");
+    runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
+
+    traversalContext.allowAllMimeTypes(true);
+    visitor.reset();
+    supportedAfterUpdate.setFileContents("new fake tar.gz");
+    //
+    //Not perfect because we send this in as an update but it is an add
+    //to the GSA. Storing if the file has been sent to the GSA gives us
+    //enough information to know this is an add. For now this should be
+    //OK since this happens when the GSA filters a file due to a size
+    //or mime type violation and the connector later sends in a new
+    //revision as an update that the GSA is able to index.
+    runMonitorAndCheck(0, 0, 0, 0, 1, 0, 0);
+  }
+
+
   public void testFileDeletion() {
+    monitor = newFileSystemMonitor(matcher);
     // Create a new extra files, intermixed with the usual ones.
     MockReadonlyFile dir0 = root.get("dir.0");
     String[] newFiles =
@@ -263,6 +445,7 @@ public class FileSystemMonitorTest extends TestCase {
    * @throws IOException
    */
   public void testDeleteLastEntries() throws IOException {
+    monitor = newFileSystemMonitor(matcher);
     root.addFile("zzz", "");
     runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
     root.remove("zzz");
@@ -274,6 +457,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testDirAddition() {
+    monitor = newFileSystemMonitor(matcher);
     // First scan should find all files and checksum them.
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     root.get("dir.1").addSubdir("new-dir");
@@ -289,6 +473,7 @@ public class FileSystemMonitorTest extends TestCase {
    * Test corner cases where the path separator (e.g., "/") in involved.
    */
   public void testDirectorySorting() {
+    monitor = newFileSystemMonitor(matcher);
     root.addFile("AA", "");
     root.addFile("BB.", "");
     root.addFile("CC", "");
@@ -308,6 +493,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testDirDeletion() {
+    monitor = newFileSystemMonitor(matcher);
     root.get("dir.2").addSubdir("adir");
     runMonitorAndCheck(baseDirs + 1, baseFiles, 0, 0, 0, 0, 0);
     root.get("dir.2").remove("adir");
@@ -327,6 +513,7 @@ public class FileSystemMonitorTest extends TestCase {
    * works.
    */
   public void testDeleteLastDir() {
+    monitor = newFileSystemMonitor(matcher);
     root.addSubdir("zzzz");
     runMonitorAndCheck(baseDirs + 1, baseFiles, 0, 0, 0, 0, 0);
     root.remove("zzzz");
@@ -338,6 +525,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testDirDeleteWithFiles() {
+    monitor = newFileSystemMonitor(matcher);
     MockReadonlyFile dir = root.get("dir.2").addSubdir("new-dir");
     for (int k = 0; k < 15; ++k) {
       dir.addFile(String.format("file.%s", k), "");
@@ -357,6 +545,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testReplaceDirWithFile() {
+    monitor = newFileSystemMonitor(matcher);
     root.get("dir.2").addSubdir("new-dir");
     runMonitorAndCheck(baseDirs + 1, baseFiles, 0, 0, 0, 0, 0);
 
@@ -371,6 +560,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testReplaceFileWithDirectory() {
+    monitor = newFileSystemMonitor(matcher);
     root.get("dir.2").addFile("new-file", "");
     runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
 
@@ -384,6 +574,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testContentChange() {
+    monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     visitor.reset();
     root.get("dir.1").get("file.2.txt").setFileContents("foo!");
@@ -424,9 +615,8 @@ public class FileSystemMonitorTest extends TestCase {
     }
 
     Generator gen = new Generator();
-    // TODO: Verify the original store and monitor need no cleanup.
     store = new SnapshotStore(snapshotDir, null);
-    monitor = new FileSystemMonitor("name", root, store, visitor, gen, matcher);
+    monitor = newFileSystemMonitor(gen);
 
     MyClock clock = new MyClock();
     monitor.setClock(clock);
@@ -453,6 +643,7 @@ public class FileSystemMonitorTest extends TestCase {
    * Make sure that snapshot files are cleaned up.
    */
   public void testGarbageCollection() {
+    monitor = newFileSystemMonitor(matcher);
     visitor.setMaxScans(10);
     try {
       monitor.run();
@@ -470,7 +661,7 @@ public class FileSystemMonitorTest extends TestCase {
     FilePatternMatcher nonPngMatcher =
         new FilePatternMatcher(new String[] {"/", "", "# comment"}, new String[] {".png$", "\t",
             "# another comment"});
-    monitor = new FileSystemMonitor("name", root, store, visitor, checksumGenerator, nonPngMatcher);
+    monitor = newFileSystemMonitor(nonPngMatcher);
     root.get("dir.2").addFile("new-file.png", "");
     root.get("dir.1").addFile("foo.png", "");
 
@@ -479,6 +670,7 @@ public class FileSystemMonitorTest extends TestCase {
   }
 
   public void testChangePatterns() {
+    monitor = newFileSystemMonitor(matcher);
     // Add two .png files to the file system.
     root.get("dir.2").addFile("new-file.png", "");
     root.get("dir.1").addFile("foo.png", "");
@@ -490,14 +682,14 @@ public class FileSystemMonitorTest extends TestCase {
     // Create a new monitor that excludes .png files.
     FilePatternMatcher nonPngMatcher =
         new FilePatternMatcher(new String[] {"/"}, new String[] {".png$"});
-    monitor = new FileSystemMonitor("name", root, store, visitor, checksumGenerator, nonPngMatcher);
+    monitor = newFileSystemMonitor(nonPngMatcher);
 
     // Make sure the monitor deletes two files.
     visitor.reset();
     runMonitorAndCheck(0, 0, 0, 2, 0, 0, 0);
 
     // Revert to the original monitor and make sure they are added again.
-    monitor = new FileSystemMonitor("name", root, store, visitor, checksumGenerator, matcher);
+    monitor = newFileSystemMonitor(matcher);
     visitor.reset();
     runMonitorAndCheck(0, 2, 0, 0, 0, 0, 0);
   }

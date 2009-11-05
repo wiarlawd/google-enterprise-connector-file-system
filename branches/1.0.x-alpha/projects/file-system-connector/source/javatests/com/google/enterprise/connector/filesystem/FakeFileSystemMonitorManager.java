@@ -13,6 +13,8 @@
 // limitations under the License.
 
 package com.google.enterprise.connector.filesystem;
+import com.google.enterprise.connector.spi.TraversalContext;
+
 import junit.framework.TestCase;
 
 import java.io.File;
@@ -27,6 +29,7 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
   private final AtomicInteger cleanCount = new AtomicInteger();
   private final AtomicInteger stopCount = new AtomicInteger();
   private final CheckpointAndChangeQueue checkpointAndChangeQueue;
+  private boolean isRunning = false;
 
   FakeFileSystemMonitorManager(ChangeSource changeSource, TestCase testCase) throws IOException {
     File persistDir = new TestDirectoryManager(testCase).makeDirectory("queue");
@@ -50,17 +53,20 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
   }
 
   /* @Override */
-  public void start(boolean resume, String checkpoint) {
+  public void start(String checkpoint, TraversalContext traversalContext) {
     startCount.incrementAndGet();
+    isRunning = true;
   }
 
   /* @Override */
-  public void stop() {
-    startCount.incrementAndGet();
+  public synchronized void stop() {
+    stopCount.incrementAndGet();
+    isRunning = false;
   }
 
   /**
-   * Returns the number of times {@link #start(boolean, String)} has been called.
+   * Returns the number of times {@link #start(String, TraversalContext)}
+   * has been called.
    */
   int getStartCount() {
     return startCount.get();
@@ -87,5 +93,9 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
           "getCheckpointAndChangeQueue not supported with null checkpointAndChangeQueue");
     }
     return checkpointAndChangeQueue;
+  }
+
+  public synchronized boolean isRunning() {
+    return isRunning;
   }
 }

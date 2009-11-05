@@ -15,28 +15,26 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.TraversalContext;
 
 /**
  * Management interface to {@link FileSystemMonitor} threads.
  */
 public interface FileSystemMonitorManager {
   /**
-   * Starts all the configured {@link FileSystemMonitor} threads. If they are
-   * running this will stop and restart them.
+   * Ensures all monitor threads are running.
    *
-   * @param resume Passing true will cause the {@link FileSystemMonitor} threads
-   *        to resume from where they left off last time and false will cause a
-   *        restart as if no files have been sent to the Connector Manager.
    * @param checkpoint for the last completed document or null if none have
    *        been completed.
+   * @param traversalContext for traversal configuration values.
    *
    * @throws RepositoryException
    */
-  void start(boolean resume, String checkpoint) throws RepositoryException;
 
-  /**
-   * Stops all the configured {@link FileSystemMonitor} threads.
-   */
+  void start(String checkpoint, TraversalContext traversalContext)
+      throws RepositoryException;
+
+  /** Stops all the configured {@link FileSystemMonitor} threads. */
   void stop();
 
   /**
@@ -57,4 +55,7 @@ public interface FileSystemMonitorManager {
    * {@link FileSystemMonitorManager}
    */
   CheckpointAndChangeQueue getCheckpointAndChangeQueue();
+
+  /** Returns whether we are after a start() call and before a stop(). */
+  boolean isRunning();
 }

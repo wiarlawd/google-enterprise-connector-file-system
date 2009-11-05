@@ -16,14 +16,16 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
+//import java.util.logging.Logger;
+
 /**
  * An implementation of FileSystemType for SMB file systems.
  *
  */
 public class SmbFileSystemType implements FileSystemType {
+  //private static final Logger LOG = Logger.getLogger(SmbFileSystemType.class.getName());
   private static final String SMB_PATH_PREFIX = "smb://";
-  // TODO: Consider supporting UNC style paths for customer convenience.
-  // Look at this file's revision history for some earlier UNC experiments.
+  private static final String UNC_PATH_PREFIX = "\\\\";
   private final boolean stripDomainFromAces;
 
   /**
@@ -42,12 +44,13 @@ public class SmbFileSystemType implements FileSystemType {
   /* @Override */
   public SmbReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryDocumentException {
-    return new SmbReadonlyFile(path, credentials, stripDomainFromAces);
+    boolean isUncForm = path.startsWith(UNC_PATH_PREFIX);
+    return new SmbReadonlyFile(path, credentials, stripDomainFromAces, isUncForm);
   }
 
   /* @Override */
   public boolean isPath(String path) {
-    return path.startsWith(SMB_PATH_PREFIX);
+    return path.startsWith(SMB_PATH_PREFIX) || path.startsWith(UNC_PATH_PREFIX);
   }
 
   /**
@@ -59,6 +62,7 @@ public class SmbFileSystemType implements FileSystemType {
    *
    * <pre>
    *   smb://host/path
+   *   \\host\path
    * </pre>
    *
    * The CIFS library is very picky about trailing slashes: directories must end
@@ -69,19 +73,43 @@ public class SmbFileSystemType implements FileSystemType {
    * @throws IllegalArgumentException if {@link #isPath} returns false for path.
    */
   /* @Override */
-  public SmbReadonlyFile getReadableFile(final String path, final Credentials credentials)
+  public SmbReadonlyFile getReadableFile(final String originalPath, final Credentials credentials)
       throws RepositoryDocumentException {
-    if (!isPath(path)) {
-      throw new IllegalArgumentException("Invalid path " + path);
+    if (!isPath(originalPath)) {
+      throw new IllegalArgumentException("Invalid path " + originalPath);
     }
 
-    SmbReadonlyFile result = getFile(path, credentials);
-    if (!result.canRead()) {
-      String alternatePath = addOrRemoveTrailingSlash(path);
-      result = getFile(alternatePath, credentials);
+    String smbStylePath;
+    boolean isUncForm = originalPath.startsWith(UNC_PATH_PREFIX);
+    if (isUncForm) {
+      smbStylePath = makeSmbPathFromUncPath(originalPath);
+    } else {
+      smbStylePath = originalPath;
+    }
+
+    SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials, isUncForm);
+    if (null == result) {
+      String alternatePath = addOrRemoveTrailingSlash(smbStylePath);
+      result = getReadableFileHelper(alternatePath, credentials, isUncForm);
+    }
+
+    if (null == result) {
+      throw new RepositoryDocumentException("failed to open file: " + originalPath);
+    } else {
+      return result;
+    }
+  }
+
+  private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials,
+      boolean isUncForm) {
+    SmbReadonlyFile result = null;
+    try {
+      result = new SmbReadonlyFile(path, credentials, stripDomainFromAces, isUncForm);
       if (!result.canRead()) {
-        throw new RepositoryDocumentException("failed to open file: " + path);
-      }
+        result = null;
+      } 
+    } catch(RepositoryDocumentException rde) {
+      result = null;
     }
     return result;
   }
@@ -97,5 +125,19 @@ public class SmbFileSystemType implements FileSystemType {
   /* @Override */
   public String getName() {
     return SmbReadonlyFile.FILE_SYSTEM_TYPE;
+  }
+
+  private String makeSmbPathFromUncPath(String uncPath)
+      throws RepositoryDocumentException {	
+    String[] names = uncPath.substring(2).split("\\\\");	
+    if (names.length == 0) {	
+      throw new RepositoryDocumentException("failed to parse path: " + uncPath);	
+    }	
+    StringBuilder buf = new StringBuilder(SMB_PATH_PREFIX);	
+    for (String name : names) {	
+      buf.append(name);	
+      buf.append("/");	
+    }	
+    return buf.toString();	
   }
 }

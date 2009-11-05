@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@ import com.google.enterprise.connector.spi.TraversalContext;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,13 +45,6 @@ public class FileFetcher {
   private final MimeTypeFinder mimeTypeFinder;
   private volatile TraversalContext traversalContext;
 
-  /**
-   * If MIME type is not set for a document, it defaults to text/html. We don't
-   * want that for documents for which we don't know the MIME type.
-   */
-  // TODO: verify that this is the correct thing to do.
-  static final String UNKNOWN_MIMETYPE = "text/html";
-
   public FileFetcher(FileSystemTypeRegistry fileSystemTypeRegistry,
       MimeTypeFinder mimeTypeFinder) {
     this(fileSystemTypeRegistry, false, false, null, null, null, mimeTypeFinder);
@@ -69,17 +61,6 @@ public class FileFetcher {
     this.markAllDocumentsPublic = markAllDocumentsPublic;
     this.credentials = FileConnector.newCredentials(domainName, userName, password);
     this.mimeTypeFinder = mimeTypeFinder;
-  }
-
-  private static class ReadonlyFileInputStreamFactory implements InputStreamFactory {
-    private final ReadonlyFile<?> file;
-
-    ReadonlyFileInputStreamFactory(ReadonlyFile<?> file) {
-      this.file = file;
-    }
-    public InputStream getInputStream() throws IOException {
-      return file.getInputStream();
-    }
   }
 
   /**
@@ -106,7 +87,7 @@ public class FileFetcher {
         ReadonlyFile<?> file = factory.getFile(change.getPath(), credentials);
         result.setProperty(SpiConstants.PROPNAME_ACTION, ADD);
         result.setProperty(SpiConstants.PROPNAME_DOCID, file.getPath());
-        result.setProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getPath());
+        result.setProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
         String mimeType = getMimeType(file);
         result.setProperty(SpiConstants.PROPNAME_MIMETYPE, mimeType);
         try {
@@ -137,7 +118,7 @@ public class FileFetcher {
   private String getMimeType(ReadonlyFile<?> file) throws RepositoryDocumentException{
     try {
       return mimeTypeFinder.find(traversalContext, file.getPath(),
-          new ReadonlyFileInputStreamFactory(file));
+          new FileInfoInputStreamFactory(file));
     } catch (IOException ioe) {
       throw new RepositoryDocumentException("Unable to get mime type for file "
           + file.getPath(), ioe);

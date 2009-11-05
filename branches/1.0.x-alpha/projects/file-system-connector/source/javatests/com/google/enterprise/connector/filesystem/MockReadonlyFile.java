@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,8 @@ package com.google.enterprise.connector.filesystem;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -120,7 +122,13 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   /* @Override */
   public String getDisplayUrl() {
-    return getPath();
+    try {
+      URI displayUri = new URI("file", null /* userInfo */, "google.com", 123,
+          getPath(), null /* query */, null /* fragment */);
+      return displayUri.toASCIIString();
+    } catch (URISyntaxException e) {
+      throw new IllegalStateException("getDispayUrl failed for path " + getPath());
+    }
   }
 
   /**
@@ -160,6 +168,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     if (isDir) {
       throw new RuntimeException("cannot set file contents of a directory: " + getPath());
     }
+    if (fileContents == null) {
+      throw new IllegalArgumentException("fileContents==null");
+    }
     this.fileContents = fileContents;
   }
 
@@ -170,6 +181,11 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
       throw new RuntimeException("attempt to get input stream of directory: " + getPath());
     }
     return new ByteArrayInputStream(fileContents.getBytes());
+  }
+
+  /* @Override */
+  public long length() {
+    return fileContents.length();
   }
 
   /* @Override */
@@ -261,5 +277,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   /* @Override */
   public String getFileSystemType() {
     return "mock";
+  }
+
+  public boolean acceptedBy(FilePatternMatcher matcher) {
+    return matcher.acceptName(getPath());
   }
 }

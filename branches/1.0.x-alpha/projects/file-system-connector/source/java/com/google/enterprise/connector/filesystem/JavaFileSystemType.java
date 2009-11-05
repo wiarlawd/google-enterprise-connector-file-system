@@ -31,6 +31,7 @@ public class JavaFileSystemType implements FileSystemType {
 
   /* @Override */
   public boolean isPath(String path) {
+    // TODO: Add support for windows local files, not just Unix.
     return path.startsWith("/");
   }
 
