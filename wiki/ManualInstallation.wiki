@@ -17,7 +17,7 @@ Google recommends that you use the installer for installing the connector. You m
 =Manual installation steps=
   # Shut down Tomcat if it is running.
   # Go to $CATALINA_HOME\bin directory.
-    * *For Windows* edit Add the following lines in the start of the file:
+    * *For Windows* edit setclasspath.bat
       {{{
       Add the following lines in the start of the file:
       set JRE_HOME=<JRE_HOME>
