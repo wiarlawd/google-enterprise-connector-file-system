@@ -14,8 +14,11 @@
 
 package com.google.enterprise.connector.filesystem;
 
+
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
+
+import java.util.Map;
 
 /**
  * Management interface to {@link FileSystemMonitor} threads.
@@ -58,4 +61,18 @@ public interface FileSystemMonitorManager {
 
   /** Returns whether we are after a start() call and before a stop(). */
   boolean isRunning();
+
+
+  /**
+   * Receives information specifing what is guaranteed to be delivered to GSA.
+   * Every entry in passed in Map is a monitor name and MonitorCheckpoint.
+   * The monitor of that name can expect that all documents before and including
+   * document related with MonitorCheckpoint will be delivered to GSA.
+   * This information is for the convenience and efficiency of the Monitor so
+   * that it knows how many changes it has to resend.  It's valid for a monitor
+   * to ignore these updates if it feels like it for some good reason.
+   * FileConnectorSystemMonitor instances use this information to trim their
+   * file system snapshots.
+   */
+  void acceptGuarantees(Map<String, MonitorCheckpoint> guarantees);
 }

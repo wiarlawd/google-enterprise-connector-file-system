@@ -19,6 +19,8 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import junit.framework.TestCase;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -26,8 +28,8 @@ public class FilePatternMatcherTest extends TestCase {
   Credentials credentials = new Credentials(null, "testUser", "foobar");
 
   public void testBasics() throws RepositoryDocumentException {
-    String[] include = new String[] {"smb://foo.com/", "/foo/bar/"};
-    String[] exclude = new String[] {"smb://foo.com/secret/", "/foo/bar/hidden/"};
+    List<String> include = Arrays.asList("smb://foo.com/", "/foo/bar/");
+    List<String> exclude = Arrays.asList("smb://foo.com/secret/", "/foo/bar/hidden/");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
     assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, false, false)
         .acceptedBy(matcher));

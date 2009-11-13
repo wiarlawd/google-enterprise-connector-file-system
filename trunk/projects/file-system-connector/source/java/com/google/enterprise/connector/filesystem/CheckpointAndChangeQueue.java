@@ -299,8 +299,6 @@ class CheckpointAndChangeQueue {
     } else {
       RecoveryFile current = removeExcessRecoveryState();
       loadUpFromRecoveryState(current);
-      monitorPoints.updateOnGuaranteed(checkpointAndChangeList);
-      // TODO: Figure out if the above call is needed.
     }
   }
 
@@ -322,9 +320,9 @@ class CheckpointAndChangeQueue {
   synchronized List<CheckpointAndChange> resume(String checkpointString) throws IOException {
     removeCompletedChanges(checkpointString);
     loadUpFromChangeSource();
+    monitorPoints.updateOnGuaranteed(checkpointAndChangeList);
     try {
       writeRecoveryState();
-      monitorPoints.updateOnGuaranteed(checkpointAndChangeList);
     } finally {
       // TODO: Enahnce with mechanism that remembers
       // information about recovery files to avoid re-reading.

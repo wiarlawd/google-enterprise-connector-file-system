@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
@@ -183,8 +184,8 @@ public class FileSystemMonitorTest extends TestCase {
 
     store = new SnapshotStore(snapshotDir, null);
 
-    String[] include = new String[] {"/"};
-    String[] exclude = new String[] {};
+    List<String> include = ImmutableList.of("/");
+    List<String> exclude = ImmutableList.of();
 
     matcher = new FilePatternMatcher(include, exclude);
    }
@@ -659,8 +660,8 @@ public class FileSystemMonitorTest extends TestCase {
 
   public void testPatternBasics() {
     FilePatternMatcher nonPngMatcher =
-        new FilePatternMatcher(new String[] {"/", "", "# comment"}, new String[] {".png$", "\t",
-            "# another comment"});
+        FileConnectorType.newFilePatternMatcher(ImmutableList.of("/", "", "# comment"),
+            ImmutableList.of(".png$", "\t", "# another comment"));
     monitor = newFileSystemMonitor(nonPngMatcher);
     root.get("dir.2").addFile("new-file.png", "");
     root.get("dir.1").addFile("foo.png", "");
@@ -680,8 +681,8 @@ public class FileSystemMonitorTest extends TestCase {
     runMonitorAndCheck(baseDirs, baseFiles + 2, 0, 0, 0, 0, 0);
 
     // Create a new monitor that excludes .png files.
-    FilePatternMatcher nonPngMatcher =
-        new FilePatternMatcher(new String[] {"/"}, new String[] {".png$"});
+    FilePatternMatcher nonPngMatcher = FileConnectorType.newFilePatternMatcher(
+        ImmutableList.of("/"), ImmutableList.of(".png$"));
     monitor = newFileSystemMonitor(nonPngMatcher);
 
     // Make sure the monitor deletes two files.

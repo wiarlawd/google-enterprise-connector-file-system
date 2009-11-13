@@ -425,6 +425,15 @@ public class FileSystemMonitor implements Runnable {
     }
   }
 
+  void acceptGuarantee(MonitorCheckpoint cp) {
+    // TODO: Figure out a way for cp to interact with going crawl.
+    // Maybe it will be possible to mark/modify internal state
+    // without a sync?
+    // Or maybe this signal is supposted to go to SnapshotStore
+    // instead?  Or to both SnapshotStore and FileSysteMonitor?
+    // Pending corrected pruning logic.
+  }
+
   /**
    * Callback for filtering files that do not have supported mime types.
    * <p>

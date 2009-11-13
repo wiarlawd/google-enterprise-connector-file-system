@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -448,11 +448,10 @@ public class FileConnectorType implements ConnectorType {
      */
     private String assureStartPathsReadable() {
       MultiLineField startPaths = startField;
-      String[] paths = startPaths.lines.toArray(new String[0]);
       Credentials credentials = getCredentials();
       StringBuilder buf = new StringBuilder();
 
-      for (String path : paths) {
+      for (String path : startPaths.lines) {
         path = path.trim();
         if ((path.length() == 0)) {
           continue;
@@ -482,28 +481,17 @@ public class FileConnectorType implements ConnectorType {
       return buf.toString();
     }
 
-    private FilePatternMatcher makeFilePatternMatcher() {
-      String include[] = includeField.lines.toArray(new String[0]);
-      String exclude[] = excludeField.lines.toArray(new String[0]);
-      return new FilePatternMatcher(include, exclude);
-    }
-
     /**
      * Make sure that start paths are allowed to be traversed
      * per include and exclude restrictions.
      */
     private String assureStartPathsNotExcluded()  {
-      MultiLineField startPaths = startField;
-      String[] paths = startPaths.lines.toArray(new String[0]);
       Credentials credentials = getCredentials();
       StringBuilder buf = new StringBuilder();
-      FilePatternMatcher filePatternMatcher = makeFilePatternMatcher();
+      FilePatternMatcher filePatternMatcher = newFilePatternMatcher(
+          includeField.lines, excludeField.lines);
 
-      for (String path : paths) {
-        path = path.trim();
-        if ((path.length() == 0)) {
-          continue;
-        }
+      for (String path : filterUserEnteredList(startField.lines)) {
         try {
           ReadonlyFile<?> file = pathParser.getFile(path, credentials);
           if (file.acceptedBy(filePatternMatcher)) {
@@ -573,5 +561,39 @@ public class FileConnectorType implements ConnectorType {
 
   static int getMaxInputsOfMultiLineFieldForTesting() {
     return MultiLineField.MAX_INPUT_LINES;
+  }
+
+  /**
+   * Returns a new {@link List} with all unique entries from an original user
+   * entered {@link List} of values that represent <b>real</b> values rather
+   * than
+   * <OL>
+   * <LI> null
+   * <LI> Zero length values
+   * <LI> All white space values
+   * <LI> Comments beginning with #
+   * </OL>
+   */
+  static final List<String> filterUserEnteredList(List<String> original) {
+    List<String> result = new ArrayList<String>();
+    for (String v : original) {
+      v = (v == null) ? "" : v.trim();
+      if (v.length() == 0 || v.startsWith("#") || result.contains(v)) {
+        continue;
+      }
+      result.add(v);
+    }
+    return result;
+  }
+
+  /**
+   * Returns a new {@link FilePatternMatcher} with the provided include and
+   * exclude patterns. Note that {@link #filterUserEnteredList(List)} is applied
+   * to both {@code includePatterns} and {@code excludePatterns}.
+   */
+  static final FilePatternMatcher newFilePatternMatcher(List<String> includePatterns,
+      List<String> excludePatterns) {
+    return new FilePatternMatcher(filterUserEnteredList(includePatterns),
+        filterUserEnteredList(excludePatterns));
   }
 }

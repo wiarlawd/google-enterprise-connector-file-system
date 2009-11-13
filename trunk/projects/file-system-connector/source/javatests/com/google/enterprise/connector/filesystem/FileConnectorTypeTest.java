@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.spi.ConfigureResponse;
 
 import junit.framework.TestCase;
@@ -24,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -237,5 +239,56 @@ public class FileConnectorTypeTest extends TestCase {
     String snippet = response.getFormSnippet();
     assertTrue(snippet.contains(RED_ON));
     assertTrue(snippet.contains(RED_OFF));
+  }
+
+  public void filterEmptyUserEnteredList() {
+    final List<String> empty = ImmutableList.of();
+    List<String> result = FileConnectorType.filterUserEnteredList(empty);
+    assertEquals(0, result.size());
+  }
+
+  public void testFilterUserListWithComment() {
+    final List<String> input = Arrays.asList("Hi", "# comment ", "Bye");
+    final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
+    assertEquals(2, filtered.size());
+    assertEquals(input.get(0), filtered.get(0));
+    assertEquals(input.get(2), filtered.get(1));
+  }
+
+  public void testFilterUserListWithNull() {
+    final List<String> input = Arrays.asList("Hi", null, "Bye");
+    final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
+    assertEquals(2, filtered.size());
+    assertEquals(input.get(0), filtered.get(0));
+    assertEquals(input.get(2), filtered.get(1));
+  }
+
+  public void testFilterUserListWithEmpty() {
+    final List<String> input = Arrays.asList("Hi", "", "Bye");
+    final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
+    assertEquals(2, filtered.size());
+    assertEquals(input.get(0), filtered.get(0));
+    assertEquals(input.get(2), filtered.get(1));
+  }
+
+  public void testFilterUserListWithTrim() {
+    final List<String> input = Arrays.asList(" Hi", " ", "Bye ");
+    final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
+    assertEquals(2, filtered.size());
+    assertEquals(input.get(0).trim(), filtered.get(0));
+    assertEquals(input.get(2).trim(), filtered.get(1));
+  }
+
+  public void testFilterUserListWithAllGood() {
+    final List<String> input = Arrays.asList("Hi", "mOm");
+    assertEquals(input, FileConnectorType.filterUserEnteredList(input));
+  }
+
+  public void testFilterUserListWithDuplicates() {
+    final String hi = "Hi";
+    final String mom = "mom";
+    final List<String> input = Arrays.asList(hi, hi, mom, mom, hi);
+    final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
+    assertEquals(Arrays.asList(hi, mom), filtered);
   }
 }

@@ -19,6 +19,7 @@ import junit.framework.TestCase;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -28,6 +29,7 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
   private final AtomicInteger startCount = new AtomicInteger();
   private final AtomicInteger cleanCount = new AtomicInteger();
   private final AtomicInteger stopCount = new AtomicInteger();
+  private final AtomicInteger guaranteeCount = new AtomicInteger();
   private final CheckpointAndChangeQueue checkpointAndChangeQueue;
   private boolean isRunning = false;
 
@@ -86,6 +88,13 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
     return cleanCount.get();
   }
 
+  /**
+   * Returns the number of times {@link #acceptGuarantees} has been called.
+   */
+  int getGuaranteeCount() {
+    return guaranteeCount.get();
+  }
+
   /* @Override */
   public CheckpointAndChangeQueue getCheckpointAndChangeQueue() {
     if (checkpointAndChangeQueue == null) {
@@ -97,5 +106,10 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
 
   public synchronized boolean isRunning() {
     return isRunning;
+  }
+
+  /* @Override */
+  public void acceptGuarantees(Map<String, MonitorCheckpoint> guarantees) {
+    guaranteeCount.incrementAndGet();
   }
 }

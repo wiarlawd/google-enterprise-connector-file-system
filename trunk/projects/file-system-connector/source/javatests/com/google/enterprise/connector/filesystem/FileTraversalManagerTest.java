@@ -104,6 +104,7 @@ public class FileTraversalManagerTest extends TestCase {
       assertEquals(1, fileSystemMonitorManager.getStopCount());
       // clean is called after stop is called, for same reason as stop is called.
       assertEquals(1, fileSystemMonitorManager.getCleanCount());
+      assertEquals(1, fileSystemMonitorManager.getGuaranteeCount());
     } else {
       docs = tm.resumeTraversal(checkpoint);
       assertEquals(1, fileSystemMonitorManager.getStartCount());
@@ -111,6 +112,7 @@ public class FileTraversalManagerTest extends TestCase {
       assertEquals(0, fileSystemMonitorManager.getStopCount());
       // Doesn't call clean. 
       assertEquals(0, fileSystemMonitorManager.getCleanCount());
+      assertEquals(1, fileSystemMonitorManager.getGuaranteeCount());
     }
 
     for (int k = 0; k < BATCH_SIZE; ++k) {
@@ -119,8 +121,10 @@ public class FileTraversalManagerTest extends TestCase {
     }
     assertNull(docs.nextDocument());
 
-    for (int batch = 1; batch < BATCH_COUNT; ++batch) {
+    // TODO: Investigate: this loop looks weird cause it goes for BATCH_COUNT-1.
+    for (int batch = 1; batch < BATCH_COUNT; batch++) {
       docs = tm.resumeTraversal(docs.checkpoint());
+      assertEquals(1 + batch, fileSystemMonitorManager.getGuaranteeCount());
       for (int k = 0; k < BATCH_SIZE; ++k) {
         Document doc = docs.nextDocument();
         assertNotNull(doc);
