@@ -28,13 +28,12 @@ public class SnapshotStoreTest extends TestCase {
   private SnapshotStore store;
   private Acl acl;
 
-
   @Override
   public void setUp() throws Exception {
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
     File rootDir = testDirectoryManager.makeDirectory("rootDir");
     snapshotDir = new File(rootDir, "snapshots");
-    store = new SnapshotStore(new File(rootDir, "snapshots"), null);
+    store = new SnapshotStore(new File(rootDir, "snapshots"));
     List<String> users = Arrays.asList("d1\\bob", "d1\\tom");
     List<String> groups = Arrays.asList("d1\\loosers");
     acl =  Acl.newAcl(users, groups);
@@ -57,29 +56,19 @@ public class SnapshotStoreTest extends TestCase {
    *
    * @throws SnapshotStoreException
    */
-  public void testWriteRead() throws SnapshotStoreException {
-    SnapshotWriter out = store.getNewSnapshotWriter();
+  public void testWriteRead() throws Exception {
+    SnapshotWriter out = store.openNewSnapshotWriter();
 
     SnapshotRecord before =
         new SnapshotRecord("java", "/foo/bar", SnapshotRecord.Type.DIR, 12345L, acl, "check sum",
             123456L, false);
-    writeAndClose(out, before);
+    out.write(before);
 
     SnapshotReader in = store.openMostRecentSnapshot();
     SnapshotRecord after = in.read();
     assertEquals(before, after);
     assertNull(in.read());
-  }
-
-  private void writeAndClose(SnapshotWriter writer, SnapshotRecord record)
-      throws SnapshotStoreException {
-    boolean iMadeIt = false;
-    try {
-      writer.write(record);
-      iMadeIt = true;
-    } finally {
-      writer.close(iMadeIt);
-    }
+    store.close(in, out);
   }
 
   /**
@@ -89,18 +78,19 @@ public class SnapshotStoreTest extends TestCase {
    * @throws SnapshotWriterException
    * @throws SnapshotReaderException
    */
-  public void testSnapshotSorting() throws SnapshotStoreException, SnapshotReaderException {
+  public void testSnapshotSorting() throws Exception {
     for (int k = 0; k < 10; ++k) {
-      SnapshotWriter out = store.getNewSnapshotWriter();
+      SnapshotWriter out = store.openNewSnapshotWriter();
       String path = String.format("/foo/bar/%d", k);
       SnapshotRecord before =
           new SnapshotRecord("java", path, SnapshotRecord.Type.DIR, 12345L, acl, "check sum",
               123456L, false);
-      writeAndClose(out, before);
+      out.write(before);
 
       SnapshotReader in = store.openMostRecentSnapshot();
       SnapshotRecord after = in.read();
       assertEquals(before, after);
+      store.close(in, out);
     }
   }
 
@@ -110,10 +100,14 @@ public class SnapshotStoreTest extends TestCase {
    *
    * @throws SnapshotWriterException
    */
-  public void testGarbageCollection() throws SnapshotStoreException {
+  public void testGarbageCollection() throws Exception {
     for (int k = 0; k < 10; ++k) {
-      SnapshotWriter out = store.getNewSnapshotWriter();
-      out.close(true);
+      SnapshotWriter out = store.openNewSnapshotWriter();
+      long readSnapshotNum = Math.max(0, k - 1);
+      MonitorCheckpoint cp = new MonitorCheckpoint("foo", readSnapshotNum, 2, 1);
+      store.acceptGuarantee(cp);
+      store.close(null, out);
+      store.deleteOldSnapshots();
     }
     File[] contents = snapshotDir.listFiles();
     for (File f : contents) {
@@ -135,13 +129,15 @@ public class SnapshotStoreTest extends TestCase {
   // TODO: add more recovery tests.
   public void testRecoveryBasics() throws IOException, SnapshotStoreException {
     // Create the first snapshot with modification time 12345.
-    SnapshotWriter ss1 = store.getNewSnapshotWriter();
-    writeRecordsAndClose(ss1, 12345);
+    SnapshotWriter ss1 = store.openNewSnapshotWriter();
+    writeRecords(ss1, 12345);
+    store.close(null ,ss1);
 
     // Create a second snapshot with the same files, but modification time
     // 23456.
-    SnapshotWriter ss2 = store.getNewSnapshotWriter();
-    writeRecordsAndClose(ss2, 23456);
+    SnapshotWriter ss2 = store.openNewSnapshotWriter();
+    writeRecords(ss2, 23456);
+    store.close(null ,ss2);
 
     // Now pretend that the file-system monitor has scanned the first 7 records
     // from each snapshot and emitted changes for them. I.e., create a
@@ -149,7 +145,8 @@ public class SnapshotStoreTest extends TestCase {
     // as if the first 7 changes have been sent to the GSA.
     MonitorCheckpoint cp = new MonitorCheckpoint("foo", 1, 7, 7);
 
-    SnapshotStore after = new SnapshotStore(snapshotDir, cp);
+    SnapshotStore.stich(snapshotDir, cp);
+    SnapshotStore after = new SnapshotStore(snapshotDir);
     SnapshotReader reader = after.openMostRecentSnapshot();
     assertEquals(3, reader.getSnapshotNumber());
 
@@ -160,6 +157,7 @@ public class SnapshotStoreTest extends TestCase {
       assertNotNull(rec);
       assertEquals((k < 7) ? 23456 : 12345, rec.getLastModified());
     }
+    store.close(reader, null);
   }
 
   /**
@@ -170,30 +168,24 @@ public class SnapshotStoreTest extends TestCase {
    * @param lastModified
    * @throws SnapshotWriterException
    */
-  private void writeRecordsAndClose(SnapshotWriter writer, long lastModified)
+  private void writeRecords(SnapshotWriter writer, long lastModified)
       throws SnapshotWriterException {
-    boolean iMadeIt = false;
-    try {
-      for (int k = 0; k < 100; ++k) {
-        String path = String.format("/foo/bar/%d", k);
-        SnapshotRecord rec =
-            new SnapshotRecord("java", path, SnapshotRecord.Type.FILE, lastModified, acl,
-                "check sum", 123456L, false);
-        writer.write(rec);
-        iMadeIt = true;
-      }
-    } finally {
-      writer.close(iMadeIt);
+    for (int k = 0; k < 100; ++k) {
+      String path = String.format("/foo/bar/%d", k);
+      SnapshotRecord rec =
+          new SnapshotRecord("java", path, SnapshotRecord.Type.FILE, lastModified, acl,
+              "check sum", 123456L, false);
+      writer.write(rec);
     }
   }
 
   public void testTwoWriters() throws SnapshotStoreException {
-    store.getNewSnapshotWriter();
+    store.openNewSnapshotWriter();
     try {
-      store.getNewSnapshotWriter();
+      store.openNewSnapshotWriter();
       fail("opened second writer");
     } catch (IllegalStateException expected) {
-      assertTrue(expected.getMessage().matches(".*already open.*"));
+      assertEquals(expected.getMessage(), "There is already an active writer.");
     }
   }
 }

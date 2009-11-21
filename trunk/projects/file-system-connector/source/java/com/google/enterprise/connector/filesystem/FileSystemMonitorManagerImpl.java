@@ -29,7 +29,12 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * {@link FileSystemMonitorManager} implementation.
+ * {@link FileSystemMonitorManager} implementation.  There is one instance of this 
+ * class per FileConnector created by Spring.  That instance gets singals from 
+ * TraversalManager to start (go from "cold" to "warm") and does so from scratch
+ * or from recovery state.  It creates the SnapshotStore instances and invokes
+ * their recovery method.  It creates and manages the FileSystemMonitor instances.
+ * It passes guaranteed checkpoints to these monitors.
  */
 public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   /** Maximum time to wait for background threads to terminate (in ms). */
@@ -96,6 +101,33 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     this.isRunning = false;
   }
 
+  /* For each start path gets its monitor recovery files in state were monitor
+   * can be started. */
+  private Map<String, SnapshotStore> recoverSnapshotStores(
+      String connectorManagerCheckpoint, Map<String, MonitorCheckpoint> monitorPoints)
+      throws IOException, SnapshotStoreException {
+    Map<String, SnapshotStore> snapshotStores = new HashMap<String, SnapshotStore>();
+    for (String startPath : startPaths) {
+      String monitorName = makeMonitorNameFromStartPath(startPath);
+      File dir = new File(snapshotDir,  monitorName);
+
+      boolean startEmpty = (connectorManagerCheckpoint == null) 
+          || (!monitorPoints.containsKey(monitorName));
+      if (startEmpty) {
+        LOG.info("Deleting " + startPath + " global checkpoint=" + connectorManagerCheckpoint
+            + " monitor checkpoint=" + monitorPoints.get(monitorName));
+        delete(dir);
+      } else {
+        SnapshotStore.stich(dir, monitorPoints.get(monitorName));
+      }
+
+      SnapshotStore snapshotStore = new SnapshotStore(dir);
+
+      snapshotStores.put(monitorName, snapshotStore);
+    }
+    return snapshotStores;
+  }
+
   /** Go from "cold" to "warm" including CheckpointAndChangeQueue. */
   public void start(String connectorManagerCheckpoint, TraversalContext traversalContext)
       throws RepositoryException {
@@ -109,7 +141,17 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     Map<String, MonitorCheckpoint> monitorPoints
         = checkpointAndChangeQueue.getMonitorRestartPoints();
 
-    startMonitorThreads(connectorManagerCheckpoint, monitorPoints, traversalContext);
+    Map<String, SnapshotStore> snapshotStores = null;
+
+    try {
+      snapshotStores = recoverSnapshotStores(connectorManagerCheckpoint, monitorPoints);
+    } catch (SnapshotStoreException e) {
+      throw new RepositoryException("Snapshot recovery failed.", e);
+    } catch (IOException e) {
+      throw new RepositoryException("Snapshot recovery failed.", e);
+    }
+
+    startMonitorThreads(snapshotStores, traversalContext);
     isRunning = true;
   }
 
@@ -159,7 +201,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    * @throws RepositoryDocumentException if {@code startPath} is not readable,
    *         or if there is any problem reading or writing snapshots.
    */
-  private Thread newMonitorThread(String startPath, MonitorCheckpoint checkpoint,
+  private Thread newMonitorThread(String startPath, SnapshotStore snapshotStore,
       TraversalContext traversalContext) throws RepositoryDocumentException {
     ReadonlyFile<?> root = pathParser.getFile(startPath, credentials);
     if (root == null) {
@@ -167,36 +209,11 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     }
 
     String monitorName = makeMonitorNameFromStartPath(startPath);
-
-    // Snapshots for this file-system monitor go in a sub-directory of
-    // snapshotDir. The name of the sub-directory is the name of the monitor
-    // which is hash of the start path.
-    File dir = new File(snapshotDir, monitorName);
-    SnapshotStore snapshotStore;
-    try {
-      snapshotStore = new SnapshotStore(dir, checkpoint);
-    } catch (SnapshotStoreException e) {
-      throw new RepositoryDocumentException("failed to open snapshot store for file system: "
-          + root.getPath(), e);
-    }
-
     FileSystemMonitor monitor =
         new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.getCallback(),
             checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK);
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
-  }
-
-  private MonitorCheckpoint figureOutWhichMonitorCheckpointToUse(String connectorManagerCheckpoint,
-       Map<String, MonitorCheckpoint> guarantees) {
-    // TODO: Update checkpoint logic as part of correcting pruning logic.
-    // Currently there are starts from null and LAST_FULL_SNAPSHOT_CHECKPOINT.
-    // Persisted data, available in guarantees, is not yet used.
-    MonitorCheckpoint monPoint = null;
-    if (connectorManagerCheckpoint != null) {
-      monPoint = SnapshotStore.LAST_FULL_SNAPSHOT_CHECKPOINT;
-    }
-    return monPoint;
   }
 
   /**
@@ -205,17 +222,13 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    * @throws RepositoryDocumentException if any of the threads cannot be
    *         started.
    */
-  private void startMonitorThreads(String connectorManagerCheckpoint, Map<String,
-      MonitorCheckpoint> guarantees, TraversalContext traversalContext)
-      throws RepositoryDocumentException {
+  private void startMonitorThreads(Map<String, SnapshotStore> snapshotStores,
+      TraversalContext traversalContext) throws RepositoryDocumentException {
 
-    for (String rawStartPath : startPaths) {
-      String startPath = rawStartPath.trim();
-
-      MonitorCheckpoint monPoint = figureOutWhichMonitorCheckpointToUse(
-          connectorManagerCheckpoint, guarantees);
-      Thread monitorThread = newMonitorThread(startPath, monPoint, traversalContext);
-
+    for (String startPath : startPaths) {
+      String monitorName = makeMonitorNameFromStartPath(startPath);
+      SnapshotStore snapshotStore = snapshotStores.get(monitorName);
+      Thread monitorThread = newMonitorThread(startPath, snapshotStore, traversalContext);
       threads.add(monitorThread);
 
       LOG.info("starting monitor for <" + startPath + ">");

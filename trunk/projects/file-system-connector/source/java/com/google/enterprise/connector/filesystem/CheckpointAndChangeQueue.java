@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.base.Charsets;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -25,7 +27,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,7 +52,6 @@ class CheckpointAndChangeQueue {
 
   private static final Logger LOG = Logger.getLogger(CheckpointAndChangeQueue.class.getName());
 
-  private static final Charset UTF_8 = Charset.forName("UTF-8");
   private static final String SENTINAL = "SENTINAL";
   private static final String RECOVERY_FILE_PREFIX = "recovery.";
   private static final String QUEUE_JSON_TAG = "Q";
@@ -78,7 +78,7 @@ class CheckpointAndChangeQueue {
     try {
       byte bytes[] = new byte[(int) file.length()];
       bis.read(bytes);
-      return new String(bytes, UTF_8);
+      return new String(bytes, Charsets.UTF_8.name());
     } finally {
       bis.close();
     }
@@ -222,7 +222,8 @@ class CheckpointAndChangeQueue {
         JSONObject json = new JSONObject(contents);
         return json;
       } catch (JSONException e) {
-        throw new IOException("Failed reading persisted JSON queue.", e);
+        throw IOExceptionHelper.newIOException(
+            "Failed reading persisted JSON queue.", e);
       }
     }
   }
@@ -242,13 +243,14 @@ class CheckpointAndChangeQueue {
     // TODO(pjo): Move this method into RecoveryFile.
     File recoveryFile = new RecoveryFile();
     FileOutputStream outStream = new FileOutputStream(recoveryFile);
-    Writer writer = new OutputStreamWriter(outStream, UTF_8);
+    Writer writer = new OutputStreamWriter(outStream, Charsets.UTF_8);
     try {
       JSONObject queueJson = getJson();
       try {
         queueJson.write(writer);
       } catch (JSONException e) {
-        throw new IOException("Failed writing recovery file.", e);
+        throw IOExceptionHelper.newIOException(
+            "Failed writing recovery file.", e);
       }
       writer.write(SENTINAL);
       writer.flush();
@@ -270,7 +272,8 @@ class CheckpointAndChangeQueue {
       JSONObject jsonMonPoints = json.getJSONObject(MONITOR_STATE_JSON_TAG);
       monitorPoints = new MonitorRestartState(jsonMonPoints);
     } catch (JSONException e) {
-      throw new IOException("Failed reading persisted JSON queue.", e);
+      throw IOExceptionHelper.newIOException(
+                "Failed reading persisted JSON queue.", e);
     }
   }
 

@@ -53,7 +53,13 @@ public class JavaReadonlyFileTest extends TestCase {
     testDirectoryManager.writeFile("root/A/foo", "");
     fileOneLastModified = file1.lastModified();
     File test2 = new File (root, "test2");
-    test2.setReadable(false);
+    // TODO: test2 does not exist so it will not be readable.
+    //       When java 1.5 support is dropped it would be a nice
+    //       test to create a file the test does not have
+    //       permission to read. This is not well supported by
+    //       java 1.5.
+    //testDirectoryManager.writeFile(test2.getPath(), "test2 contents");
+    //test2.setReadable(false);
 
     readonlyRoot = new JavaReadonlyFile(root.getAbsolutePath());
     readonlyFile1 = new JavaReadonlyFile(file1.getAbsolutePath());

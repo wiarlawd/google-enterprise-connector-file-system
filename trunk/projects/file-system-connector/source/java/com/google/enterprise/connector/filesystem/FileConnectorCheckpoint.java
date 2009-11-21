@@ -86,7 +86,7 @@ public class FileConnectorCheckpoint implements Comparable<FileConnectorCheckpoi
     return getJson().toString();
   }
 
-  @Override
+  /* @Override */
   public int compareTo(FileConnectorCheckpoint o) {
     long result = majorNumber - o.majorNumber;
     if (result == 0) {

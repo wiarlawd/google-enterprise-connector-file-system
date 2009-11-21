@@ -74,7 +74,7 @@ public class CheckpointAndChangeQueueTest extends TestCase {
           new MonitorCheckpoint(monitorName, ix, ix, ix));
     }
 
-    @Override
+    /* @Override */
     public Change getNextChange() {
       return pending.poll();
     }

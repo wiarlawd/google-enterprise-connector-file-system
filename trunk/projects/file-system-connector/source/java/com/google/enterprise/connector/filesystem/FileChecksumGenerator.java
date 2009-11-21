@@ -96,7 +96,8 @@ public class FileChecksumGenerator implements ChecksumGenerator {
   /* @Override */
   public String getChecksum(String input) {
     try {
-      return getChecksum(new ByteArrayInputStream(input.getBytes(Charsets.UTF_8)));
+      return getChecksum(new ByteArrayInputStream(
+          input.getBytes(Charsets.UTF_8.name())));
     } catch (IOException e) {
       throw new RuntimeException("IO exception reading a string!?");
     }

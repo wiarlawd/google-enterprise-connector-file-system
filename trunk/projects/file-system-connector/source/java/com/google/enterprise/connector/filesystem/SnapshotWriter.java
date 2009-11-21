@@ -20,23 +20,12 @@ import java.io.Writer;
 
 /**
  * Write snapshot records in CSV format.
- *
  */
 public class SnapshotWriter {
-  private final CloseCallback callback;
   private String path;
   private Writer output;
   private long count;
   private FileDescriptor fileDescriptor;
-
-  /**
-   * When creating a SnapshotWriter, an instance of CloseCallback can be
-   * supplied. The {@code close()} method will be invoked when the
-   * SnapshotWriter is closed.
-   */
-  public interface CloseCallback {
-    void close(SnapshotWriter writer) throws SnapshotWriterException;
-  }
 
   /**
    * Creates a SnapshotWriter that appends to {@code output}.
@@ -45,16 +34,13 @@ public class SnapshotWriter {
    * @param fileDescriptor if non-null, this will be flushed after each record
    *        is written to disk.
    * @param path name of output, for logging purposes
-   * @param callback if non-null {@code callback.close()} will be invoked after
-   *        this writer is successfully closed
    * @throws SnapshotWriterException on any error
    */
-  public SnapshotWriter(Writer output, FileDescriptor fileDescriptor, String path,
-      CloseCallback callback) throws SnapshotWriterException {
+  public SnapshotWriter(Writer output, FileDescriptor fileDescriptor, String path)
+      throws SnapshotWriterException {
     this.output = output;
     this.fileDescriptor = fileDescriptor;
     this.path = path;
-    this.callback = callback;
     this.count = 0;
   }
 
@@ -87,15 +73,11 @@ public class SnapshotWriter {
    *
    * @throws SnapshotWriterException
    */
-  public void close(boolean isComplete) throws SnapshotWriterException {
+  public void close() throws SnapshotWriterException {
     try {
       output.close();
     } catch (IOException e) {
       throw new SnapshotWriterException("failed to close snapshot", e);
-    }
-
-    if (isComplete && callback != null) {
-      callback.close(this);
     }
   }
 

@@ -39,7 +39,7 @@ public class FileSystemMonitorTest extends TestCase {
   private SnapshotStore store;
   private FileChecksumGenerator checksumGenerator;
 
-  private static class TestVisitor implements FileSystemMonitor.Callback {
+  private class TestVisitor implements FileSystemMonitor.Callback {
     private int maxScans = 1;
     private int scanCount = 0;
 
@@ -50,6 +50,14 @@ public class FileSystemMonitorTest extends TestCase {
     int fileContentChangedCount;
     int fileMetadataChangedCount;
     int deletedFileCount;
+
+    FileSystemMonitor monitor = null;
+
+    /* Giving a monitor reference makes this vistior update
+       it's monitor with checkpoints at passComplete. */
+    private void registerMonitor(FileSystemMonitor monitor) {
+      this.monitor = monitor;
+    }
 
     public TestVisitor() {
       reset();
@@ -104,10 +112,21 @@ public class FileSystemMonitorTest extends TestCase {
       ++newFileCount;
     }
 
-    public void passComplete(MonitorCheckpoint mcp) {
+    /* @Override */
+    public void passComplete(MonitorCheckpoint mcp) throws InterruptedException {
       ++scanCount;
+      if (monitor != null) {
+        monitor.acceptGuarantee(mcp);  // On maxScans pass let's monitor know
+                                      // it can drop snapshots < (maxScans - 1).
+                                      // deleteOldSnapshots() needs to be called
+                                      // for this pruning to actually happen.
+      }
       if (scanCount >= maxScans) {
-        throw new RuntimeException("done");
+        // Last snapshot (maxScans) is expected written and closed now.
+        // So if maxScans was 10 there is a closed file called snap.10 in
+        // snapshots directory.  Next call to deleteOldSnapshots() would delete
+        // snap.8 however Monitor won't make that call because we:
+        throw new InterruptedException("done");
       }
     }
   }
@@ -182,7 +201,7 @@ public class FileSystemMonitorTest extends TestCase {
     visitor = new TestVisitor();
     checksumGenerator = new FileChecksumGenerator("SHA1");
 
-    store = new SnapshotStore(snapshotDir, null);
+    store = new SnapshotStore(snapshotDir);
 
     List<String> include = ImmutableList.of("/");
     List<String> exclude = ImmutableList.of();
@@ -250,22 +269,14 @@ public class FileSystemMonitorTest extends TestCase {
   // TODO: avoid lint warning for more than 5 parameters.
   private void runMonitorAndCheck(int newDirs, int newFiles, int deletedDirs, int deletedFiles,
       int contentChanges, int fileMetadataChanges, int dirMetadataChanges) {
-    try {
-      monitor.run();
-    } catch (RuntimeException e) {
-      String msg = e.getMessage();
-      if (msg != null && msg.equals("done")) {
-        assertEquals("new dirs", newDirs, visitor.newDirCount);
-        assertEquals("new files", newFiles, visitor.newFileCount);
-        assertEquals("deleted dirs", deletedDirs, visitor.deletedDirCount);
-        assertEquals("deleted files", deletedFiles, visitor.deletedFileCount);
-        assertEquals("content changes", contentChanges, visitor.fileContentChangedCount);
-        assertEquals("dir metadata", dirMetadataChanges, visitor.dirMetadataChangeCount);
-        assertEquals("file metadata", fileMetadataChanges, visitor.fileMetadataChangedCount);
-      } else {
-        fail(e.getMessage());
-      }
-    }
+    monitor.run();
+    assertEquals("new dirs", newDirs, visitor.newDirCount);
+    assertEquals("new files", newFiles, visitor.newFileCount);
+    assertEquals("deleted dirs", deletedDirs, visitor.deletedDirCount);
+    assertEquals("deleted files", deletedFiles, visitor.deletedFileCount);
+    assertEquals("content changes", contentChanges, visitor.fileContentChangedCount);
+    assertEquals("dir metadata", dirMetadataChanges, visitor.dirMetadataChangeCount);
+    assertEquals("file metadata", fileMetadataChanges, visitor.fileMetadataChangedCount);
   }
 
   public void testFirstScan() {
@@ -412,7 +423,6 @@ public class FileSystemMonitorTest extends TestCase {
     runMonitorAndCheck(0, 0, 0, 0, 1, 0, 0);
   }
 
-
   public void testFileDeletion() {
     monitor = newFileSystemMonitor(matcher);
     // Create a new extra files, intermixed with the usual ones.
@@ -500,11 +510,7 @@ public class FileSystemMonitorTest extends TestCase {
     root.get("dir.2").remove("adir");
     visitor.reset();
     // Should notice that a directory has been deleted.
-    try {
-      runMonitorAndCheck(0, 0, 1, 0, 0, 0, 0);
-    } catch (RuntimeException e) {
-      e.printStackTrace();
-    }
+    runMonitorAndCheck(0, 0, 1, 0, 0, 0, 0);
     visitor.reset();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
@@ -616,7 +622,7 @@ public class FileSystemMonitorTest extends TestCase {
     }
 
     Generator gen = new Generator();
-    store = new SnapshotStore(snapshotDir, null);
+    store = new SnapshotStore(snapshotDir);
     monitor = newFileSystemMonitor(gen);
 
     MyClock clock = new MyClock();
@@ -643,18 +649,19 @@ public class FileSystemMonitorTest extends TestCase {
   /**
    * Make sure that snapshot files are cleaned up.
    */
-  public void testGarbageCollection() {
+  public void testGarbageCollection() throws Exception {
     monitor = newFileSystemMonitor(matcher);
+    visitor.registerMonitor(monitor);
     visitor.setMaxScans(10);
-    try {
-      monitor.run();
-    } catch (RuntimeException e) {
-      assertEquals("done", e.getMessage());
-      assertEquals(3, snapshotDir.list().length);
-      // Only snapshots 8, 9, and 10 should remain.
-      for (File s : snapshotDir.listFiles()) {
-        assertTrue(s.getName().matches(".*\\.(8|9|10)$"));
-      }
+    monitor.run();
+    assertEquals(3, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(8|9|10)$"));
+    }
+    store.deleteOldSnapshots();
+    assertEquals(2, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(9|10)$"));
     }
   }
 
