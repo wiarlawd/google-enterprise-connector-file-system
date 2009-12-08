@@ -2,7 +2,7 @@
 Steps to install Google Enterprise Connector for File Systems
 
 =Introduction=
-This document walks you through the steps to manually install a connector. The instructions mentioned here are applicable to connector version 1.0.0_ALPHA and above
+This document walks you through the steps to manually install a connector. The instructions mentioned here are applicable to connector version 1.0.2_ALPHA and above
 
 Google recommends that you use the installer for installing the connector. You may want to do it manually if,
 
