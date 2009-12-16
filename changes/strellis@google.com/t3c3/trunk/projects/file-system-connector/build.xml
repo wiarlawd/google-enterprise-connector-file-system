@@ -17,7 +17,8 @@
   <property name="config-zip.dir" value  = "${zip.dir}/Config" />
   <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
   <property name="license-zip.dir" value  = "${zip.dir}/License" />
-  <property name="file-connector-jar-zip.file" value = "${zip.dir}/connector-filesystem.jar" />
+  <property name="file-connector-jar-zip.file" 
+	    value = "${zip.dir}/connector-filesystem.jar" />
   <property name="file-connector-copying-zip.file" value="${zip.dir}/COPYING" />
 
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
@@ -42,11 +43,12 @@
 
   <property name="copying.file" value="COPYING" />
   <property name="readme.file" value="README" />
-  <property name="release_notes.file" value="RELEASE_NOTES" />
+  <property name="release-notes.file" value="RELEASE_NOTES" />
   <property name="downloads.dir" value="downloads" />
 
   <property name="zip-src.dir" value="${build.dir}/file-src" />
-  <property name="release-notes-zip-src.file" value="${zip-src.dir}/${release_notes.file}" />
+  <property name="release-notes-zip-src.file" 
+	    value="${zip-src.dir}/${release-notes.file}" />
 
   <property name="tests_out.dir" value="tests_outdir" />
   <property name="tests.logging.properties"
@@ -268,7 +270,7 @@
   </target>
 
   <target name="download_filesystem_connector" depends="jar_prod" >
-    <copy file="${release_notes.file}" tofile="${release-notes-zip-src.file}" >
+    <copy file="${release-notes.file}" tofile="${release-notes-zip-src.file}" >
        <filterchain>
          <replacestring from="__SVN_VERSION__" to="r${svn-version} ${TODAY}"/>
       </filterchain>
