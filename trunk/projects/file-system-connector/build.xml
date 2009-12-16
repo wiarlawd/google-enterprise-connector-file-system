@@ -17,7 +17,8 @@
   <property name="config-zip.dir" value  = "${zip.dir}/Config" />
   <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
   <property name="license-zip.dir" value  = "${zip.dir}/License" />
-  <property name="file-connector-jar-zip.file" value = "${zip.dir}/connector-filesystem.jar" />
+  <property name="file-connector-jar-zip.file" 
+	    value = "${zip.dir}/connector-filesystem.jar" />
   <property name="file-connector-copying-zip.file" value="${zip.dir}/COPYING" />
 
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
@@ -42,8 +43,12 @@
 
   <property name="copying.file" value="COPYING" />
   <property name="readme.file" value="README" />
-  <property name="release_notes.file" value="RELEASE_NOTES" />
+  <property name="release-notes.file" value="RELEASE_NOTES" />
   <property name="downloads.dir" value="downloads" />
+
+  <property name="zip-src.dir" value="${build.dir}/file-src" />
+  <property name="release-notes-zip-src.file" 
+	    value="${zip-src.dir}/${release-notes.file}" />
 
   <property name="tests_out.dir" value="tests_outdir" />
   <property name="tests.logging.properties"
@@ -61,12 +66,28 @@
     location="${connector-manager-thirdparty-jar.dir}/tests" />
   <property name="spi.jar.dir" value="${connector-manager.dir}/dist/jarfile" />
 
-
+  <property name="connector-filesystem-src.zip" 
+	    value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
   <!-- =========================== TASKS =============================== -->
   <target name="build" depends="init,compile_prod,run_tests,jar_prod">
   </target>
 
   <target name="init">
+    <exec executable="svn" 
+	  failifexecutionfails="false"
+	  resultproperty="svn-status-result">
+      <arg line="status"/>
+      <redirector outputproperty="svn-status"
+                  logError="true">
+     </redirector>
+    </exec>
+
+    <echo message="Note 'svn status' must return no changes to indicate a client with" />
+    <echo message="no changes to set svn-version in ${jar-prod.file}" />
+    <echo message="and in ${connector-filesystem-src.zip}." />
+    <echo message="svn status returned: " /> 
+    <echo message="${svn-status}" />
+
     <mkdir dir="${build.dir}" />
     <mkdir dir="${build-tests.dir}" />
     <mkdir dir="${build-prod.dir}" />
@@ -76,6 +97,8 @@
     <mkdir dir="${config-zip.dir}" />
     <mkdir dir="${lib-zip.dir}" />
     <mkdir dir="${license-zip.dir}" />
+
+    <mkdir dir="${zip-src.dir}" />
 
     <mkdir dir="${classes-prod.dir}" />
     <mkdir dir="${classes-tests.dir}" />
@@ -88,6 +111,51 @@
     <mkdir dir="${javadoc-prod.dir}" />
 
     <mkdir dir="${tests_out.dir}" />
+
+    <exec executable="svn" 
+	  failifexecutionfails="false"
+	  resultproperty="svn-url-result" >
+      <arg line="info" />
+      <redirector outputproperty="svn-url"
+                  logError="true" >
+        <outputfilterchain>
+	  <linecontains>
+	    <contains value="URL: "/>
+	  </linecontains>
+          <replacestring from="URL: "/>
+        </outputfilterchain>
+      </redirector>
+    </exec>
+
+    <exec executable="svn" 
+	  failifexecutionfails="false"
+	  resultproperty="svn-revision-result" >
+      <arg line="info"/>
+      <redirector outputproperty="svn-revision"
+                  logError="true">
+        <outputfilterchain>
+	  <linecontains>
+	    <contains value="Revision: " />
+	  </linecontains>
+          <replacestring from="Revision: " />
+          <trim/>
+        </outputfilterchain>
+      </redirector>
+    </exec>
+
+    <condition property="svn-version" 
+	       value="${svn-revision} (${svn-url})"
+	       else="?? Unknown svn version">
+      <and>
+         <equals arg1="0" arg2="${svn-url-result}" />
+         <equals arg1="0" arg2="${svn-revision-result}" />
+         <equals arg1="0" arg2="${svn-status-result}" />
+	 <length string="${svn-status}" trim="true" length="0" />
+      </and>
+    </condition>
+
+    <echo message="svn-version set to '${svn-version}'" />
+    
   </target>
 
   <target name="compile_prod" depends="init">
@@ -173,11 +241,13 @@
       <fileset dir="${build-prod.dir}" includes="*.properties"/>
       <manifest>
         <attribute name="Implementation-Title" value="File System Connector"/>
-        <attribute name="Implementation-Version" value="${version} ${TODAY}"/>
+        <attribute name="Implementation-Version" value="${svn-version} ${TODAY}"/>
         <attribute name="Implementation-Vendor" value="Google Inc."/>
         <attribute name="Specification-Title" value="Connector Manager SPI"/>
         <attribute name="Specification-Version" value="${version.spi}"/>
         <attribute name="Specification-Vendor" value="Google Inc."/>
+        <attribute name="Main-Class"
+                   value="com.google.enterprise.connector.filesystem.FileConnectorMain" />
       </manifest>
     </jar>
   </target>
@@ -200,10 +270,15 @@
   </target>
 
   <target name="download_filesystem_connector" depends="jar_prod" >
-    <property name="connector-filesystem-src.zip" value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
+    <copy file="${release-notes.file}" tofile="${release-notes-zip-src.file}" >
+       <filterchain>
+         <replacestring from="__SVN_VERSION__" to="r${svn-version} ${TODAY}"/>
+      </filterchain>
+    </copy>
     <zip destfile="${connector-filesystem-src.zip}" >
       <zipfileset dir="." prefix="connector-filesystem-${version}/projects/file-system-connector" 
-        includes="${readme.file}, ${copying.file}, ${release_notes.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
+        includes="${readme.file}, ${copying.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
+      <zipfileset dir="${zip-src.dir}" />
     </zip>
 
     <checksum file="${connector-filesystem-src.zip}" />
