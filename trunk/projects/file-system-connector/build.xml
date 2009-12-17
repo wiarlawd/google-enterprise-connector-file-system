@@ -73,6 +73,7 @@
   </target>
 
   <target name="init">
+    <tstamp />
     <exec executable="svn" 
 	  failifexecutionfails="false"
 	  resultproperty="svn-status-result">
@@ -233,7 +234,6 @@
       <fileset dir="${config.dir}" excludes="**/*.xml" />
     </copy>
 
-    <tstamp />
     <jar jarfile="${jar-prod.file}">
       <fileset dir="source/java" includes="**/*.properties"/>
       <fileset dir="${classes-prod.dir}"/>
