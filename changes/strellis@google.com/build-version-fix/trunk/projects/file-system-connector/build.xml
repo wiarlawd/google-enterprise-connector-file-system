@@ -146,7 +146,7 @@
 
     <condition property="svn-version" 
 	       value="${svn-revision} (${svn-url})"
-	       else="${version} Unknown svn version">
+	       else="?? Unknown svn version">
       <and>
          <equals arg1="0" arg2="${svn-url-result}" />
          <equals arg1="0" arg2="${svn-revision-result}" />
@@ -241,7 +241,7 @@
       <fileset dir="${build-prod.dir}" includes="*.properties"/>
       <manifest>
         <attribute name="Implementation-Title" value="File System Connector"/>
-        <attribute name="Implementation-Version" value="${svn-version} ${TODAY}"/>
+        <attribute name="Implementation-Version" value="${version} (${svn-version}) ${TODAY}"/>
         <attribute name="Implementation-Vendor" value="Google Inc."/>
         <attribute name="Specification-Title" value="Connector Manager SPI"/>
         <attribute name="Specification-Version" value="${version.spi}"/>
