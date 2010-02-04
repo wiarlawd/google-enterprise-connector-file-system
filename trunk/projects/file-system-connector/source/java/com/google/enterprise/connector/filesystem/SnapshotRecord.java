@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@ package com.google.enterprise.connector.filesystem;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -90,24 +89,6 @@ public class SnapshotRecord implements FileInfo {
     }
   }
 
-  /**
-   * Create a new {@link SnapshotRecord} from context available during the scan of
-   * a file. It extracts several of the fields from {@code file}.
-   *
-   * @param file source of the path, the file type, the last-modified time, and
-   *        the ACL
-   * @param checksum a strong checksum of the current file contents
-   * @param scanTime the time the file was scanned
-   * @param stable true if the file is stable (see JavaDoc in FileSystemMonitor)
-   * @throws IOException if attributes of {@code file} cannot be read.
-   */
-  public SnapshotRecord(ReadonlyFile<?> file, String checksum,
-      long scanTime, boolean stable) throws IOException {
-    this(file.getFileSystemType(), file.getPath(),
-        file.isDirectory() ? Type.DIR : Type.FILE, file.getLastModified(), file.getAcl(),
-        checksum, scanTime, stable);
-  }
-
   public JSONObject getJson() {
     JSONObject result = new JSONObject();
     try {
@@ -138,7 +119,7 @@ public class SnapshotRecord implements FileInfo {
    * @param stable true if this file is "stable" (see JavaDoc in
    *        FileSystemMonitor)
    */
-  SnapshotRecord(String filesys, String path, SnapshotRecord.Type type, long lastModified,
+  public SnapshotRecord(String filesys, String path, SnapshotRecord.Type type, long lastModified,
       Acl acl, String checksum, long scanTime, boolean stable) {
     Check.notNull(filesys);
     Check.notNull(path);
@@ -281,5 +262,9 @@ public class SnapshotRecord implements FileInfo {
   /* @Override */
   public boolean isRegularFile() {
     return type == Type.FILE;
+  }
+
+  public String toString() { 
+    return getJson().toString();
   }
 }

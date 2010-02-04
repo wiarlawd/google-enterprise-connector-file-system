@@ -73,6 +73,7 @@
   <bean id = "authz"
         class = "com.google.enterprise.connector.filesystem.FileAuthorizationManager"
         singleton = "false">
+    <constructor-arg ref="path-parser"/>
   </bean>
 
   <bean id = "filesystem-monitor-manager"

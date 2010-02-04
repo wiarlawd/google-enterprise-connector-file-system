@@ -127,17 +127,18 @@ public class SnapshotStoreTest extends TestCase {
    * @throws SnapshotReaderException
    */
   // TODO: add more recovery tests.
-  public void testRecoveryBasics() throws IOException, SnapshotStoreException {
+  public void testRecoveryBasics() throws IOException, SnapshotStoreException,
+      InterruptedException {
     // Create the first snapshot with modification time 12345.
     SnapshotWriter ss1 = store.openNewSnapshotWriter();
     writeRecords(ss1, 12345);
-    store.close(null ,ss1);
+    store.close(null, ss1);
 
     // Create a second snapshot with the same files, but modification time
     // 23456.
     SnapshotWriter ss2 = store.openNewSnapshotWriter();
     writeRecords(ss2, 23456);
-    store.close(null ,ss2);
+    store.close(null, ss2);
 
     // Now pretend that the file-system monitor has scanned the first 7 records
     // from each snapshot and emitted changes for them. I.e., create a
@@ -159,6 +160,39 @@ public class SnapshotStoreTest extends TestCase {
     }
     store.close(reader, null);
   }
+  public void testStitchWithIntterupt() throws Exception {
+    // Create the first snapshot with modification time 12345.
+    SnapshotWriter ss1 = store.openNewSnapshotWriter();
+    writeRecords(ss1, 12345);
+    store.close(null, ss1);
+
+    // Create a second snapshot with the same files, but modification time
+    // 23456.
+    SnapshotWriter ss2 = store.openNewSnapshotWriter();
+    writeRecords(ss2, 23456);
+    store.close(null, ss2);
+
+    // Now pretend that the file-system monitor has scanned the first 7 records
+    // from each snapshot and emitted changes for them. I.e., create a
+    // checkpoint
+    // as if the first 7 changes have been sent to the GSA.
+    MonitorCheckpoint cp = new MonitorCheckpoint("foo", 1, 7, 7);
+    try {
+      Thread.currentThread().interrupt();
+      SnapshotStore.stich(snapshotDir, cp);
+      fail();
+    } catch (InterruptedException ie) {
+      // Expected.
+    } finally {
+      assertFalse(Thread.interrupted());
+    }
+
+    SnapshotStore after = new SnapshotStore(snapshotDir);
+    // Verify stitch did not create a new snapshot.
+    SnapshotReader reader = after.openMostRecentSnapshot();
+    assertEquals(2, reader.getSnapshotNumber());
+  }
+
 
   /**
    * Write 100 records to {@code writer} with the specified {@code lastModified}

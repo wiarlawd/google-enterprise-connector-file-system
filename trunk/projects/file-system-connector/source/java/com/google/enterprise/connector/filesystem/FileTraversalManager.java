@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
@@ -22,12 +23,12 @@ import com.google.enterprise.connector.spi.TraversalManager;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 /** Implementation of TraversalManager for file systems. */
-public class FileTraversalManager implements TraversalManager, TraversalContextAware {
+public class FileTraversalManager implements TraversalManager,
+    TraversalContextAware {
   private static final Logger LOG = Logger.getLogger(FileTraversalManager.class.getName());
   private final FileFetcher fetcher;
   private final FileSystemMonitorManager fileSystemMonitorManager;
@@ -35,11 +36,11 @@ public class FileTraversalManager implements TraversalManager, TraversalContextA
       = new AtomicReference<TraversalContext>();
   /**
    * Boolean to mark TraversalManager as invalid.
-   * It's possible for Connector Manager to keep a reference to 
+   * It's possible for Connector Manager to keep a reference to
    * an outdated TraversalManager (after a new one has been given
    * previous TraversalManagers are invalid to use).
    */
-  private final AtomicBoolean isActive = new AtomicBoolean(true);
+  private boolean isActive = true;
 
   /**
    * Creates a {@link FileTraversalManager}
@@ -60,22 +61,24 @@ public class FileTraversalManager implements TraversalManager, TraversalContextA
         fileSystemMonitorManager.getCheckpointAndChangeQueue();
 
     try {
-      FileDocumentList result = new FileDocumentList(checkpointAndChangeQueue,
-          CheckpointAndChangeQueue.initializeCheckpointStringIfNull(checkpoint), fetcher);
+      FileDocumentList documentList = new FileDocumentList(
+          checkpointAndChangeQueue,
+          CheckpointAndChangeQueue.initializeCheckpointStringIfNull(checkpoint),
+          fetcher);
 
       Map<String, MonitorCheckpoint> guaranteesMade =
           checkpointAndChangeQueue.getMonitorRestartPoints();
 
       fileSystemMonitorManager.acceptGuarantees(guaranteesMade);
 
-      return result;
+      return new ConfirmActiveDocumentList(documentList);
     } catch (IOException e) {
       throw new RepositoryException("Failure when making DocumentList.", e);
     }
   }
 
   /* @Override */
-  public void setBatchHint(int batchHint) {
+  public synchronized void setBatchHint(int batchHint) {
     if (isActive()) {
       fileSystemMonitorManager.getCheckpointAndChangeQueue().setMaximumQueueSize(batchHint);
     }
@@ -83,7 +86,7 @@ public class FileTraversalManager implements TraversalManager, TraversalContextA
 
   /** Start document crawling and piping as if from beginning. */
   /* @Override */
-  public DocumentList startTraversal() throws RepositoryException {
+  public synchronized DocumentList startTraversal() throws RepositoryException {
     if (isActive()) {
       // Entirely reset connector's state.
       fileSystemMonitorManager.stop();
@@ -96,10 +99,11 @@ public class FileTraversalManager implements TraversalManager, TraversalContextA
   }
 
   /* @Override */
-  public DocumentList resumeTraversal(String checkpoint) throws RepositoryException {
+  public synchronized DocumentList resumeTraversal(String checkpoint)
+      throws RepositoryException {
     /* Exhaustive list of method's use:
      resumeTraversal(null) from startTraversal:
-       monitors get started from null 
+       monitors get started from null
      resumeTraversal(null) from Connector Manager sometime after startTraversal:
        monitors already started from previous resumeTraversal call
      resumeTraversal(cp) from Connector Manager without a startTraversal:
@@ -119,7 +123,7 @@ public class FileTraversalManager implements TraversalManager, TraversalContextA
   }
 
   /* @Override */
-  public void setTraversalContext(TraversalContext traversalContext) {
+  public synchronized void setTraversalContext(TraversalContext traversalContext) {
     if (isActive()) {
       this.traversalContext.set(traversalContext);
       fetcher.setTraversalContext(traversalContext);
@@ -127,15 +131,59 @@ public class FileTraversalManager implements TraversalManager, TraversalContextA
     }
   }
 
-  void deactivate() {
-    isActive.set(false);
+  synchronized void deactivate() {
+    isActive = false;
+    fileSystemMonitorManager.stop();
   }
 
-  boolean isActive() {
-    boolean activeHelper = isActive.get();
-    if (!activeHelper) {
+  synchronized boolean isActive() {
+    if (!isActive) {
       LOG.info("Inactive FileTraversalManager referanced.");
     }
-    return activeHelper;
+    return isActive;
+  }
+
+  /**
+   * A delegating {@link DocumentList} that throws an {@link Exception}
+   * if called when {@link FileTraversalManager#isActive()} returns
+   * false.
+   */
+  private class ConfirmActiveDocumentList implements DocumentList{
+    DocumentList delegate;
+    private ConfirmActiveDocumentList(DocumentList delegate) {
+      this.delegate = delegate;
+    }
+
+    /**
+     * @throws RepositoryException if {@link FileTraversalManager#isActive()}
+     *         returns false.
+     */
+    /* @Override */
+    public String checkpoint() throws RepositoryException {
+      synchronized (FileTraversalManager.this) {
+        if (isActive()) {
+          return delegate.checkpoint();
+        } else {
+          throw new RepositoryException(
+              "Inactive FileTraversalManager referanced.");
+        }
+      }
+    }
+
+    /**
+     * @throws RepositoryException if {@link FileTraversalManager#isActive()}
+     *         returns false.
+     */
+    /* @Override */
+    public Document nextDocument() throws RepositoryException {
+      synchronized (FileTraversalManager.this) {
+        if (isActive()) {
+          return delegate.nextDocument();
+        } else {
+          throw new RepositoryException(
+              "Inactive FileTraversalManager referanced.");
+        }
+      }
+    }
   }
 }

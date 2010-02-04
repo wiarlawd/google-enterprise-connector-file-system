@@ -261,6 +261,11 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     return directoryContents;
   }
 
+  /* @Override */
+  public boolean supportsAuthn() {
+    return false;
+  }
+
   /**
    * Arrange for an IOException to be thrown if this file is accessed. Call with
    * null to turn this off.
@@ -281,5 +286,10 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   public boolean acceptedBy(FilePatternMatcher matcher) {
     return matcher.acceptName(getPath());
+  }
+
+  @Override
+  public String toString() {
+    return getPath();
   }
 }

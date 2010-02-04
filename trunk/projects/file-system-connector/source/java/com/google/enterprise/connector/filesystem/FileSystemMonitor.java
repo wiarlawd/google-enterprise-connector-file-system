@@ -83,6 +83,8 @@ public class FileSystemMonitor implements Runnable {
    * notification of changes to the file system.
    */
   public static interface Callback {
+    public void passBegin() throws InterruptedException;
+
     public void newDirectory(FileInfo dir, MonitorCheckpoint mcp) throws InterruptedException;
 
     public void newFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException;
@@ -101,7 +103,12 @@ public class FileSystemMonitor implements Runnable {
         throws InterruptedException;
 
     public void passComplete(MonitorCheckpoint mcp) throws InterruptedException;
+
+    public boolean hasEnqueuedAtLeastOneChangeThisPass();
   }
+
+  /* Signal from traversal. */
+  private static class DirListingFailedException extends Exception { }
 
   /**
    * Injectable clock to allow better testing.
@@ -144,6 +151,9 @@ public class FileSystemMonitor implements Runnable {
 
   private final FileSink fileSink;
 
+  /* Contains a checkpoint confirmation from CM. */
+  private MonitorCheckpoint guaranteeCheckpoint;
+
   /**
    * Minimum interval in ms between identical checksums for a file to be deemed
    * "stable". This should be at least several times the granularity of the
@@ -163,10 +173,11 @@ public class FileSystemMonitor implements Runnable {
    * @param matcher for accepting and rejecting filenames
    * @param traversalContext null means accept any size/mime-type
    * @param fileSink destination for filtered out file info
+   * @param initialCp checkpoint when system initiated, could be null
    */
   public FileSystemMonitor(String name, ReadonlyFile<?> root, SnapshotStore snapshotStore,
       Callback callback, ChecksumGenerator checksumGenerator, FilePatternMatcher matcher,
-      TraversalContext traversalContext, FileSink fileSink) {
+      TraversalContext traversalContext, FileSink fileSink, MonitorCheckpoint initialCp) {
     this.name = name;
     this.root = root;
     this.snapshotStore = snapshotStore;
@@ -185,6 +196,7 @@ public class FileSystemMonitor implements Runnable {
 
     this.mimeTypeFinder = new MimeTypeFinder();
     this.fileSink = fileSink;
+    guaranteeCheckpoint = initialCp;
   }
 
   /**
@@ -199,41 +211,100 @@ public class FileSystemMonitor implements Runnable {
   /**
    * @return a current checkpoint for this monitor.
    */
-  private MonitorCheckpoint getCheckpoint() {
+  private MonitorCheckpoint getCheckpoint(long readerDelta) {
     long snapNum = snapshotReader.getSnapshotNumber();
-    long readRecNum = snapshotReader.getRecordNumber();
+    long readRecNum = snapshotReader.getRecordNumber() + readerDelta;
+    if (readRecNum < 0) {
+      readRecNum = 0;
+    }
     long writeRecNum = snapshotWriter.getRecordCount();
-    // TODO: We believe we still need to work on add case.
     return new MonitorCheckpoint(name, snapNum, readRecNum, writeRecNum);
+  }
+
+  private MonitorCheckpoint getCheckpoint() {
+    return getCheckpoint(0);
   }
 
   /* @Override */
   public void run() {
     try {
       while (true) {
+        tryToRunForever();
+        // TODO: Remove items from this monitor that are in queues.
+        // Watch out for race conditions. The queues are potentially
+        // giving docs to CM as bad things happen in monitor.
+        // This TODO would be mitigated by a reconciliation with GSA.
+        performExceptionRecovery();
+      }
+    } catch (InterruptedException ie) {
+      LOG.log(Level.INFO, "FileSystemMonitor " + name + " received stop signal.");
+    }
+  }
+
+  private void tryToRunForever() throws InterruptedException {
+    try {
+      while (true) {
         doOnePass();
       }
     } catch (SnapshotWriterException e) {
-      String msg = "failed to write to snapshot file: " + snapshotWriter.getPath();
+      String msg = "Failed to write to snapshot file: " + snapshotWriter.getPath();
       LOG.log(Level.SEVERE, msg, e);
-      throw new RuntimeException(msg, e);
     } catch (SnapshotReaderException e) {
-      String msg = "failed to read snapshot file: " + snapshotReader.getPath();
+      String msg = "Failed to read snapshot file: " + snapshotReader.getPath();
       LOG.log(Level.SEVERE, msg, e);
-      // TODO: figure out how to recover (delete file and restart?).
-      throw new RuntimeException(msg, e);
-    } catch (IOException e) {
-      // This can be normal. E.g., a file may disappear while we are examining
-      // it, or a file system may go off-line for a while. Just log and go on.
-      LOG.log(Level.WARNING, "IO exception", e);
-    } catch (InterruptedException e) {
-      // Normal termination via fileConnector.shutdown().
-      LOG.log(Level.INFO, "FileSystemMonitor " + name + " received stop signal.");
-      return;
     } catch (SnapshotStoreException e) {
-      String msg = "problem with snapshot store";
+      String msg = "Problem with snapshot store.";
       LOG.log(Level.SEVERE, msg, e);
-      throw new RuntimeException(msg, e);
+    } catch (DirListingFailedException e) {
+      String msg = "Failed listing directory.";
+      LOG.log(Level.SEVERE, msg, e);
+    }
+  }
+
+  /**
+   * Call in situations were FileSystemMonitor runs were interfered with
+   * and we wish to have the FileSystemMonitor continue running.
+   * Brings system into state where doOnePass can be invoked.
+   * Failures in this method are considered fatal for the thread.
+   *
+   * @throws IllegalStateException if recovery fails.
+   * @throws InterruptedException if the calling thread is interrupted.
+   */
+  private void performExceptionRecovery() throws InterruptedException,
+      IllegalStateException {
+    // Try to close potentially opened snapshot files.
+    try {
+      snapshotStore.close(snapshotReader, snapshotWriter);
+      LOG.info("FileSystemMonitor " + name + " closed faulty reader and writer.");
+    } catch (IOException e) {
+      String msg = "FileSystemMonitor " + name + " failed clean up .";
+      LOG.log(Level.SEVERE, msg, e);
+      throw new IllegalStateException(msg, e);
+    } catch (SnapshotStoreException e) {
+      String msg = "FileSystemMonitor " + name + " failed clean up .";
+      LOG.log(Level.SEVERE, msg, e);
+      throw new IllegalStateException(msg, e);
+    }
+
+    if (null == guaranteeCheckpoint) {
+      // This monitor was started without state; that is from scratch.
+      // TODO: Consider deleting all snapshot state and starting again.
+      String msg = "FileSystemMonitor " + name + " could not start correctly.";
+      LOG.severe(msg);
+      throw new IllegalStateException(msg);
+    } else {
+      try {
+        SnapshotStore.stich(snapshotStore.getDirectory(), guaranteeCheckpoint);
+        LOG.info("FileSystemMonitor " + name + " restiched snapshot.");
+      } catch (IOException e) {
+        String msg = "FileSystemMonitor " + name + " has failed and stopped.";
+        LOG.log(Level.SEVERE, msg, e);
+        throw new IllegalStateException(msg, e);
+      } catch (SnapshotStoreException e) {
+        String msg = "FileSystemMonitor " + name + " failed fixing store.";
+        LOG.log(Level.SEVERE, msg, e);
+        throw new IllegalStateException(msg, e);
+      }
     }
   }
 
@@ -241,11 +312,11 @@ public class FileSystemMonitor implements Runnable {
    * Makes one pass through the file system, notifying {@code visitor} of any
    * changes.
    *
-   * @throws IOException
    * @throws InterruptedException
    */
-  private void doOnePass() throws SnapshotStoreException, IOException,
-      InterruptedException {
+  private void doOnePass() throws SnapshotStoreException,
+      InterruptedException, DirListingFailedException {
+    callback.passBegin();
     try {
       // Open the most recent snapshot and read the first record.
       this.snapshotReader = snapshotStore.openMostRecentSnapshot();
@@ -261,12 +332,27 @@ public class FileSystemMonitor implements Runnable {
       processDeletes(null);
 
     } finally {
-      snapshotStore.close(snapshotReader, snapshotWriter);
+      try {
+        snapshotStore.close(snapshotReader, snapshotWriter);
+      } catch (IOException e) {
+        LOG.log(Level.WARNING, "Failed closing snapshot reader and writer.", e);
+        // Try to proceed anyway.  Weird they are not closing.
+      }
     }
-    callback.passComplete(getCheckpoint());
+    if (current != null) {
+      throw new IllegalStateException(
+          "Should not finish pass until entire read snapshot is consumed.");
+    }
+    callback.passComplete(getCheckpoint(-1));
+    snapshotStore.deleteOldSnapshots();
+    if (!callback.hasEnqueuedAtLeastOneChangeThisPass()) {
+      // No monitor checkpoints from this pass went to queue because
+      // there were no changes, so we can delete the snapshot we just wrote.
+      new java.io.File(snapshotWriter.getPath()).delete();
+      // TODO: Check return value; log trouble.
+    }
     snapshotWriter = null;
     snapshotReader = null;
-    snapshotStore.deleteOldSnapshots();
   }
 
   /**
@@ -274,22 +360,19 @@ public class FileSystemMonitor implements Runnable {
    * changes to the client.
    *
    * @param fileOrDir
-   * @throws IOException
    * @throws InterruptedException
    */
   private void processFileOrDir(ReadonlyFile<?> fileOrDir) throws SnapshotReaderException,
-      SnapshotWriterException, IOException, InterruptedException {
+      SnapshotWriterException, InterruptedException, DirListingFailedException {
     // If we have been interrupted, terminate.
     if (Thread.currentThread().isInterrupted()) {
       throw new InterruptedException();
     }
 
     if (fileOrDir.isDirectory()) {
-      SnapshotRecord rec = new SnapshotRecord(fileOrDir, "", clock.getTime(), false);
-      snapshotWriter.write(rec);
       processDirectory(fileOrDir);
     } else if (fileOrDir.acceptedBy(matcher)) {
-      processFile(fileOrDir);
+      safelyProcessFile(fileOrDir);
     } else {
       fileSink.add(fileOrDir, FileFilterReason.PATTERN_MISMATCH);
     }
@@ -306,12 +389,23 @@ public class FileSystemMonitor implements Runnable {
   private void processDeletes(ReadonlyFile<?> file) throws SnapshotReaderException,
       InterruptedException {
     while (current != null && (file == null || file.getPath().compareTo(current.getPath()) > 0)) {
+      // TODO: Directory getPath() calls end with / while  file getPath() don't.
+      // This bug is known now.
       if (current.getFileType() == SnapshotRecord.Type.DIR) {
         callback.deletedDirectory(current, getCheckpoint());
       } else {
         callback.deletedFile(current, getCheckpoint());
       }
       current = snapshotReader.read();
+    }
+  }
+
+  private void safelyProcessFile(ReadonlyFile<?> file) throws  InterruptedException,
+      SnapshotReaderException, SnapshotWriterException {
+    try {
+      processFile(file);
+    } catch (IOException e) {
+      fileSink.add(file, FileFilterReason.IO_EXCEPTION);
     }
   }
 
@@ -324,8 +418,8 @@ public class FileSystemMonitor implements Runnable {
    * @throws SnapshotReaderException
    * @throws SnapshotWriterException
    */
-  private void processFile(ReadonlyFile<?> file) throws IOException, InterruptedException,
-      SnapshotReaderException, SnapshotWriterException {
+  private void processFile(ReadonlyFile<?> file) throws  InterruptedException,
+      IOException, SnapshotReaderException, SnapshotWriterException {
     processDeletes(file);
 
     if ((traversalContext != null) && (traversalContext.maxDocumentSize() < file.length())) {
@@ -335,21 +429,30 @@ public class FileSystemMonitor implements Runnable {
 
     // At this point 'current' >= 'file', or possibly current == null if
     // we've processed the previous snapshot entirely.
+    // TODO: Handle the case an existing directory is replaced with a file
+    //       with the same name. Since getPath for a directory appends a '/'
+    //       the paths for the file and directory will differ. Though
+    //       processPossibleChange includes code to handle this case it is not
+    //       called and does not account for the path difference. Also note
+    //       that processDirectory includes code to handle the case a file is
+    //       replaced with a directory of the same name. This code
+    //       may need adjustment as well.
     if (current != null && current.getPath().equals(file.getPath())) {
       processPossibleChange(file);
     } else {
       // This file didn't exist during the previous scan.
-      String checksum = checksumGenerator.getChecksum(file);
-      SnapshotRecord rec = new SnapshotRecord(file, checksum, clock.getTime(), false);
-      snapshotWriter.write(rec);
-      callback.newFile(file, getCheckpoint());
+      FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
+      writeFileSnapshot(file.getFileSystemType(), file.getPath(),
+          file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
+          false);
+      callback.newFile(file, getCheckpoint(-1));
     }
   }
 
   /**
    * Processes a file in the file system that also appeared in the previous
-   * scan. Determines whether the file has changed and propagates changes to the
-   * client.
+   * scan. Determines whether the file has changed, propagates changes to the
+   * client and writes the snapshot record.
    *
    * @param file
    * @throws IOException
@@ -357,76 +460,110 @@ public class FileSystemMonitor implements Runnable {
    * @throws SnapshotWriterException
    * @throws SnapshotReaderException
    */
-  private void processPossibleChange(ReadonlyFile<?> file) throws IOException,
-      InterruptedException, SnapshotWriterException, SnapshotReaderException {
+  private void processPossibleChange(ReadonlyFile<?> file) throws
+      IOException, InterruptedException, SnapshotWriterException, SnapshotReaderException {
+    FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
     if (current.getFileType() == SnapshotRecord.Type.DIR) {
-      // Since the last scan, a directory was deleted and replaced with a file.
-      SnapshotRecord rec =
-          new SnapshotRecord(file, checksumGenerator.getChecksum(file),
-          clock.getTime(), false);
-      snapshotWriter.write(rec);
+      writeFileSnapshot(file.getFileSystemType(), file.getPath(),
+          file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
+          false);
       callback.deletedDirectory(current, getCheckpoint());
       callback.newFile(file, getCheckpoint());
+    } else if (current.getLastModified() != file.getLastModified()
+        || !current.getAcl().equals(infoCache.getAcl())
+        || (!current.isStable() && !current.getChecksum().equals(
+            infoCache.getChecksum()))) {
+      writeFileSnapshot(file.getFileSystemType(), file.getPath(),
+          file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
+          false);
+      callback.changedFileContent(file, getCheckpoint());
     } else {
-      if (current.isStable() && current.getLastModified() == file.getLastModified()) {
-        // The file apparently hasn't changed. I.e., it was deemed stable on
-        // a previous pass, and the last-modified time hasn't changed since
-        // then.
-        SnapshotRecord rec =
-            new SnapshotRecord(file, current.getChecksum(), clock.getTime(), true);
-        snapshotWriter.write(rec);
-      } else {
-        // The file may have changed; decide by comparing checksums.
-        String checksum = checksumGenerator.getChecksum(file);
-        if (current.getChecksum().equals(checksum)) {
-          long currentTime = clock.getTime();
-          boolean stable = current.getScanTime() + STABLE_INTERVAL_MS < currentTime;
-          SnapshotRecord rec =
-              new SnapshotRecord(file, checksum, clock.getTime(), stable);
-          snapshotWriter.write(rec);
-        } else {
-          // Content has definitely changed.
-          SnapshotRecord rec =
-              new SnapshotRecord(file, checksum, clock.getTime(), false);
-          snapshotWriter.write(rec);
-          callback.changedFileContent(file, getCheckpoint());
-        }
-      }
+      boolean isStable = current.isStable()
+          || current.getScanTime() + STABLE_INTERVAL_MS < clock.getTime();
+      writeFileSnapshot(current.getFileSystemType(), current.getPath(),
+          current.getLastModified(), current.getAcl(), current.getChecksum(),
+          isStable);
     }
     current = snapshotReader.read();
+  }
+
+  void writeDirectorySnapshot(ReadonlyFile<?> file)
+      throws IOException, SnapshotWriterException {
+    if (!file.isDirectory()) {
+      throw new IllegalArgumentException("File is not a directory: " + file);
+    }
+    SnapshotRecord rec =
+        new SnapshotRecord(file.getFileSystemType(), file.getPath(),
+            SnapshotRecord.Type.DIR, file.getLastModified(), file.getAcl(),
+            "", clock.getTime(), false);
+    snapshotWriter.write(rec);
+  }
+
+  void writeFileSnapshot(String fileSystemType, String path, long lastModified,
+      Acl acl, String checksum, boolean stable) throws SnapshotWriterException {
+    SnapshotRecord rec = new SnapshotRecord(fileSystemType, path,
+        SnapshotRecord.Type.FILE, lastModified, acl, checksum, clock.getTime(),
+        stable);
+    snapshotWriter.write(rec);
   }
 
   /**
    * Processes a directory {@code dir}.
    *
    * @param dir
-   * @throws IOException
    * @throws InterruptedException
    * @throws SnapshotReaderException
    * @throws SnapshotWriterException
    */
-  private void processDirectory(ReadonlyFile<?> dir) throws IOException, InterruptedException,
+  private void processDirectory(ReadonlyFile<?> dir)
+      throws InterruptedException, DirListingFailedException,
       SnapshotReaderException, SnapshotWriterException {
+
     processDeletes(dir);
 
     if (current != null && current.getPath().equals(dir.getPath())) {
       if (current.getFileType() == SnapshotRecord.Type.FILE) {
         // This directory used to be a file.
         callback.deletedFile(current, getCheckpoint());
+        try {
+          writeDirectorySnapshot(dir);
+        } catch (IOException e) {
+          LOG.log(Level.INFO, "Failed getting info off directory.", e);
+        }
         callback.newDirectory(dir, getCheckpoint());
+      } else {
+        try {
+          writeDirectorySnapshot(dir);
+        } catch (IOException e) {
+          LOG.log(Level.INFO, "Failed getting info off directory.", e);
+        }
       }
       current = snapshotReader.read();
     } else {
-      callback.newDirectory(dir, getCheckpoint());
+      // Assume current.getPath() >= dir.getpath().
+      try {
+        writeDirectorySnapshot(dir);
+      } catch (IOException e) {
+        LOG.log(Level.INFO, "Failed getting info off directory.", e);
+      }
+      callback.newDirectory(dir, getCheckpoint(-1));
     }
 
-    for (ReadonlyFile<?> f : dir.listFiles()) {
+    java.util.List<? extends ReadonlyFile<?>> filesListing = null;
+    try {
+      filesListing = dir.listFiles();
+    } catch (IOException e) {
+      LOG.log(Level.SEVERE, "Failed listing " + dir.getPath() + ".", e);
+      throw new DirListingFailedException();
+    }
+    for (ReadonlyFile<?> f: filesListing) {
       processFileOrDir(f);
     }
   }
 
   void acceptGuarantee(MonitorCheckpoint cp) {
     snapshotStore.acceptGuarantee(cp);
+    guaranteeCheckpoint = cp;
   }
 
   /**
@@ -453,8 +590,13 @@ public class FileSystemMonitor implements Runnable {
    */
   private class FilteringCallback implements Callback {
     private final Callback delegate;
+
     FilteringCallback(Callback delegate) {
       this.delegate = delegate;
+    }
+
+    public void passBegin() throws InterruptedException {
+      delegate.passBegin();
     }
 
     public void changedDirectoryMetadata(FileInfo dir, MonitorCheckpoint mcp)
@@ -475,26 +617,35 @@ public class FileSystemMonitor implements Runnable {
       throw new UnsupportedOperationException();
     }
 
-    public void deletedDirectory(FileInfo dir, MonitorCheckpoint mcp) throws InterruptedException {
+    public void deletedDirectory(FileInfo dir, MonitorCheckpoint mcp)
+        throws InterruptedException {
       delegate.deletedDirectory(dir, mcp);
     }
 
-    public void deletedFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException {
+    public void deletedFile(FileInfo file, MonitorCheckpoint mcp)
+        throws InterruptedException {
       delegate.deletedFile(file, mcp);
     }
 
-    public void newDirectory(FileInfo dir, MonitorCheckpoint mcp) throws InterruptedException {
+    public void newDirectory(FileInfo dir, MonitorCheckpoint mcp)
+        throws InterruptedException {
       delegate.newDirectory(dir, mcp);
     }
 
-    public void newFile(FileInfo fileInfo, MonitorCheckpoint mcp) throws InterruptedException {
+    public void newFile(FileInfo fileInfo, MonitorCheckpoint mcp)
+        throws InterruptedException {
       if (isMimeTypeSupported(fileInfo)) {
         delegate.newFile(fileInfo, mcp);
       }
     }
 
-    public void passComplete(MonitorCheckpoint mcp) throws InterruptedException {
+    public void passComplete(MonitorCheckpoint mcp)
+        throws InterruptedException {
       delegate.passComplete(mcp);
+    }
+
+    public boolean hasEnqueuedAtLeastOneChangeThisPass() {
+      return delegate.hasEnqueuedAtLeastOneChangeThisPass();
     }
 
     private boolean isMimeTypeSupported(FileInfo f) {
@@ -504,7 +655,8 @@ public class FileSystemMonitor implements Runnable {
       try {
         String mimeType = mimeTypeFinder.find(traversalContext, f.getPath(),
             new FileInfoInputStreamFactory(f));
-        boolean isSupported = traversalContext.mimeTypeSupportLevel(mimeType) > 0;
+        boolean isSupported =
+            traversalContext.mimeTypeSupportLevel(mimeType) > 0;
         if (!isSupported) {
           fileSink.add(f, FileFilterReason.UNSUPPORTED_MIME_TYPE);
         }

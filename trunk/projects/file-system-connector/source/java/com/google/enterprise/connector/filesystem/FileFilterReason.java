@@ -26,5 +26,8 @@ public enum FileFilterReason {
   TOO_BIG,
 
   /** File has an unsupported mime type. */
-  UNSUPPORTED_MIME_TYPE
+  UNSUPPORTED_MIME_TYPE,
+
+  /** IO error occured while processing. */
+  IO_EXCEPTION
 }

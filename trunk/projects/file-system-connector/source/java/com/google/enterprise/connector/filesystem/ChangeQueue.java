@@ -39,6 +39,10 @@ class ChangeQueue implements ChangeSource {
   private class Callback implements FileSystemMonitor.Callback {
     private int changeCount = 0;
 
+    public void passBegin() {
+      changeCount = 0;
+    }
+
     /* @Override */
     public void changedDirectoryMetadata(FileInfo dir, MonitorCheckpoint mcp) {
       // Ignored; this is not needed for the GSA.
@@ -87,7 +91,10 @@ class ChangeQueue implements ChangeSource {
       if (changeCount == 0) {
         Thread.sleep(sleepInterval);
       }
-      changeCount = 0;
+    }
+
+    public boolean hasEnqueuedAtLeastOneChangeThisPass() {
+      return changeCount > 0;
     }
   }
 
@@ -101,8 +108,8 @@ class ChangeQueue implements ChangeSource {
    * @return the monitor callback. This is a factory method for use by Spring,
    *         which needs a Callback to create a FileSystemMonitor.
    */
-  public FileSystemMonitor.Callback getCallback() {
-    return callback;
+  public FileSystemMonitor.Callback newCallback() {
+    return new Callback();
   }
 
   /**

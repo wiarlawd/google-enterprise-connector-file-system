@@ -37,7 +37,10 @@ public class FileSessionTest extends TestCase {
             new MimeTypeFinder());
     fetcher.setTraversalContext(new FakeTraversalContext());
     changes = new ChangeQueue(100, 10);
-    authz = new FileAuthorizationManager();
+    FileSystemTypeRegistry fileSystemTypeRegistry =
+      new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
+          new SmbFileSystemType(false)));
+    authz = new FileAuthorizationManager(new PathParser(fileSystemTypeRegistry));
     fileSystemMonitorManager = new FakeFileSystemMonitorManager(changes, this);
     session = new FileConnector(fetcher, authz, fileSystemMonitorManager);
   }

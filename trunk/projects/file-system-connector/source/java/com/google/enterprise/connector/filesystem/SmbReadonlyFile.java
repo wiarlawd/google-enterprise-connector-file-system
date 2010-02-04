@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-//import java.util.logging.Logger;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code jcifs.smb.SmbFile}.
@@ -185,6 +184,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   /* @Override */
   public long length() throws IOException {
     return isRegularFile() ? delegate.length() : 0L;
+  }
+
+  /* @Override */
+  public boolean supportsAuthn() {
+    return true;
   }
 
   @Override

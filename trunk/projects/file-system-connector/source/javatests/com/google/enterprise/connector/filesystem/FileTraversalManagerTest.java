@@ -94,6 +94,18 @@ public class FileTraversalManagerTest extends TestCase {
     runTraversal(null);
   }
 
+  public void testInactive() {
+    try {
+      DocumentList docs = tm.startTraversal();
+      tm.deactivate();
+      docs.nextDocument();
+      fail("DocumentList stayed active despite inactive TraversalManager.");
+    } catch (RepositoryException re) {
+      assertTrue(re.getMessage().contains(
+          "Inactive FileTraversalManager referanced."));
+    }
+  }
+
   private void runTraversal(String checkpoint) throws RepositoryException {
     fileSystemMonitorManager.getCheckpointAndChangeQueue().setMaximumQueueSize(BATCH_SIZE);
     DocumentList docs = null;
@@ -108,9 +120,9 @@ public class FileTraversalManagerTest extends TestCase {
     } else {
       docs = tm.resumeTraversal(checkpoint);
       assertEquals(1, fileSystemMonitorManager.getStartCount());
-      // resume doesn't call stop. 
+      // resume doesn't call stop.
       assertEquals(0, fileSystemMonitorManager.getStopCount());
-      // Doesn't call clean. 
+      // Doesn't call clean.
       assertEquals(0, fileSystemMonitorManager.getCleanCount());
       assertEquals(1, fileSystemMonitorManager.getGuaranteeCount());
     }

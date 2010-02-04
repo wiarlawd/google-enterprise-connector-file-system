@@ -22,10 +22,10 @@ import java.io.Writer;
  * Write snapshot records in CSV format.
  */
 public class SnapshotWriter {
-  private String path;
-  private Writer output;
-  private long count;
-  private FileDescriptor fileDescriptor;
+  protected String path;
+  protected Writer output;
+  protected long count;
+  protected FileDescriptor fileDescriptor;
 
   /**
    * Creates a SnapshotWriter that appends to {@code output}.

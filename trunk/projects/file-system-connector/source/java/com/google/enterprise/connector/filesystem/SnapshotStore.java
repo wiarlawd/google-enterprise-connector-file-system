@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,7 +52,7 @@ public class SnapshotStore {
   private final File snapshotDir;
   private boolean aWriterIsActive = false;  // Whether there is a current writer or not.
 
-  private volatile long oldestSnapshotToKeep;
+  protected volatile long oldestSnapshotToKeep;
   /**
    * @param snapshotDirectory directory in which to store the snapshots. Must be
    *        non-null. If it does not exist, it will be created.
@@ -175,21 +175,20 @@ public class SnapshotStore {
     }
   }
 
-  void close(SnapshotReader reader, SnapshotWriter writer) 
+  void close(SnapshotReader reader, SnapshotWriter writer)
       throws IOException, SnapshotStoreException, SnapshotWriterException {
     try {
       if (reader != null) {
         reader.close();
+        reader = null;
       }
     } finally {  // Make sure to try to close writer too.
       if (aWriterIsActive) {
         if (writer != null) {
           writer.close();
+          writer = null;
         }
         aWriterIsActive = false;
-      } else {
-        new IllegalStateException(
-            "A FileSystemMonitor pass ended but no writer was active.");
       }
     }
   }
@@ -223,14 +222,24 @@ public class SnapshotStore {
     }
   }
 
+  private static void handleInterrupt() throws InterruptedException {
+    if (Thread.interrupted()) {
+      throw new InterruptedException();
+    }
+  }
+
   static void stich(File snapshotDir, MonitorCheckpoint checkpoint)
-      throws IOException, SnapshotStoreException {
+      throws IOException, SnapshotStoreException, InterruptedException {
     long readSnapshotIndex = checkpoint.getSnapshotNumber();
     long writeSnapshotIndex = readSnapshotIndex + 1;
     for (long snapshotIndex : getExistingSnapshots(snapshotDir)) {
+      handleInterrupt();
       if (snapshotIndex > writeSnapshotIndex) {
-        getSnapshotFile(snapshotDir, snapshotIndex).delete();
-        // TODO: Check return value of delete.
+        if (getSnapshotFile(snapshotDir, snapshotIndex).delete()) {
+          LOG.info("Deleted snapshot # " + snapshotIndex + ".");
+        } else {
+          throw new IllegalStateException("Failed deleting snapshot file.");
+        }
       }
     }
 
@@ -244,6 +253,7 @@ public class SnapshotStore {
       SnapshotReader part1 = openSnapshot(snapshotDir, checkpoint.getSnapshotNumber() + 1);
       try {
         for (long k = 0; k < checkpoint.getOffset2(); ++k) {
+          handleInterrupt();
           SnapshotRecord rec = part1.read();
           writer.write(rec);
         }
@@ -255,6 +265,7 @@ public class SnapshotStore {
         part2.skipRecords(checkpoint.getOffset1());
         SnapshotRecord rec = part2.read();
         while (rec != null) {
+          handleInterrupt();
           writer.write(rec);
           rec = part2.read();
         }
@@ -265,5 +276,9 @@ public class SnapshotStore {
     } finally {
       writer.close();
     }
+  }
+
+  File getDirectory() {
+    return snapshotDir;
   }
 }

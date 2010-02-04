@@ -30,7 +30,7 @@ public class ChangeQueueTest extends TestCase {
   @Override
   public void setUp() {
     this.queue = new ChangeQueue(10, 0L);
-    this.callback = queue.getCallback();
+    this.callback = queue.newCallback();
     this.root = MockReadonlyFile.createRoot("/root");
   }
 

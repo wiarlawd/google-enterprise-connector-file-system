@@ -119,10 +119,6 @@ public class JavaReadonlyFileTest extends TestCase {
   public void testListFiles() throws IOException {
     List<JavaReadonlyFile> x = readonlyRoot.listFiles();
     assertEquals(4, x.size());
-    System.out.println(x.get(0).getPath());
-    System.out.println(x.get(1).getPath());
-    System.out.println(x.get(2).getPath());
-    System.out.println(x.get(3).getPath());
     assertEquals(fileA.getAbsolutePath(), x.get(0).getPath());
     assertEquals(dirA.getAbsolutePath() + "/", x.get(1).getPath());
     assertEquals(file1.getAbsolutePath(), x.get(2).getPath());
@@ -130,9 +126,11 @@ public class JavaReadonlyFileTest extends TestCase {
   }
 
   public void testGetAcl() {
-    // TODO: will need to be changed when ACLs are created by
-    // JavaReadonlyFile
     assertTrue(readonlyRoot.getAcl().isPublic());
+  }
+
+  public void testSupportsAuthn() {
+    assertFalse(readonlyRoot.supportsAuthn());
   }
 
   public void testLastModified() throws IOException {

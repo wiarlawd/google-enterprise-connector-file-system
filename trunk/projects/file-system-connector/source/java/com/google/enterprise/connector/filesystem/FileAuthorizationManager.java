@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,38 +17,49 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
-import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
-import jcifs.smb.NtlmPasswordAuthentication;
-import jcifs.smb.SmbException;
-import jcifs.smb.SmbFile;
-
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  */
 public class FileAuthorizationManager implements AuthorizationManager {
-  private static final Logger LOG = Logger.getLogger(FileAuthorizationManager.class.getName());
+  private static final Logger LOG =
+      Logger.getLogger(FileAuthorizationManager.class.getName());
+  private final PathParser pathParser;
+
+  FileAuthorizationManager(PathParser pathParser) {
+    this.pathParser = pathParser;
+  }
+
   /**
-   * @param docId
-   * @param identity
-   * @return true if {@code docId} can be read as an SMB file using {@code
-   *         identity}.
+   * Returns true if we succeed in verifying that the user indicated by the
+   * passed in identity has permission to read the document with the
+   * passed in docId and false otherwise.
    */
-  private boolean smbCanRead(String docId, AuthenticationIdentity identity) {
-    try {
-      NtlmPasswordAuthentication auth =
-          new NtlmPasswordAuthentication(identity.getDomain(), identity.getUsername(), identity
-              .getPassword());
-      SmbFile file = new SmbFile(docId, auth);
-      return file.canRead();
-    } catch (MalformedURLException e) {
+  private boolean canRead(String docId, AuthenticationIdentity identity) {
+    Credentials credentials =
+        FileConnector.newCredentials(identity.getDomain(),
+            identity.getUsername(), identity.getPassword());
+    if (credentials == null) {
+      // Null credentials mean identity has a null or zero length userName.
       return false;
-    } catch (SmbException e) {
+    }
+    try {
+      ReadonlyFile<?> file = pathParser.getFile(docId, credentials);
+      if (file.supportsAuthn()) {
+        return file.canRead();
+      } else {
+        return false;
+      }
+    } catch (RepositoryDocumentException re) {
+      LOG.log(Level.FINE,
+          "Exception during authorization check for document id "
+          + docId, re);
       return false;
     }
   }
@@ -57,24 +68,28 @@ public class FileAuthorizationManager implements AuthorizationManager {
    * @param docIds
    * @param identity
    * @return a list of authorizations for document IDs.
-   * @throws RepositoryException
    */
   // TODO: This will require work for non-SMB files.
   /* @Override */
   public List<AuthorizationResponse> authorizeDocids(Collection<String> docIds,
-      AuthenticationIdentity identity) throws RepositoryException {
-    // TODO: Remove the password and lower the logging level
-    LOG.warning("Authorization request for domainName = " + identity.getDomain()
-        + " userName = " + identity.getUsername()
-        + " password = " + identity.getPassword());
-    List<AuthorizationResponse> authorized = new ArrayList<AuthorizationResponse>();
+      AuthenticationIdentity identity) {
+    List<AuthorizationResponse> authorized =
+        new ArrayList<AuthorizationResponse>();
+    List<String> authorizedIds = new ArrayList<String>();
+    List<String> notAutorizedIds = new ArrayList<String>();
     for (String docId : docIds) {
-      if (!docId.startsWith("smb://")) {
-        LOG.warning("failed to authorize non-SMB document: " + docId);
-      }
-      if (smbCanRead(docId, identity)) {
+      if (canRead(docId, identity)) {
+        authorizedIds.add(docId);
         authorized.add(new AuthorizationResponse(true, docId));
+      } else {
+        notAutorizedIds.add(docId);
       }
+    }
+    if (LOG.isLoggable(Level.INFO)) {
+      LOG.info("Authorization request for domainName = " + identity.getDomain()
+          + " userName = " + identity.getUsername()
+          + " authorized Ids = " + authorizedIds
+          + " not authorized Ids = " + notAutorizedIds);
     }
     return authorized;
   }

@@ -23,14 +23,18 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Tests for the {@link FileSystemMonitor}
  */
 public class FileSystemMonitorTest extends TestCase {
   private FileSystemMonitor monitor;
-  private TestVisitor visitor;
+  private CountingVisitor visitor;
   private MockReadonlyFile root;
   private File snapshotDir;
   private int baseDirs;
@@ -39,10 +43,13 @@ public class FileSystemMonitorTest extends TestCase {
   private SnapshotStore store;
   private FileChecksumGenerator checksumGenerator;
 
-  private class TestVisitor implements FileSystemMonitor.Callback {
+  private class CountingVisitor implements FileSystemMonitor.Callback {
+
     private int maxScans = 1;
     private int scanCount = 0;
+    private boolean keepAddingFiles = false; // Ensures modification every pass.
 
+    int beginCount;
     int newDirCount;
     int newFileCount;
     int dirMetadataChangeCount;
@@ -51,23 +58,29 @@ public class FileSystemMonitorTest extends TestCase {
     int fileMetadataChangedCount;
     int deletedFileCount;
 
-    FileSystemMonitor monitor = null;
+    FileSystemMonitor myMonitor = null;
+
+    MonitorCheckpoint checkpoint = null;
+
+    CountingVisitor() {
+    }
 
     /* Giving a monitor reference makes this vistior update
        it's monitor with checkpoints at passComplete. */
     private void registerMonitor(FileSystemMonitor monitor) {
-      this.monitor = monitor;
-    }
-
-    public TestVisitor() {
-      reset();
+      this.myMonitor = monitor;
     }
 
     public void setMaxScans(int count) {
       this.maxScans = count;
     }
 
-    public void reset() {
+    public void setKeepAddingFiles(boolean makeMods) {
+      keepAddingFiles = makeMods;
+    }
+
+    public void passBegin() {
+      beginCount++;
       newDirCount = 0;
       newFileCount = 0;
       dirMetadataChangeCount = 0;
@@ -114,12 +127,13 @@ public class FileSystemMonitorTest extends TestCase {
 
     /* @Override */
     public void passComplete(MonitorCheckpoint mcp) throws InterruptedException {
+      checkpoint = mcp;
       ++scanCount;
-      if (monitor != null) {
-        monitor.acceptGuarantee(mcp);  // On maxScans pass let's monitor know
-                                      // it can drop snapshots < (maxScans - 1).
-                                      // deleteOldSnapshots() needs to be called
-                                      // for this pruning to actually happen.
+      if (myMonitor != null) {
+        myMonitor.acceptGuarantee(mcp); // On maxScans pass let's monitor know
+                                        // it can drop snapshots < (maxScans - 1).
+                                        // deleteOldSnapshots() needs to be called
+                                        // for this pruning to actually happen.
       }
       if (scanCount >= maxScans) {
         // Last snapshot (maxScans) is expected written and closed now.
@@ -128,6 +142,149 @@ public class FileSystemMonitorTest extends TestCase {
         // snap.8 however Monitor won't make that call because we:
         throw new InterruptedException("done");
       }
+      if (keepAddingFiles) {
+        root.get("dir.2").addFile("was-added-by-visitor-" + scanCount, "");
+      }
+    }
+
+    public boolean hasEnqueuedAtLeastOneChangeThisPass() {
+      int changeCount = newFileCount + fileContentChangedCount
+          + fileMetadataChangedCount + deletedFileCount;
+      return changeCount > 0;
+    }
+  }
+
+  /**
+   * A {@link FileSystemMonitor.Callback} for running a scan, making a
+   * file system change and running another scan. The caller should override the
+   * call back for her change and throw an {@link InterruptedException} for the
+   * specific change. On the initial scan passComplete will remain false.
+   */
+  private abstract static class ChangeOnPassCompleteVisitor implements
+      FileSystemMonitor.Callback {
+    protected MonitorCheckpoint checkpoint = null;
+    protected boolean passComplete = false;
+
+    /* @Override */
+    public void changedDirectoryMetadata(FileInfo dir, MonitorCheckpoint mcp) {
+    }
+
+    /* @Override */
+    @SuppressWarnings("unused")
+    public void changedFileContent(FileInfo string, MonitorCheckpoint mcp)
+        throws InterruptedException {
+    }
+
+    /* @Override */
+    @SuppressWarnings("unused")
+    public void newFile(FileInfo file, MonitorCheckpoint mcp)
+        throws InterruptedException{
+    }
+
+    /* @Override */
+    public void changedFileMetadata(FileInfo file, MonitorCheckpoint mcp) {
+    }
+
+    /* @Override */
+    public void deletedDirectory(FileInfo dir, MonitorCheckpoint mcp) {
+    }
+
+    /* @Override */
+    public void deletedFile(FileInfo file, MonitorCheckpoint mcp) {
+    }
+
+    /* @Override */
+    public boolean hasEnqueuedAtLeastOneChangeThisPass() {
+      return true;  // The conservative, always allowed, answer.
+    }
+
+    /* @Override */
+    public void newDirectory(FileInfo dir, MonitorCheckpoint mcp) {
+    }
+
+    /* @Override */
+    public void passBegin() {
+    }
+
+    protected abstract void change();
+
+    /* @Override */
+    public void passComplete(MonitorCheckpoint mcp) {
+      if (passComplete) {
+        fail("Should have been interrupted.");
+      } else {
+        change();
+        passComplete = true;
+      }
+    }
+  }
+
+  /**
+   * Adds a file after a complete pass and throws an {@link
+   * InterruptedException} in {@link #newFile(FileInfo, MonitorCheckpoint)} for
+   * the added file on the next pass.
+   */
+  private class StopAfterSpecificAddVisitor
+      extends ChangeOnPassCompleteVisitor {
+
+    private final String stopOnThisName;
+
+    StopAfterSpecificAddVisitor(String stopOnThisName) {
+      this.stopOnThisName = stopOnThisName;
+    }
+
+    @Override
+    public void newFile(FileInfo file, MonitorCheckpoint mcp)
+      throws InterruptedException{
+      if (file.getPath().equals(root.getPath() + "/" + stopOnThisName)) {
+        checkpoint = mcp;
+        throw new InterruptedException("done");
+      }
+    }
+
+    @Override
+    protected void change() {
+      root.addFile(stopOnThisName, "");
+    }
+  }
+
+  /**
+   * Adds a file after a complete pass and throws an {@link
+   * InterruptedException} in {@link #newFile(FileInfo, MonitorCheckpoint)} for
+   * the added file on the next pass.
+   */
+  private class StopAfterReplaceFileVisitor
+      extends ChangeOnPassCompleteVisitor {
+
+    private final String replaceName;
+
+    StopAfterReplaceFileVisitor(String replaceName) {
+      this.replaceName = replaceName;
+    }
+
+    @Override
+    public void changedFileContent(FileInfo file, MonitorCheckpoint mcp)
+      throws InterruptedException{
+      if (file.getPath().equals(root.getPath() + "/" + replaceName)) {
+        checkpoint = mcp;
+        throw new InterruptedException("done");
+      }
+    }
+
+    @Override
+    public void newFile(FileInfo file, MonitorCheckpoint mcp)
+      throws InterruptedException{
+      if (passComplete
+          && file.getPath().equals(root.getPath() + "/" + replaceName)) {
+        checkpoint = mcp;
+        throw new InterruptedException("done");
+      }
+    }
+
+    @Override
+    protected void change() {
+      root.remove(replaceName);
+      root.addFile(replaceName, "newContent");
     }
   }
 
@@ -162,7 +319,7 @@ public class FileSystemMonitorTest extends TestCase {
       FilePatternMatcher myMatcher, TraversalContext traversalContext,
       FileSink fileSink) {
     return new FileSystemMonitor("name", root, store, visitor, generator,
-        myMatcher, traversalContext, fileSink);
+        myMatcher, traversalContext, fileSink, null);
   }
 
   private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
@@ -185,6 +342,11 @@ public class FileSystemMonitorTest extends TestCase {
     return newFileSystemMonitor(checksumGenerator, matcher, traversalContext, fileSink);
   }
 
+  private FileSystemMonitor newFileSystemMonitor(FileSystemMonitor.Callback customVisitor) {
+    return new FileSystemMonitor("name", root, store, customVisitor, checksumGenerator,
+        matcher, new FakeTraversalContext(), new LoggingFileSink(), null);
+  }
+
   @Override
   public void setUp() throws Exception {
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
@@ -198,7 +360,7 @@ public class FileSystemMonitorTest extends TestCase {
     root = MockReadonlyFile.createRoot("/foo/bar");
     createTree(root, 3, 2, 10);
 
-    visitor = new TestVisitor();
+    visitor = new CountingVisitor();
     checksumGenerator = new FileChecksumGenerator("SHA1");
 
     store = new SnapshotStore(snapshotDir);
@@ -287,7 +449,7 @@ public class FileSystemMonitorTest extends TestCase {
   public void testNoChangeScan() {
     monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
     // A rescan should checksum all files again, but find no changes.
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
@@ -295,12 +457,12 @@ public class FileSystemMonitorTest extends TestCase {
   public void testFileAddition() {
     monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
     root.addFile("new-file", "");
     // Should find the new file, and checksum all files.
     runMonitorAndCheck(0, 1, 0, 0, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -319,7 +481,7 @@ public class FileSystemMonitorTest extends TestCase {
     monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length() - 1),
         sink);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
     final int bigCount = 4;
     for (int ix = 0; ix < bigCount; ix++) {
       root.addFile("big-file" + ix, BIG_CONTENT);
@@ -342,7 +504,7 @@ public class FileSystemMonitorTest extends TestCase {
     monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length()),
         sink);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
     final int count = 4;
     for (int ix = 0; ix < count; ix++) {
       root.addFile("big-file" + ix, BIG_CONTENT);
@@ -358,7 +520,7 @@ public class FileSystemMonitorTest extends TestCase {
     assertTrue(smallContent.length() < maxSize);
     MockReadonlyFile smallToBig = root.addFile("smallToBig.txt", smallContent);
     runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
 
     smallToBig.setFileContents(BIG_CONTENT);
     runMonitorAndCheck(0, 0, 0, 1, 0, 0, 0);
@@ -369,7 +531,7 @@ public class FileSystemMonitorTest extends TestCase {
     monitor = newFileSystemMonitor(new FakeTraversalContext(maxSize));
     MockReadonlyFile bigToSmall = root.addFile("smallToBig.txt", BIG_CONTENT);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
 
     final String smallContent = "small";
     assertTrue(smallContent.length() < maxSize);
@@ -397,7 +559,7 @@ public class FileSystemMonitorTest extends TestCase {
     runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
 
     traversalContext.allowAllMimeTypes(false);
-    visitor.reset();
+    visitor.passBegin();
     unsupportedAfterUpdate.setFileContents("new fake tar.gz");
     runMonitorAndCheck(0, 0, 0, 1, 0, 0, 0);
   }
@@ -411,7 +573,7 @@ public class FileSystemMonitorTest extends TestCase {
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
 
     traversalContext.allowAllMimeTypes(true);
-    visitor.reset();
+    visitor.passBegin();
     supportedAfterUpdate.setFileContents("new fake tar.gz");
     //
     //Not perfect because we send this in as an update but it is an add
@@ -443,10 +605,10 @@ public class FileSystemMonitorTest extends TestCase {
     }
 
     // Now the monitor should notice the deletions.
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 5, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -460,10 +622,10 @@ public class FileSystemMonitorTest extends TestCase {
     root.addFile("zzz", "");
     runMonitorAndCheck(baseDirs, baseFiles + 1, 0, 0, 0, 0, 0);
     root.remove("zzz");
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 1, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -472,11 +634,11 @@ public class FileSystemMonitorTest extends TestCase {
     // First scan should find all files and checksum them.
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     root.get("dir.1").addSubdir("new-dir");
-    visitor.reset();
+    visitor.passBegin();
     // Should notice the new directory.
     runMonitorAndCheck(1, 0, 0, 0, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -489,7 +651,7 @@ public class FileSystemMonitorTest extends TestCase {
     root.addFile("BB.", "");
     root.addFile("CC", "");
     runMonitorAndCheck(baseDirs, baseFiles + 3, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
 
     // Add a directory and a couple files
     MockReadonlyFile bb = root.addSubdir("BB");
@@ -499,7 +661,7 @@ public class FileSystemMonitorTest extends TestCase {
     // Should find one new dir and two new files.
     runMonitorAndCheck(1, 2, 0, 0, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -508,10 +670,10 @@ public class FileSystemMonitorTest extends TestCase {
     root.get("dir.2").addSubdir("adir");
     runMonitorAndCheck(baseDirs + 1, baseFiles, 0, 0, 0, 0, 0);
     root.get("dir.2").remove("adir");
-    visitor.reset();
+    visitor.passBegin();
     // Should notice that a directory has been deleted.
     runMonitorAndCheck(0, 0, 1, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -524,10 +686,10 @@ public class FileSystemMonitorTest extends TestCase {
     root.addSubdir("zzzz");
     runMonitorAndCheck(baseDirs + 1, baseFiles, 0, 0, 0, 0, 0);
     root.remove("zzzz");
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 1, 0, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -544,10 +706,10 @@ public class FileSystemMonitorTest extends TestCase {
     }
     root.get("dir.2").remove("new-dir");
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 1, 15, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -559,10 +721,10 @@ public class FileSystemMonitorTest extends TestCase {
     root.get("dir.2").remove("new-dir");
     root.get("dir.2").addFile("new-dir", "");
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 1, 1, 0, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
@@ -573,86 +735,169 @@ public class FileSystemMonitorTest extends TestCase {
 
     root.get("dir.2").remove("new-file");
     root.get("dir.2").addSubdir("new-file");
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(1, 0, 0, 1, 0, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
   public void testContentChange() {
     monitor = newFileSystemMonitor(matcher);
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
-    visitor.reset();
+    visitor.passBegin();
     root.get("dir.1").get("file.2.txt").setFileContents("foo!");
 
     // Should notice the content change.
     runMonitorAndCheck(0, 0, 0, 0, 1, 0, 0);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
+  private static class IncrementableClock implements FileSystemMonitor.Clock {
+    private long increment = 0;
+
+    /* @Override */
+    public long getTime() {
+      return System.currentTimeMillis() + increment;
+    }
+
+    public void advance(long ms) {
+      increment += ms;
+    }
+  }
+
+  private static class UseCountingGenerator extends FileChecksumGenerator {
+    int count;
+
+    UseCountingGenerator() {
+      super("SHA1");
+    }
+
+    @Override
+    public String getChecksum(InputStream in) throws IOException {
+      ++count;
+      return super.getChecksum(in);
+    }
+  }
+
   public void testStability() throws SnapshotStoreException {
-    class MyClock implements FileSystemMonitor.Clock {
-      private long increment = 0;
-
-      /* @Override */
-      public long getTime() {
-        return System.currentTimeMillis() + increment;
-      }
-
-      public void advance(long ms) {
-        increment += ms;
-      }
-    }
-
-    class Generator extends FileChecksumGenerator {
-      int count;
-
-      Generator() {
-        super("SHA1");
-      }
-
-      @Override
-      public String getChecksum(InputStream in) throws IOException {
-        ++count;
-        return super.getChecksum(in);
-      }
-    }
-
-    Generator gen = new Generator();
+    UseCountingGenerator gen = new UseCountingGenerator();
     store = new SnapshotStore(snapshotDir);
     monitor = newFileSystemMonitor(gen);
 
-    MyClock clock = new MyClock();
+    IncrementableClock clock = new IncrementableClock();
     monitor.setClock(clock);
 
     runMonitorAndCheck(baseDirs, baseFiles, 0, 0, 0, 0, 0);
     assertEquals(baseFiles, gen.count);
-    visitor.reset();
+    visitor.passBegin();
 
     // The second scan should checksum all files, but find no changes.
     clock.advance(10000);
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
     assertEquals(2 * baseFiles, gen.count);
 
-    visitor.reset();
+    visitor.passBegin();
     // Third scan should not need to checksum any files.
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
     assertEquals(2 * baseFiles, gen.count);
 
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
   }
 
-  /**
-   * Make sure that snapshot files are cleaned up.
-   */
+  public void testChangeAclNotStable() throws Exception {
+    UseCountingGenerator gen = new UseCountingGenerator();
+    store = new SnapshotStore(snapshotDir);
+    monitor = newFileSystemMonitor(gen);
+
+    IncrementableClock clock = new IncrementableClock();
+    monitor.setClock(clock);
+
+    //Update an ACL
+    MockReadonlyFile dir0 = root.get("dir.0");
+    MockReadonlyFile file1 = dir0.addFile("zz.file1.txt", "hi mom.");
+    MockReadonlyFile file2 = dir0.addFile("file2.html", "hi dad.");
+
+    runMonitorAndCheck(baseDirs, baseFiles + 2, 0, 0, 0, 0, 0);
+    assertEquals(baseFiles + 2, gen.count);
+    visitor.passBegin();
+
+    // The second scan should checksum all files including the 2 with changed
+    // ACLs.
+    Acl acl2 = Acl.newAcl(Arrays.asList("fred", "jill"),
+        Arrays.asList("admins"));
+    file1.setAcl(acl2);
+    file2.setAcl(acl2);
+    clock.advance(10000);
+    runMonitorAndCheck(0, 0, 0, 0, 2, 0, 0);
+    assertEquals(2 * (baseFiles + 2), gen.count);
+
+    visitor.passBegin();
+    // The third scan should checksum the 2 files that are not yet stable but
+    // record no new changes.
+    clock.advance(10000);
+    runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
+    assertEquals(2 * (baseFiles + 2) + 2, gen.count);
+
+    visitor.passBegin();
+    // The forth scan all files are stable and unchanged so no additional
+    // checksums should be computed and not files should reflect changes.
+    runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
+    assertEquals(2 * (baseFiles + 2) + 2, gen.count);
+  }
+
+  public void testChangeChangeAclStable() throws Exception {
+    UseCountingGenerator gen = new UseCountingGenerator();
+    store = new SnapshotStore(snapshotDir);
+    monitor = newFileSystemMonitor(gen);
+
+    IncrementableClock clock = new IncrementableClock();
+    monitor.setClock(clock);
+
+    //Update an ACL
+    MockReadonlyFile dir0 = root.get("dir.0");
+    MockReadonlyFile file1 = dir0.addFile("zz.file1.txt", "hi mom.");
+    MockReadonlyFile file2 = dir0.addFile("file2.html", "hi dad.");
+
+    runMonitorAndCheck(baseDirs, baseFiles + 2, 0, 0, 0, 0, 0);
+    assertEquals(baseFiles + 2, gen.count);
+    visitor.passBegin();
+
+    // The second scan should checksum all files.
+    clock.advance(10000);
+    runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
+    assertEquals(2 * (baseFiles + 2), gen.count);
+
+    visitor.passBegin();
+    // The third scan reflects all the files stable so no changes or checksums
+    // should be detected.
+    clock.advance(10000);
+    runMonitorAndCheck(0, 0, 0, 0, 0, 0, 0);
+    assertEquals(2 * (baseFiles + 2), gen.count);
+
+    visitor.passBegin();
+
+    // Now we change the ACLs for 2 stable files.
+    Acl acl2 = Acl.newAcl(Arrays.asList("fred", "jill"),
+        Arrays.asList("admins"));
+    file1.setAcl(acl2);
+    file2.setAcl(acl2);
+
+    // The forth scan should detect changes to 2 files with changed ACLs and
+    // compute 2 additional checksums.
+    runMonitorAndCheck(0, 0, 0, 0, 2, 0, 0);
+    assertEquals(2 * (baseFiles + 2) + 2, gen.count);
+  }
+
+  /* Make sure that snapshot files are cleaned up. */
   public void testGarbageCollection() throws Exception {
     monitor = newFileSystemMonitor(matcher);
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(10);
+    visitor.setKeepAddingFiles(true);
     monitor.run();
     assertEquals(3, snapshotDir.list().length);
     for (File s : snapshotDir.listFiles()) {
@@ -662,6 +907,23 @@ public class FileSystemMonitorTest extends TestCase {
     assertEquals(2, snapshotDir.list().length);
     for (File s : snapshotDir.listFiles()) {
       assertTrue(s.getName().matches(".*\\.(9|10)$"));
+    }
+  }
+
+  public void testImmediateDeletionOfNoChangeSnapshots() throws Exception {
+    monitor = newFileSystemMonitor(matcher);
+    visitor.registerMonitor(monitor);
+    visitor.setMaxScans(10);
+    visitor.setKeepAddingFiles(false);
+    monitor.run();
+    assertEquals(2, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(1|2)$"));
+    }
+    store.deleteOldSnapshots();
+    assertEquals(2, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(2|1)$"));
     }
   }
 
@@ -693,12 +955,291 @@ public class FileSystemMonitorTest extends TestCase {
     monitor = newFileSystemMonitor(nonPngMatcher);
 
     // Make sure the monitor deletes two files.
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 0, 0, 2, 0, 0, 0);
 
     // Revert to the original monitor and make sure they are added again.
     monitor = newFileSystemMonitor(matcher);
-    visitor.reset();
+    visitor.passBegin();
     runMonitorAndCheck(0, 2, 0, 0, 0, 0, 0);
+  }
+
+  public void testSnapshotRestoreOnNewFile() throws Exception {
+    root.addSubdir("fila.brazila"); // Testing to see this dir in stiched snapshot.
+    StopAfterSpecificAddVisitor stoppingVisitor
+        = new StopAfterSpecificAddVisitor("fila.b"); // Sorts before fila.brazila
+    monitor = newFileSystemMonitor(stoppingVisitor);
+    monitor.run();
+    SnapshotStore.stich(snapshotDir, stoppingVisitor.checkpoint);
+    SnapshotReader reader = store.openMostRecentSnapshot();
+    ArrayList<String> paths = new ArrayList<String>();
+    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getPath());
+    }
+    List<String> sorted = new ArrayList<String>(paths);
+    Collections.sort(sorted);
+    assertEquals(sorted, paths);
+    int earlier = paths.indexOf(root.getPath() + "/" + "fila.b");
+    assertFalse("Expected file not found in snapshot.", earlier == -1);
+    int later = paths.indexOf(root.getPath() + "/" + "fila.brazila/");
+    assertFalse("Expected directory not found in snapshot.", later == -1);
+    assertTrue((earlier + 1) == later);
+  }
+
+  public void testSnapshotRestoreOnNewFileAfter() throws Exception {
+    root.addSubdir("xlast"); // Testing to see this dir in stiched snapshot.
+    StopAfterSpecificAddVisitor stoppingVisitor
+        = new StopAfterSpecificAddVisitor("xxlast"); // Sorts after xlast
+    monitor = newFileSystemMonitor(stoppingVisitor);
+    monitor.run();
+    SnapshotStore.stich(snapshotDir, stoppingVisitor.checkpoint);
+    SnapshotReader reader = store.openMostRecentSnapshot();
+    ArrayList<String> paths = new ArrayList<String>();
+    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getPath());
+    }
+    List<String> sorted = new ArrayList<String>(paths);
+    Collections.sort(sorted);
+    assertEquals(sorted, paths);
+
+    int earlier = paths.indexOf(root.getPath() + "/" + "xlast/");
+    assertFalse("Expected directory not found in snapshot.", earlier == -1);
+    int later = paths.indexOf(root.getPath() + "/" + "xxlast");
+    assertFalse("Expected file not found in snapshot.", later == -1);
+    assertTrue((earlier + 1) == later);
+  }
+
+  public void testSnapshotRestoreAfterReplaceFile() throws Exception {
+    StopAfterReplaceFileVisitor replaceVisitor
+        = new StopAfterReplaceFileVisitor("file.6.txt");
+    monitor = newFileSystemMonitor(replaceVisitor);
+    monitor.run();
+    SnapshotStore.stich(snapshotDir, replaceVisitor.checkpoint);
+    SnapshotReader reader = store.openMostRecentSnapshot();
+    ArrayList<String> paths = new ArrayList<String>();
+    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getPath());
+    }
+    List<String> sorted = new ArrayList<String>(paths);
+    Collections.sort(sorted);
+    assertEquals(sorted, paths);
+
+    String path = root.getPath() + "/" + "file.6.txt";
+    int idx = paths.indexOf(path);
+    assertTrue("Expected file found in snapshot.", idx != -1);
+    Set<String> unique = new HashSet<String>(paths);
+    assertTrue("Unexpected duplicates", unique.size() == paths.size());
+  }
+
+  public void testSnapshotRestoreAfterFileReplaceWithDir() throws Exception {
+    String dirToFileName = "dirBeforeFileAfter";
+    root.addSubdir(dirToFileName);
+    StopAfterReplaceFileVisitor replaceVisitor
+        = new StopAfterReplaceFileVisitor(dirToFileName);
+    monitor = newFileSystemMonitor(replaceVisitor);
+    monitor.run();
+    SnapshotStore.stich(snapshotDir, replaceVisitor.checkpoint);
+    SnapshotReader reader = store.openMostRecentSnapshot();
+    ArrayList<String> paths = new ArrayList<String>();
+    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getPath());
+    }
+    List<String> sorted = new ArrayList<String>(paths);
+    Collections.sort(sorted);
+    assertEquals(sorted, paths);
+
+// TODO: Fix the bug that causes the following assertion to fail and restore
+//       the assertion. For more information refer to the TODO in
+//       FileSystemMonitor.processFile.
+//    int dirIx = paths.indexOf(root.getPath() + "/" + dirToFileName + "/");
+//    assertTrue("Expected directory not found in snapshot.", dirIx == -1);
+    int fileIx = paths.indexOf(root.getPath() + "/" + dirToFileName);
+    assertFalse("Expected file not found in snapshot.", fileIx == -1);
+    Set<String> unique = new HashSet<String>(paths);
+    assertTrue("Unexpected duplicates", unique.size() == paths.size());
+  }
+
+  /* Throws in a single failing SnapshotWriterException into otherwise
+   * perfectly running SnapshotWriter. */
+  private class FailingSnapshotWriter extends SnapshotWriter {
+    boolean threw = false;
+    int timesToWriteBeforeThrow = 5;
+    private final boolean interrupt;
+
+    FailingSnapshotWriter(boolean threw, SnapshotWriter writer,
+        boolean interrupt) throws SnapshotWriterException {
+      super(writer.output, writer.fileDescriptor, writer.path);
+      this.threw = threw;
+      this.interrupt = interrupt;
+    }
+
+    @Override
+    public void write(SnapshotRecord rec) throws SnapshotWriterException {
+      if (threw || timesToWriteBeforeThrow > 0) {
+        super.write(rec);
+        timesToWriteBeforeThrow--;
+      } else {
+        try {
+          if (interrupt) {
+            Thread.currentThread().interrupt();
+          }
+          throw new SnapshotWriterException("purposefully");
+        } finally {
+          threw = true;
+        }
+      }
+    }
+  }
+
+  private class FailingSnapshotStore extends SnapshotStore {
+    FailingSnapshotWriter writer = null;
+    // True means FailingSnapshotWriter will set the interrupt status before
+    // throwing a SnapshotWriterException. This exercises interrupting
+    // FileSystemMonitor exception recovery.
+    private final boolean interrupt;
+    FailingSnapshotStore(long oldestSnapshotToKeep, boolean interrupt)
+        throws SnapshotStoreException {
+      super(snapshotDir);
+      this.oldestSnapshotToKeep = oldestSnapshotToKeep;
+      this.interrupt = interrupt;
+    }
+
+    @Override
+    public SnapshotWriter openNewSnapshotWriter() throws SnapshotStoreException {
+      boolean threw = writer != null && writer.threw;
+      writer = new FailingSnapshotWriter(threw, super.openNewSnapshotWriter(),
+          interrupt);
+      return writer;
+    }
+  }
+
+  private ArrayList<String> readEntireMostRecentSnapshot(SnapshotStore store) {
+    try {
+      SnapshotReader reader = store.openMostRecentSnapshot();
+      ArrayList<String> records = new ArrayList<String>();
+      for (SnapshotRecord record = reader.read(); record != null; record = reader.read()) {
+        records.add(record.getPath());  // Use paths cause scan times are different.
+      }
+      return records;
+    } catch (Exception e) {
+      throw new IllegalStateException("Reading snapshot in test failed.", e);
+    }
+  }
+
+  public void testSevereExceptionCausesReStich() throws Exception {
+    ArrayList<String> beforeFailingStarted = null;
+    ArrayList<String> afterFailures = null;
+
+    /* Setup some state before the failure. */
+
+    monitor = newFileSystemMonitor(matcher);
+    visitor.registerMonitor(monitor);
+    visitor.setMaxScans(5);
+    visitor.setKeepAddingFiles(true);
+    monitor.run();
+    beforeFailingStarted = readEntireMostRecentSnapshot(store);
+    long saveOldestSnapshotToKeep = store.oldestSnapshotToKeep;
+    MonitorCheckpoint saveOldestMonitorCp = visitor.checkpoint;
+    store = null;
+    visitor = null;
+    monitor = null;
+    assertEquals(3, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(3|4|5)$"));
+    }
+
+    /* Cause failure. */
+    FailingSnapshotStore failingStore =
+      new FailingSnapshotStore(saveOldestSnapshotToKeep, false);
+
+    visitor = new CountingVisitor();
+    monitor = new FileSystemMonitor("name", root, failingStore,
+        visitor, checksumGenerator, matcher, new FakeTraversalContext(),
+        new LoggingFileSink(), saveOldestMonitorCp);
+
+    visitor.registerMonitor(monitor);
+    visitor.setMaxScans(1);
+    visitor.setKeepAddingFiles(false);
+    monitor.run();
+    afterFailures = readEntireMostRecentSnapshot(failingStore);
+      // Failed writing snapshot.6; And a restich is caused
+      // from a monitor checkpointing that uses #4 and #5, so
+      // #6 gets deleted in stitch and gets created from #4 and #5.
+      // The next traversal (the first one to complete) writes #7.
+
+    assertTrue(failingStore.writer.threw);
+    assertEquals(beforeFailingStarted.size(), afterFailures.size());
+    assertEquals(beforeFailingStarted, afterFailures);
+
+    assertEquals(5, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      if (s.getName().matches(".*\\.7$")) {
+        s.delete();  // Delete the interrupted/done snapshot.
+      } else {
+        assertTrue(s.getName().matches(".*\\.(3|4|5|6)$"));
+      }
+    }
+    assertEquals(4, snapshotDir.list().length);
+
+    // Make sure re-stich snapshot (#6) is correct.
+    afterFailures = readEntireMostRecentSnapshot(failingStore);
+
+    assertEquals(beforeFailingStarted.size(), afterFailures.size());
+    assertEquals(beforeFailingStarted, afterFailures);
+
+    /* Get rolling correct again, without any fs changes. */
+
+    visitor.setMaxScans(5);
+    visitor.setKeepAddingFiles(false);
+    monitor.run();
+
+    assertEquals(2, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(7|6)$"));
+    }
+  }
+
+  public void testInterruptExceptionRecovery() throws Exception {
+    ArrayList<String> beforeFailingStarted = null;
+    ArrayList<String> afterFailures = null;
+
+    /* Setup some state before the failure. */
+    monitor = newFileSystemMonitor(matcher);
+    visitor.registerMonitor(monitor);
+    visitor.setMaxScans(5);
+    visitor.setKeepAddingFiles(true);
+    monitor.run();
+    beforeFailingStarted = readEntireMostRecentSnapshot(store);
+    long saveOldestSnapshotToKeep = store.oldestSnapshotToKeep;
+    MonitorCheckpoint saveOldestMonitorCp = visitor.checkpoint;
+    store = null;
+    visitor = null;
+    monitor = null;
+    assertEquals(3, snapshotDir.list().length);
+    for (File s : snapshotDir.listFiles()) {
+      assertTrue(s.getName().matches(".*\\.(3|4|5)$"));
+    }
+
+    /* Cause failure after setting the interrupt status for the
+     * FileSystemMonitor thread. The interrupt should cause
+     * FileSystemMonitor recovery to exit and the FileSystemMonitor.run()
+     * to exit. */
+    FailingSnapshotStore failingStore =
+      new FailingSnapshotStore(saveOldestSnapshotToKeep,
+          true);
+
+    visitor = new CountingVisitor();
+    monitor = new FileSystemMonitor("name", root, failingStore,
+        visitor, checksumGenerator, matcher, new FakeTraversalContext(),
+        new LoggingFileSink(), saveOldestMonitorCp);
+
+    visitor.registerMonitor(monitor);
+    visitor.setMaxScans(1);
+    visitor.setKeepAddingFiles(false);
+    monitor.run();
+    // The monitor should run only the pass that fails and exit without
+    // starting a new pass because FileSystemMonitor.performExceptionRecovery
+    // should throw an InterruptedException.
+    assertEquals(1, visitor.beginCount);
   }
 }

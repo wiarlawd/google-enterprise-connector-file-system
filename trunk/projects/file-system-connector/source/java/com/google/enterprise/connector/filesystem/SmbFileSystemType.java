@@ -16,6 +16,13 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
+import jcifs.Config;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 //import java.util.logging.Logger;
 
 /**
@@ -23,10 +30,59 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
  *
  */
 public class SmbFileSystemType implements FileSystemType {
-  //private static final Logger LOG = Logger.getLogger(SmbFileSystemType.class.getName());
+  /**
+   * Name of the jcifsConfiguration.properties resource. Users configure
+   * jcifs by editing this file.
+   */
+  public static final String JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME =
+      "config/jcifsConfiguration.properties";
+
+  private static final Logger LOG =
+      Logger.getLogger(SmbFileSystemType.class.getName());
+
+  static {
+    configureJcifs();
+  }
+
   private static final String SMB_PATH_PREFIX = "smb://";
   private static final String UNC_PATH_PREFIX = "\\\\";
   private final boolean stripDomainFromAces;
+
+  /**
+   * Configures the jcifs library by loading configuration properties from the
+   * properties file with resource name
+   * {@link #JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME}. Note that this must
+   * be called before the jcifs library for this class loader is used.
+   * Otherwise this function has no effect.
+   */
+  private static void configureJcifs() {
+    InputStream is =
+        FileConnectorType.class.getResourceAsStream(
+            JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME);
+    if (is == null) {
+      LOG.info("Resouce " + JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME
+          + " not found. Accepting default jcifs configuration.");
+    } else {
+      try {
+        Config.load(is);
+      } catch (IOException ioe) {
+        LOG.log(Level.SEVERE, "Failed loading resource "
+            + JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME
+            + ". Accepting default jcifs configuration.", ioe);
+      } finally {
+        close(is);
+      }
+    }
+
+  }
+
+  private static void close(InputStream is) {
+    try {
+      is.close();
+    } catch (IOException ioe) {
+      LOG.log(Level.WARNING, "Failed to close input stream.", ioe);
+    }
+  }
 
   /**
    * Creates a {@link SmbFileSystemType}.
@@ -107,7 +163,7 @@ public class SmbFileSystemType implements FileSystemType {
       result = new SmbReadonlyFile(path, credentials, stripDomainFromAces, isUncForm);
       if (!result.canRead()) {
         result = null;
-      } 
+      }
     } catch(RepositoryDocumentException rde) {
       result = null;
     }
@@ -128,16 +184,16 @@ public class SmbFileSystemType implements FileSystemType {
   }
 
   private String makeSmbPathFromUncPath(String uncPath)
-      throws RepositoryDocumentException {	
-    String[] names = uncPath.substring(2).split("\\\\");	
-    if (names.length == 0) {	
-      throw new RepositoryDocumentException("failed to parse path: " + uncPath);	
-    }	
-    StringBuilder buf = new StringBuilder(SMB_PATH_PREFIX);	
-    for (String name : names) {	
-      buf.append(name);	
-      buf.append("/");	
-    }	
-    return buf.toString();	
+      throws RepositoryDocumentException {
+    String[] names = uncPath.substring(2).split("\\\\");
+    if (names.length == 0) {
+      throw new RepositoryDocumentException("failed to parse path: " + uncPath);
+    }
+    StringBuilder buf = new StringBuilder(SMB_PATH_PREFIX);
+    for (String name : names) {
+      buf.append(name);
+      buf.append("/");
+    }
+    return buf.toString();
   }
 }

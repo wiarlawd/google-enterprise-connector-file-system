@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,7 +46,7 @@ public class SnapshotReaderTest extends TestCase {
     List<String> users = Arrays.asList("d1\\u1", "d1\\u2");
     List<String> groups = Collections.emptyList();
     acl = Acl.newAcl(users, groups);
-    
+
     good1 = new JSONObject();
     good1.put(Field.FILESYS.name(), "java");
     good1.put(Field.PATH.name(), "foo/bar/baz.txt");
@@ -213,7 +213,8 @@ public class SnapshotReaderTest extends TestCase {
     }
   }
 
-  public void testSkipRecords() throws SnapshotReaderException {
+  public void testSkipRecords() throws SnapshotReaderException,
+      InterruptedException {
     SnapshotReader reader = createMockInput(100);
 
     reader.skipRecords(0);
@@ -229,5 +230,20 @@ public class SnapshotReaderTest extends TestCase {
     } catch (SnapshotReaderException e) {
       assertTrue(e.getMessage().contains("snapshot contains only"));
     }
+  }
+
+  public void testSkipRecordsInterrupt() throws SnapshotStoreException {
+    SnapshotReader reader = createMockInput(100);
+    try {
+      Thread.currentThread().interrupt();
+      reader.skipRecords(25);
+      fail();
+    } catch (InterruptedException ie) {
+      //Expected.
+    } finally {
+      assertFalse(Thread.interrupted());
+    }
+    SnapshotRecord rec = reader.read();
+    assertEquals(0, rec.getLastModified());
   }
 }

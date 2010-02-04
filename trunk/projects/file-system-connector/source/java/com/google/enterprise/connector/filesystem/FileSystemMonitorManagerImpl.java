@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * {@link FileSystemMonitorManager} implementation.  There is one instance of this 
- * class per FileConnector created by Spring.  That instance gets singals from 
+ * {@link FileSystemMonitorManager} implementation.  There is one instance of this
+ * class per FileConnector created by Spring.  That instance gets singals from
  * TraversalManager to start (go from "cold" to "warm") and does so from scratch
  * or from recovery state.  It creates the SnapshotStore instances and invokes
  * their recovery method.  It creates and manages the FileSystemMonitor instances.
@@ -105,13 +105,13 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    * can be started. */
   private Map<String, SnapshotStore> recoverSnapshotStores(
       String connectorManagerCheckpoint, Map<String, MonitorCheckpoint> monitorPoints)
-      throws IOException, SnapshotStoreException {
+      throws IOException, SnapshotStoreException, InterruptedException {
     Map<String, SnapshotStore> snapshotStores = new HashMap<String, SnapshotStore>();
     for (String startPath : startPaths) {
       String monitorName = makeMonitorNameFromStartPath(startPath);
       File dir = new File(snapshotDir,  monitorName);
 
-      boolean startEmpty = (connectorManagerCheckpoint == null) 
+      boolean startEmpty = (connectorManagerCheckpoint == null)
           || (!monitorPoints.containsKey(monitorName));
       if (startEmpty) {
         LOG.info("Deleting " + startPath + " global checkpoint=" + connectorManagerCheckpoint
@@ -144,14 +144,17 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     Map<String, SnapshotStore> snapshotStores = null;
 
     try {
-      snapshotStores = recoverSnapshotStores(connectorManagerCheckpoint, monitorPoints);
+      snapshotStores =
+          recoverSnapshotStores(connectorManagerCheckpoint, monitorPoints);
     } catch (SnapshotStoreException e) {
       throw new RepositoryException("Snapshot recovery failed.", e);
     } catch (IOException e) {
       throw new RepositoryException("Snapshot recovery failed.", e);
+    } catch (InterruptedException e) {
+      throw new RepositoryException("Snapshot recovery interrupted.", e);
     }
 
-    startMonitorThreads(snapshotStores, traversalContext);
+    startMonitorThreads(snapshotStores, traversalContext, monitorPoints);
     isRunning = true;
   }
 
@@ -202,7 +205,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    *         or if there is any problem reading or writing snapshots.
    */
   private Thread newMonitorThread(String startPath, SnapshotStore snapshotStore,
-      TraversalContext traversalContext) throws RepositoryDocumentException {
+      TraversalContext traversalContext, MonitorCheckpoint startCp)
+      throws RepositoryDocumentException {
     ReadonlyFile<?> root = pathParser.getFile(startPath, credentials);
     if (root == null) {
       throw new RepositoryDocumentException("failed to open start path: " + startPath);
@@ -210,8 +214,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
 
     String monitorName = makeMonitorNameFromStartPath(startPath);
     FileSystemMonitor monitor =
-        new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.getCallback(),
-            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK);
+        new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.newCallback(),
+            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK, startCp);
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
   }
@@ -223,12 +227,14 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    *         started.
    */
   private void startMonitorThreads(Map<String, SnapshotStore> snapshotStores,
-      TraversalContext traversalContext) throws RepositoryDocumentException {
+      TraversalContext traversalContext, Map<String, MonitorCheckpoint> monitorPoints)
+      throws RepositoryDocumentException {
 
     for (String startPath : startPaths) {
       String monitorName = makeMonitorNameFromStartPath(startPath);
       SnapshotStore snapshotStore = snapshotStores.get(monitorName);
-      Thread monitorThread = newMonitorThread(startPath, snapshotStore, traversalContext);
+      Thread monitorThread = newMonitorThread(startPath, snapshotStore, traversalContext,
+          monitorPoints.get(monitorName));
       threads.add(monitorThread);
 
       LOG.info("starting monitor for <" + startPath + ">");
