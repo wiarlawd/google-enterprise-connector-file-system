@@ -1,0 +1,26 @@
+Release Notes:
+===============
+
+Google Enterprise Connector for File Systems
+
+This document contains the release notes for Google Enterprise Connector for File Systems
+The following sections describe the release in detail and provide information that supplements
+the main documentation.  See the Issues Tab on the Code Site for the current list of known
+issues and workarounds.
+
+Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
+
+svn veresion: __SVN_VERSION__
+
+Release 1.0.2_ALPHA, Dec 7, 2009
+================================
+
+Introduction
+------------
+This is an early access release for evaluation and usage. Your feedback is important to us.
+
+Version Compatibility
+---------------------
+This version works with Connector Manager version 2.0.0 or later. Earlier versions of
+the Connector Manager will not work correctly with this version of the connector.
+
