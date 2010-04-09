@@ -37,6 +37,8 @@ public class SmbFileSystemType implements FileSystemType {
   public static final String JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME =
       "config/jcifsConfiguration.properties";
 
+  static final String SMB_PATH_PREFIX = "smb://";
+
   private static final Logger LOG =
       Logger.getLogger(SmbFileSystemType.class.getName());
 
@@ -44,8 +46,6 @@ public class SmbFileSystemType implements FileSystemType {
     configureJcifs();
   }
 
-  private static final String SMB_PATH_PREFIX = "smb://";
-  private static final String UNC_PATH_PREFIX = "\\\\";
   private final boolean stripDomainFromAces;
 
   /**
@@ -100,13 +100,12 @@ public class SmbFileSystemType implements FileSystemType {
   /* @Override */
   public SmbReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryDocumentException {
-    boolean isUncForm = path.startsWith(UNC_PATH_PREFIX);
-    return new SmbReadonlyFile(path, credentials, stripDomainFromAces, isUncForm);
+    return new SmbReadonlyFile(path, credentials, stripDomainFromAces);
   }
 
   /* @Override */
   public boolean isPath(String path) {
-    return path.startsWith(SMB_PATH_PREFIX) || path.startsWith(UNC_PATH_PREFIX);
+    return path.startsWith(SMB_PATH_PREFIX);
   }
 
   /**
@@ -118,7 +117,6 @@ public class SmbFileSystemType implements FileSystemType {
    *
    * <pre>
    *   smb://host/path
-   *   \\host\path
    * </pre>
    *
    * The CIFS library is very picky about trailing slashes: directories must end
@@ -129,38 +127,27 @@ public class SmbFileSystemType implements FileSystemType {
    * @throws IllegalArgumentException if {@link #isPath} returns false for path.
    */
   /* @Override */
-  public SmbReadonlyFile getReadableFile(final String originalPath, final Credentials credentials)
-      throws RepositoryDocumentException {
-    if (!isPath(originalPath)) {
-      throw new IllegalArgumentException("Invalid path " + originalPath);
+  public SmbReadonlyFile getReadableFile(final String smbStylePath, final Credentials credentials)
+      throws RepositoryDocumentException, WrongSmbTypeException {
+    if (!isPath(smbStylePath)) {
+      throw new IllegalArgumentException("Invalid path " + smbStylePath);
     }
 
-    String smbStylePath;
-    boolean isUncForm = originalPath.startsWith(UNC_PATH_PREFIX);
-    if (isUncForm) {
-      smbStylePath = makeSmbPathFromUncPath(originalPath);
-    } else {
-      smbStylePath = originalPath;
-    }
-
-    SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials, isUncForm);
-    if (null == result) {
-      String alternatePath = addOrRemoveTrailingSlash(smbStylePath);
-      result = getReadableFileHelper(alternatePath, credentials, isUncForm);
-    }
+    SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials);
 
     if (null == result) {
-      throw new RepositoryDocumentException("failed to open file: " + originalPath);
+      throw new RepositoryDocumentException("failed to open file: " + smbStylePath);
+    } else if (!result.isTraversable()) {
+      throw new WrongSmbTypeException();
     } else {
       return result;
     }
   }
 
-  private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials,
-      boolean isUncForm) {
+  private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials) {
     SmbReadonlyFile result = null;
     try {
-      result = new SmbReadonlyFile(path, credentials, stripDomainFromAces, isUncForm);
+      result = new SmbReadonlyFile(path, credentials, stripDomainFromAces);
       if (!result.canRead()) {
         result = null;
       }
@@ -170,30 +157,8 @@ public class SmbFileSystemType implements FileSystemType {
     return result;
   }
 
-  private String addOrRemoveTrailingSlash(String path) {
-    if (path.endsWith("/")) {
-      return path.substring(0, path.length() - 1);
-    } else {
-      return path + "/";
-    }
-  }
-
   /* @Override */
   public String getName() {
     return SmbReadonlyFile.FILE_SYSTEM_TYPE;
-  }
-
-  private String makeSmbPathFromUncPath(String uncPath)
-      throws RepositoryDocumentException {
-    String[] names = uncPath.substring(2).split("\\\\");
-    if (names.length == 0) {
-      throw new RepositoryDocumentException("failed to parse path: " + uncPath);
-    }
-    StringBuilder buf = new StringBuilder(SMB_PATH_PREFIX);
-    for (String name : names) {
-      buf.append(name);
-      buf.append("/");
-    }
-    return buf.toString();
   }
 }

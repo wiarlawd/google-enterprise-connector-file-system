@@ -31,14 +31,14 @@ public class FilePatternMatcherTest extends TestCase {
     List<String> include = Arrays.asList("smb://foo.com/", "/foo/bar/");
     List<String> exclude = Arrays.asList("smb://foo.com/secret/", "/foo/bar/hidden/");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
-    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, false, false)
+    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, false)
         .acceptedBy(matcher));
     assertTrue(new JavaReadonlyFile(new File("/foo/bar/baz.txt"))
         .acceptedBy(matcher));
-    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, false, false)
+    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, false)
         .acceptedBy(matcher));
     assertFalse(new SmbReadonlyFile("smb://foo.com/secret/private_key",
-        credentials, false, false).acceptedBy(matcher));
+        credentials, false).acceptedBy(matcher));
     assertFalse(new JavaReadonlyFile(new File("/foo/bar/hidden/porn.png"))
         .acceptedBy(matcher));
     assertFalse(new JavaReadonlyFile(new File("/bar/foo/public/knowledge"))

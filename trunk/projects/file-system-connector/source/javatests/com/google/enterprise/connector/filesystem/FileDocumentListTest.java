@@ -97,7 +97,8 @@ public class FileDocumentListTest extends TestCase {
 
     for (Change change : changeSource.original) {
       GenericDocument doc = docs.nextDocument();
-      assertEquals(change.getPath(), Value.getSingleValueString(doc, SpiConstants.PROPNAME_DOCID));
+      String docId = Value.getSingleValueString(doc, SpiConstants.PROPNAME_DOCID);
+      assertEquals(change.getPath(), DocIdUtil.idToPath(docId));
       String action =
           (change.getAction() == Action.ADD_FILE) ? SpiConstants.ActionType.ADD.toString()
               : SpiConstants.ActionType.DELETE.toString();

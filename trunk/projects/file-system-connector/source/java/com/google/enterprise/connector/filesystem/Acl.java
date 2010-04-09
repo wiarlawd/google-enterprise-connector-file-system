@@ -38,6 +38,12 @@ import java.util.List;
  * 
  */
 public class Acl {
+
+  // Sometimes we fail getting ACLs.  In such cases we use this
+  // non-public & no users and no groups ACL.  Such an ACL makes
+  // GSA use a head request at serve time.
+  static final Acl USE_HEAD_REQUEST = Acl.newAcl(null, null);
+
   private final List<String> users;
   private final List<String> groups;
   private final boolean isPublic;

@@ -76,8 +76,15 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     this.checkpointAndChangeQueue = checkpointAndChangeQueue;
     this.changeQueue = changeQueue;
     this.credentials = FileConnector.newCredentials(domainName, userName, password);
-    this.startPaths =
-        Collections.unmodifiableCollection(FileConnectorType.filterUserEnteredList(startPaths));
+    startPaths = FileConnectorType.filterUserEnteredList(startPaths);
+    for (int i = 0; i < startPaths.size(); i++) {
+      String path = startPaths.get(i);
+      if (!path.endsWith("/")) {
+        path += "/";
+        startPaths.set(i, path);
+      }
+    }
+    this.startPaths = Collections.unmodifiableCollection(startPaths);
   }
 
   /* @Override */

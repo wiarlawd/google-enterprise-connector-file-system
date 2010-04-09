@@ -26,8 +26,6 @@ import junit.framework.TestCase;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +36,6 @@ import java.util.List;
  */
 public class FileFetcherTest extends TestCase {
   private static final int BUF_SIZE = 1024;
-  private static final DateTimeFormatter TIME_FORMATTER = ISODateTimeFormat.dateTime();
   private static final DateTime LAST_MODIFIED = new DateTime(DateTimeZone.UTC);
   private static final String ADD = SpiConstants.ActionType.ADD.toString();
   private static final String DELETE = SpiConstants.ActionType.DELETE.toString();
@@ -74,14 +71,16 @@ public class FileFetcherTest extends TestCase {
     FileFetcher fetcher = makeFetcher(false, true);
     GenericDocument addedDoc = fetcher.getFile(add);
     assertEquals(ADD, Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_ACTION));
-    assertEquals(foo.getPath(), Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_DOCID));
+    String docId = Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_DOCID);
+    assertEquals(foo.getPath(), DocIdUtil.idToPath(docId));
     assertEquals(foo.getDisplayUrl(), Value.getSingleValueString(addedDoc,
         SpiConstants.PROPNAME_DISPLAYURL));
     assertEquals("text/html", Value.getSingleValueString(addedDoc,
         SpiConstants.PROPNAME_MIMETYPE));
     assertEquals("contents of foo", getDocumentContents(addedDoc));
-    assertEquals(TIME_FORMATTER.print(LAST_MODIFIED), Value.getSingleValueString(addedDoc,
-        SpiConstants.PROPNAME_LASTMODIFIED));
+    DateTime lastModified = 
+        new DateTime(Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_LASTMODIFIED));
+    assertEquals(LAST_MODIFIED.getMillis(), lastModified.getMillis());
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
@@ -186,8 +185,8 @@ public class FileFetcherTest extends TestCase {
     FileFetcher fetcher = makeFetcher(false, true);
     GenericDocument deletedDoc = fetcher.getFile(delete);
     assertEquals(DELETE, Value.getSingleValueString(deletedDoc, SpiConstants.PROPNAME_ACTION));
-    assertEquals(foo.getPath(), Value.getSingleValueString(deletedDoc,
-        SpiConstants.PROPNAME_DOCID));
+    String docId = Value.getSingleValueString(deletedDoc, SpiConstants.PROPNAME_DOCID);
+    assertEquals(foo.getPath(), DocIdUtil.idToPath(docId)); 
     assertEquals(2, deletedDoc.getPropertyNames().size());
   }
 }

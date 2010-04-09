@@ -86,7 +86,8 @@ public class FileFetcher {
         }
         ReadonlyFile<?> file = factory.getFile(change.getPath(), credentials);
         result.setProperty(SpiConstants.PROPNAME_ACTION, ADD);
-        result.setProperty(SpiConstants.PROPNAME_DOCID, file.getPath());
+        result.setProperty(SpiConstants.PROPNAME_DOCID,
+            DocIdUtil.pathToId(file.getPath()));
         result.setProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
         String mimeType = getMimeType(file);
         result.setProperty(SpiConstants.PROPNAME_MIMETYPE, mimeType);
@@ -107,7 +108,8 @@ public class FileFetcher {
         break;
       case DELETE_FILE:
         result.setProperty(SpiConstants.PROPNAME_ACTION, DELETE);
-        result.setProperty(SpiConstants.PROPNAME_DOCID, change.getPath());
+        result.setProperty(SpiConstants.PROPNAME_DOCID,
+            DocIdUtil.pathToId(change.getPath()));
         break;
       default:
         throw new UnsupportedOperationException(change.getAction().toString());

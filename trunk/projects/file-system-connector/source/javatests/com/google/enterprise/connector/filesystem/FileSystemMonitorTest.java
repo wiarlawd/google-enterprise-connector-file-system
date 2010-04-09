@@ -590,8 +590,8 @@ public class FileSystemMonitorTest extends TestCase {
     // Create a new extra files, intermixed with the usual ones.
     MockReadonlyFile dir0 = root.get("dir.0");
     String[] newFiles =
-        new String[] {"aaa-new-file", "dir.1.new-file", "eee-new-file", "file.1.zzz-file",
-            "zzz.new-file"};
+        new String[] {"aaa-new-file", "dir.1.new-file", "eee-new-file",
+            "file.1.zzz-file", "zzz.new-file"};
     for (String newFile : newFiles) {
       dir0.addFile(newFile, "");
     }
@@ -1048,11 +1048,8 @@ public class FileSystemMonitorTest extends TestCase {
     Collections.sort(sorted);
     assertEquals(sorted, paths);
 
-// TODO: Fix the bug that causes the following assertion to fail and restore
-//       the assertion. For more information refer to the TODO in
-//       FileSystemMonitor.processFile.
-//    int dirIx = paths.indexOf(root.getPath() + "/" + dirToFileName + "/");
-//    assertTrue("Expected directory not found in snapshot.", dirIx == -1);
+    int dirIx = paths.indexOf(root.getPath() + "/" + dirToFileName + "/");
+    assertTrue("Expected directory not found in snapshot.", dirIx == -1);
     int fileIx = paths.indexOf(root.getPath() + "/" + dirToFileName);
     assertFalse("Expected file not found in snapshot.", fileIx == -1);
     Set<String> unique = new HashSet<String>(paths);
@@ -1241,5 +1238,29 @@ public class FileSystemMonitorTest extends TestCase {
     // starting a new pass because FileSystemMonitor.performExceptionRecovery
     // should throw an InterruptedException.
     assertEquals(1, visitor.beginCount);
+  }
+
+  public void testPathCompare() {
+    MockReadonlyFile dir0 = root.get("dir.0");
+    MockReadonlyFile subdir = dir0.addSubdir("for-path-cmp");
+    MockReadonlyFile file = dir0.addFile("for-path-cmp", "path-cmp contents");
+    assertEquals(0, FileSystemMonitor.pathCompare(subdir, file));
+    assertEquals(0, FileSystemMonitor.pathCompare(file, subdir));
+    subdir = dir0.addSubdir("for-path-cmp-2");
+    file = dir0.addFile("for-path-cmp-2", "path-cmp contents #2");
+    assertEquals(0, FileSystemMonitor.pathCompare(subdir, file));
+    assertEquals(0, FileSystemMonitor.pathCompare(file, subdir));
+    subdir = dir0.addSubdir("for-path-cmp-32");
+    file = dir0.addFile("for-path-cmp-33", "path-cmp contents #3");
+    assertTrue(FileSystemMonitor.pathCompare(subdir, file) < 0);
+    assertTrue(FileSystemMonitor.pathCompare(file, subdir) > 0);
+    subdir = dir0.addSubdir("for-path-cmp-33");
+    file = dir0.addFile("for-path-cmp-3", "path-cmp contents #33");
+    assertTrue(FileSystemMonitor.pathCompare(subdir, file) > 0);
+    assertTrue(FileSystemMonitor.pathCompare(file, subdir) < 0);
+    subdir = dir0.addSubdir("for-path-cmp-4");
+    file = dir0.addFile("for-path-cmp-44", "path-cmp contents #4");
+    assertTrue(FileSystemMonitor.pathCompare(subdir, file) < 0);
+    assertTrue(FileSystemMonitor.pathCompare(file, subdir) > 0);
   }
 }

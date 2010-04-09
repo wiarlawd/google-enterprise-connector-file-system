@@ -27,7 +27,7 @@ import java.util.List;
  */
 public interface ReadonlyFile<T extends ReadonlyFile<T>> extends FileInfo {
   /**
-   * @return true if this file or directory exists and is readable
+   * @return true if this file or directory exists
    */
   public boolean canRead();
 

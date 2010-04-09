@@ -41,7 +41,8 @@ public class FileConnectorType implements ConnectorType {
   private static final Map<String, String> EMPTY_CONFIG = Collections.emptyMap();
   enum ErrorMessages{CONNECTOR_INSTANTIATION_FAILED,
       MISSING_FIELDS, READ_START_PATH_FAILED, PATTERNS_ELIMINATED_START_PATH,
-      ADD_ANOTHER_ROW_BUTTON, CANNOT_ADD_ANOTHER_ROW}
+      ADD_ANOTHER_ROW_BUTTON, CANNOT_ADD_ANOTHER_ROW,
+      WRONG_SMB_TYPE, UNC_NEEDS_TRANSLATION }
 
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
@@ -386,7 +387,15 @@ public class FileConnectorType implements ConnectorType {
             getFormRows(errorKeys));
       }
 
-      String errorMessageHtml = assureStartPathsReadable();
+      String errorMessageHtml = assureNoUncPathStrings();
+      if (errorMessageHtml.length() != 0) {
+        errorKeys = Collections.singletonList(startField.getName());
+        ConfigureResponse response
+            = new ConfigureResponse(errorMessageHtml, getFormRows(errorKeys));
+        return response;
+      }
+
+      errorMessageHtml = assureStartPathsReadable();
       if (errorMessageHtml.length() != 0) {
         errorKeys = Collections.singletonList(startField.getName());
         return new ConfigureResponse(errorMessageHtml, getFormRows(errorKeys));
@@ -444,6 +453,33 @@ public class FileConnectorType implements ConnectorType {
     }
 
     /**
+     * Make sure that start paths are not UNC style strings.
+     */
+    private String assureNoUncPathStrings() {
+      MultiLineField startPaths = startField;
+      Credentials credentials = getCredentials();
+      StringBuilder buf = new StringBuilder();
+
+      final String UNC_PREFIX = "\\\\";
+
+      for (String path : startPaths.lines) {
+        path = path.trim();
+        if ((path.length() == 0)) {
+          continue;
+        }
+        if (path.startsWith(UNC_PREFIX)) {
+          String translatedPath = makeSmbPathFromUncPath(path);
+          LOG.info("UNC need to be translated to SMB URL: " + path);
+          buf.append(String.format(bundle.getLocale(),
+              bundle.getString(ErrorMessages.UNC_NEEDS_TRANSLATION.name()),
+              path, translatedPath));
+          buf.append("\n");
+        }
+      }
+      return buf.toString();
+    }
+
+    /**
      * Make sure that start paths are readable.
      */
     private String assureStartPathsReadable() {
@@ -456,14 +492,24 @@ public class FileConnectorType implements ConnectorType {
         if ((path.length() == 0)) {
           continue;
         }
+        if (!path.endsWith("/")) {
+          path += "/";
+        }
+
         try {
           ReadonlyFile<?> file = pathParser.getFile(path, credentials);
           if (file.isDirectory()) {
             for (ReadonlyFile<?> sub : file.listFiles()) {
-              LOG.info("list: " + sub.getPath());
+              LOG.finest("list: " + sub.getPath());
             }
           }
           LOG.info("successfully read " + path);
+        } catch (WrongSmbTypeException e3) {
+          LOG.info("Wrong SmbFile.getType(): " + path);
+          buf.append(String.format(bundle.getLocale(),
+              bundle.getString(ErrorMessages.WRONG_SMB_TYPE.name()),
+              path));
+          buf.append("\n");
         } catch (RepositoryDocumentException e1) {
           LOG.info("failed to read start path: " + path);
           buf.append(String.format(bundle.getLocale(),
@@ -471,7 +517,7 @@ public class FileConnectorType implements ConnectorType {
               path));
           buf.append("\n");
         } catch (IOException e) {
-          LOG.info("failed to list start path: " + path);
+          LOG.info("failed to access start path: " + path + "; " + e);
           buf.append(String.format(bundle.getLocale(),
               bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
               path));
@@ -595,5 +641,17 @@ public class FileConnectorType implements ConnectorType {
       List<String> excludePatterns) {
     return new FilePatternMatcher(filterUserEnteredList(includePatterns),
         filterUserEnteredList(excludePatterns));
+  }
+
+  private static String makeSmbPathFromUncPath(String uncPath) {
+    // Two escaped forward slashes is single forward slash regex.
+    String singleSlashRegex = "\\\\";
+    String[] names = uncPath.substring(2).split(singleSlashRegex);
+    StringBuilder buf = new StringBuilder(SmbFileSystemType.SMB_PATH_PREFIX);
+    for (String name : names) {
+      buf.append(name);
+      buf.append("/");
+    }
+    return buf.toString();
   }
 }

@@ -50,7 +50,8 @@ public class FileAuthorizationManager implements AuthorizationManager {
       return false;
     }
     try {
-      ReadonlyFile<?> file = pathParser.getFile(docId, credentials);
+      String path = DocIdUtil.idToPath(docId);
+      ReadonlyFile<?> file = pathParser.getFile(path, credentials);
       if (file.supportsAuthn()) {
         return file.canRead();
       } else {

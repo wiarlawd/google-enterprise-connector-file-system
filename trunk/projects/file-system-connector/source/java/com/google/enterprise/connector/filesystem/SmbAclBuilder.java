@@ -91,20 +91,29 @@ class SmbAclBuilder {
     List<ACE> aces = new ArrayList<ACE>();
 
     try {
-      aces.addAll(Arrays.asList(file.getSecurity()));
+      ACE securityAces[] = file.getSecurity();
+      if (securityAces == null) {
+        LOGGER.warning("getSecurity() not allowed on " + file.getURL());
+        return Acl.USE_HEAD_REQUEST; 
+      }
+      aces.addAll(Arrays.asList(securityAces));
     } catch (SmbException smbe) {
       throwIfNotAuthorizationException(smbe);
       LOGGER.log(Level.WARNING, "Authorization failure on file " + file.getURL(), smbe);
       // TODO: Add Acl.newInderminantAcl to Acl and call here.
-      return Acl.newAcl(null, null);
+      return Acl.USE_HEAD_REQUEST;
     }
     try {
-      aces.addAll(Arrays.asList(file.getShareSecurity(true)));
+      ACE securityAces[] = file.getShareSecurity(true);
+      if (securityAces == null) {
+        LOGGER.warning("getShareSecurity() not allowed on " + file.getURL());
+        return Acl.USE_HEAD_REQUEST;
+      }
+      aces.addAll(Arrays.asList(securityAces));
     } catch (SmbAuthException smbe) {
       throwIfNotAuthorizationException(smbe);
       LOGGER.log(Level.WARNING, "Authorization failure on file " + file.getURL(), smbe);
-      // TODO: Add Acl.newInderminantAcl to Acl and call here.
-      return Acl.newAcl(null, null);
+      return Acl.USE_HEAD_REQUEST;
     }
     Set<String> users = new TreeSet<String>();
     Set<String> groups = new TreeSet<String>();
@@ -118,8 +127,7 @@ class SmbAclBuilder {
       //     is set before returning an indeterminant response here.
       if (!ace.isAllow()) {
         LOGGER.finest("Filtering deny ACE " + ace + " for file " + file.getURL());
-        // TODO: Add Acl.newInderminantAcl to Acl and call here.
-        return Acl.newAcl(null, null);
+        return Acl.USE_HEAD_REQUEST;
       }
 
       SID sid = ace.getSID();

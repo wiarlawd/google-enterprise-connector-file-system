@@ -140,8 +140,9 @@ public class FileTraversalManagerTest extends TestCase {
       for (int k = 0; k < BATCH_SIZE; ++k) {
         Document doc = docs.nextDocument();
         assertNotNull(doc);
-        assertEquals(String.format("/foo/bar/file.%d", batch * BATCH_SIZE + k), Value
-            .getSingleValueString(doc, SpiConstants.PROPNAME_DOCID));
+        String docId = Value.getSingleValueString(doc, SpiConstants.PROPNAME_DOCID);
+        assertEquals(String.format("/foo/bar/file.%d", batch * BATCH_SIZE + k), 
+            DocIdUtil.idToPath(docId));
       }
       assertNull(docs.nextDocument());
     }

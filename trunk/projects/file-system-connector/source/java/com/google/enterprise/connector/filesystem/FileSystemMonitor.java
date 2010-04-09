@@ -110,6 +110,23 @@ public class FileSystemMonitor implements Runnable {
   /* Signal from traversal. */
   private static class DirListingFailedException extends Exception { }
 
+  /** Compare paths where directories have trailing / and files do not. */
+  static int pathCompare(FileInfo one, FileInfo two) {
+    int result;
+    String onePath = one.getPath();
+    String twoPath = two.getPath();
+    int oneLen = onePath.length();
+    int twoLen = twoPath.length();
+    if (one.isDirectory() && !two.isDirectory() && ((oneLen - 1) == twoLen)) {
+      result = onePath.substring(0, oneLen - 1).compareTo(twoPath);
+    } else if (!one.isDirectory() && two.isDirectory() && (oneLen == (twoLen - 1))) {
+      result = onePath.compareTo(twoPath.substring(0, twoLen - 1));
+    } else {
+      result = onePath.compareTo(twoPath);
+    }
+    return result;
+  }
+
   /**
    * Injectable clock to allow better testing.
    */
@@ -388,9 +405,7 @@ public class FileSystemMonitor implements Runnable {
    */
   private void processDeletes(ReadonlyFile<?> file) throws SnapshotReaderException,
       InterruptedException {
-    while (current != null && (file == null || file.getPath().compareTo(current.getPath()) > 0)) {
-      // TODO: Directory getPath() calls end with / while  file getPath() don't.
-      // This bug is known now.
+    while (current != null && (file == null || pathCompare(file, current) > 0)) {
       if (current.getFileType() == SnapshotRecord.Type.DIR) {
         callback.deletedDirectory(current, getCheckpoint());
       } else {
@@ -429,16 +444,8 @@ public class FileSystemMonitor implements Runnable {
 
     // At this point 'current' >= 'file', or possibly current == null if
     // we've processed the previous snapshot entirely.
-    // TODO: Handle the case an existing directory is replaced with a file
-    //       with the same name. Since getPath for a directory appends a '/'
-    //       the paths for the file and directory will differ. Though
-    //       processPossibleChange includes code to handle this case it is not
-    //       called and does not account for the path difference. Also note
-    //       that processDirectory includes code to handle the case a file is
-    //       replaced with a directory of the same name. This code
-    //       may need adjustment as well.
-    if (current != null && current.getPath().equals(file.getPath())) {
-      processPossibleChange(file);
+    if (current != null && (pathCompare(current, file) == 0)) {
+      processPossibleFileChange(file);
     } else {
       // This file didn't exist during the previous scan.
       FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
@@ -460,7 +467,7 @@ public class FileSystemMonitor implements Runnable {
    * @throws SnapshotWriterException
    * @throws SnapshotReaderException
    */
-  private void processPossibleChange(ReadonlyFile<?> file) throws
+  private void processPossibleFileChange(ReadonlyFile<?> file) throws
       IOException, InterruptedException, SnapshotWriterException, SnapshotReaderException {
     FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
     if (current.getFileType() == SnapshotRecord.Type.DIR) {
@@ -520,8 +527,8 @@ public class FileSystemMonitor implements Runnable {
       SnapshotReaderException, SnapshotWriterException {
 
     processDeletes(dir);
-
-    if (current != null && current.getPath().equals(dir.getPath())) {
+    
+    if (current != null && (pathCompare(current, dir) == 0)) {
       if (current.getFileType() == SnapshotRecord.Type.FILE) {
         // This directory used to be a file.
         callback.deletedFile(current, getCheckpoint());

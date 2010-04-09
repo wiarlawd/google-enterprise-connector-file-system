@@ -291,4 +291,18 @@ public class FileConnectorTypeTest extends TestCase {
     final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
     assertEquals(Arrays.asList(hi, mom), filtered);
   }
+
+  public void testUncDetectedAndSuggestionProvided() {
+    String uncPath = "\\\\UNC\\AM\\I\\";
+    config.put("start_3", uncPath);
+    ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
+        new MockFileConnectorFactory(snapshotDir, persistDir));
+    String suggestedPath = "smb://UNC/AM/I/";
+    String errorMessage = "Convert UNC style path " + uncPath
+        + " to SMB URL: " + suggestedPath + ", please.";
+    String snippet = response.getFormSnippet();
+    assertTrue(response.getMessage().contains(errorMessage));
+    assertTrue(snippet.contains(RED_ON));
+    assertTrue(snippet.contains(RED_OFF));
+  }
 }

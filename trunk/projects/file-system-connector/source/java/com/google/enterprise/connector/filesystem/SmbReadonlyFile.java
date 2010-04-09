@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code jcifs.smb.SmbFile}.
@@ -38,10 +39,10 @@ import java.util.List;
  */
 public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   public static final String FILE_SYSTEM_TYPE = "smb";
+
   private final SmbFile delegate;
   private final boolean stripDomainFromAces;
-  private final boolean isUncForm;
-  //private static final Logger LOG = Logger.getLogger(SmbReadonlyFile.class.getName());
+  private static final Logger LOG = Logger.getLogger(SmbReadonlyFile.class.getName());
 
   /**
    * @param path see {@code jcifs.org.SmbFile} for path syntax.
@@ -50,17 +51,15 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    *        group names in the {@link Acl} returned by {@link #getAcl()} and if
    *        false domains will be included in the form
    *        {@literal domainName\\userOrGroupName}.
-   * @param underUncStartPath whether start path was given in UNC form
    *
    * @throws RepositoryDocumentException if the path is malformed
    */
   public SmbReadonlyFile(String path, Credentials credentials,
-      boolean stripDomainFromAces, boolean underUncStartPath)
+      boolean stripDomainFromAces)
       throws RepositoryDocumentException {
     try {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
       this.stripDomainFromAces = stripDomainFromAces;
-      this.isUncForm = underUncStartPath;
     } catch (MalformedURLException e) {
       throw new RepositoryDocumentException("malformed SMB path: " + path, e);
     }
@@ -75,11 +74,9 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    *        false domains will be included in the form
    *        {@literal domainName\\userOrGroupName}.
    */
-  private SmbReadonlyFile(SmbFile smbFile, boolean stripDomainFromAces,
-      boolean isUncForm) {
+  private SmbReadonlyFile(SmbFile smbFile, boolean stripDomainFromAces) {
     this.delegate = smbFile;
     this.stripDomainFromAces = stripDomainFromAces;
-    this.isUncForm = isUncForm;
   }
 
   /* @Override */
@@ -118,7 +115,25 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   /* @Override */
   public Acl getAcl() throws IOException {
     SmbAclBuilder builder = new SmbAclBuilder(delegate, stripDomainFromAces);
-    return builder.build();
+    // TODO: Remove retries when JCIFS lib fixes "All pipe instances are busy."
+    // Note that JCIFS 1.3.14, which claims to have fixed problem, appears to
+    // have increased the frequency of occurance by approximately 100x.
+    int maxAttempts = 10;
+    int sleepTimeMillis = 30;
+    for (int i = 0; i < maxAttempts; i++) {
+      try {
+        return builder.build();
+      } catch (SmbException e) {
+        LOG.finest("Caught exception (attempt " + i + "): " + e.getMessage());  
+        try {
+          Thread.sleep(sleepTimeMillis);
+        } catch (InterruptedException interruption) {
+          Thread.currentThread().interrupt();
+          return Acl.USE_HEAD_REQUEST;
+        }
+      }
+    }
+    return Acl.USE_HEAD_REQUEST;
   }
 
   /* @Override */
@@ -160,7 +175,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     }
     List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {
-      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces, isUncForm));
+      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces));
     }
     Collections.sort(result, new Comparator<SmbReadonlyFile>() {
       /* @Override */
@@ -222,10 +237,15 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   public boolean acceptedBy(FilePatternMatcher matcher) {
-    if (isUncForm) {
-      return matcher.acceptName(delegate.getUncPath());
-    } else {
-      return matcher.acceptName(delegate.getPath());
+    return matcher.acceptName(delegate.getPath());
+  }
+
+  boolean isTraversable() throws RepositoryDocumentException {
+    try {
+      int type = delegate.getType();
+      return type == SmbFile.TYPE_SHARE || type == SmbFile.TYPE_FILESYSTEM;
+    } catch (SmbException e) {
+      throw new RepositoryDocumentException(e);
     }
   }
 }
