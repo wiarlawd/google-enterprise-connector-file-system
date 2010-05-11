@@ -19,6 +19,9 @@ import com.google.enterprise.connector.spi.ConnectorFactory;
 import com.google.enterprise.connector.spi.ConnectorType;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.XmlUtils;
+
+import org.json.XML;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -92,7 +96,7 @@ public class FileConnectorType implements ConnectorType {
       this.mandatory = mandatory;
     }
 
-    /* Fullfills Field interface except for getSnippet which requires value. */
+    /* Fulfills Field interface except for getSnippet which requires value. */
     /* @Override */
     public String getName() {
       return name;
@@ -134,6 +138,29 @@ public class FileConnectorType implements ConnectorType {
 
     /** Does this field store some user input? */
     abstract boolean hasValue();
+
+    /**
+     * Returns the provided attribute value with XML special characters
+     * escaped. This really just provides a convenience wrapper around
+     * {@link XmlUtils#xmlAppendAttr}.
+     */
+    protected String xmlEncodeAttributeValue(String v) {
+      try {
+        StringBuilder sb = new StringBuilder();
+        XmlUtils.xmlAppendAttrValue(v, sb);
+        return sb.toString();
+      } catch (IOException ioe) {
+        /*
+         * The IOException can occur because XmlUtils.xmlAppendAttrValue
+         * appends to an Appendable which may throw an IOException. In our case
+         * we pass in a StringBuilder so no  IOException should occur.
+         */
+        LOG.log(Level.SEVERE,
+            "Xml escaping encountered unexpected error ", ioe);
+        throw new IllegalStateException(
+            "Xml escaping encountered unexpected error ", ioe);
+      }
+    }
   }
 
   /**
@@ -172,9 +199,9 @@ public class FileConnectorType implements ConnectorType {
 
     @Override
     public String getSnippet(ResourceBundle bundle, boolean highlightError) {
-      // TODO: escape HTML characters
-      return String.format(FORMAT, getLabelHtml(bundle, highlightError), getName(), getName(),
-          isPassword ? "password" : "text", value);
+      return String.format(FORMAT, getLabelHtml(bundle, highlightError),
+          getName(), getName(),
+          isPassword ? "password" : "text", xmlEncodeAttributeValue(value));
     }
 
     String getValue() {
@@ -225,7 +252,8 @@ public class FileConnectorType implements ConnectorType {
           indexOfLastFieldWithContent = i;
         }
       }
-      return Math.max(MINIMUM_FIELDS_TO_RENDER, indexOfLastFieldWithContent + 1);
+      return Math.max(MINIMUM_FIELDS_TO_RENDER,
+          indexOfLastFieldWithContent + 1);
     }
 
     boolean hasAtLeastOneUserValue() {
@@ -244,14 +272,13 @@ public class FileConnectorType implements ConnectorType {
     }
 
     String getInputLinesHtml(String htmlTableName, ResourceBundle bundle) {
-      // TODO: escape HTML characters
       StringBuilder buf = new StringBuilder();
       buf.append("<td>");
       buf.append(String.format("<table id=\"%s\"><tbody>", htmlTableName));
       int lengthToRender = calculateNumberInputsToRender();
       // Make visible rows.
       for (int i = 0; i < lengthToRender; i++) {
-        String line = lines.get(i);
+        String line = xmlEncodeAttributeValue(lines.get(i));
         String name = getName() + "_" + i;
         buf.append(String.format("<tr style=\"display:visible\">"
             + "<td><input name=\"%s\" id=\"%s\" size=\"80\" value=\"%s\"></input></td></tr>",
@@ -259,7 +286,7 @@ public class FileConnectorType implements ConnectorType {
       }
       // Make invisible rows.
       for (int i = lengthToRender; i < MAX_INPUT_LINES; i++) {
-        String line = lines.get(i);
+        String line = xmlEncodeAttributeValue(lines.get(i));
         String name = getName() + "_" + i;
         buf.append(String.format("<tr style=\"display:none\">"
            + "<td><input name=\"%s\" id=\"%s\" size=\"80\" value=\"%s\"></input></td></tr>",
@@ -476,7 +503,7 @@ public class FileConnectorType implements ConnectorType {
           buf.append("\n");
         }
       }
-      return buf.toString();
+      return XML.escape(buf.toString());
     }
 
     /**
@@ -524,7 +551,7 @@ public class FileConnectorType implements ConnectorType {
           buf.append("\n");
         }
       }
-      return buf.toString();
+      return XML.escape(buf.toString());
     }
 
     /**
@@ -554,7 +581,7 @@ public class FileConnectorType implements ConnectorType {
           LOG.warning("start path not readable: " + path);
         }
       }
-      return buf.toString();
+      return XML.escape(buf.toString());
     }
   }
 

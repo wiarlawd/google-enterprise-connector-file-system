@@ -224,7 +224,7 @@
     </junit>
   </target>
 
-  <target name="jar_prod" description="filesystem-connector-jar" 
+  <target name="jar_prod" description="Build filesystem-connector-jar" 
           depends="compile_prod">
     <copy todir="${build-prod-config.dir}">
       <fileset dir="${config.dir}" excludes="**/*.properties" />
@@ -269,7 +269,8 @@
     </javadoc>
   </target>
 
-  <target name="download_filesystem_connector" depends="jar_prod" >
+  <target name="download_filesystem_connector" depends="jar_prod" 
+          description="Build distribution zip files.">
     <copy file="${release-notes.file}" tofile="${release-notes-zip-src.file}" >
        <filterchain>
          <replacestring from="__SVN_VERSION__" to="r${svn-version} ${TODAY}"/>

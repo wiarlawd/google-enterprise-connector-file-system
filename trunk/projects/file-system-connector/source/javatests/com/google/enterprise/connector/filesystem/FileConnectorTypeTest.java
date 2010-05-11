@@ -19,6 +19,8 @@ import com.google.enterprise.connector.spi.ConfigureResponse;
 
 import junit.framework.TestCase;
 
+import org.json.XML;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -229,6 +231,22 @@ public class FileConnectorTypeTest extends TestCase {
     assertTrue(snippet.contains(RED_OFF));
   }
 
+  public void testBadStartPathEscapeMsg() {
+    final String path2 = "/foo/bar/baz&<<>";
+    config.put("start_2", path2);
+    final String path3 = "/foo/baxxxx&&&!/baz&<<>";
+    config.put("start_3", path3);
+
+    ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
+        new MockFileConnectorFactory(snapshotDir, persistDir));
+    assertNotNull(response);
+    assertTrue(response.getMessage().contains(XML.escape(path2)));
+    assertTrue(response.getMessage().contains(XML.escape(path3)));
+    String snippet = response.getFormSnippet();
+    assertTrue(snippet.contains(RED_ON));
+    assertTrue(snippet.contains(RED_OFF));
+  }
+
   public void testStartPathEliminatedByPatterns() {
     config.put("exclude_3", config.get("start_1"));
     ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
@@ -305,4 +323,28 @@ public class FileConnectorTypeTest extends TestCase {
     assertTrue(snippet.contains(RED_ON));
     assertTrue(snippet.contains(RED_OFF));
   }
+
+  public void testXmlEscapingSingleLineField() {
+    config.put("domain", "&<>.");
+    ConfigureResponse response = type.getPopulatedConfigForm(config,
+        Locale.getDefault());
+    assertEquals("", response.getMessage());
+    assertBalancedTags(response.getFormSnippet());
+    assertTrue("Unexpected form snippet " + response.getFormSnippet(),
+        response.getFormSnippet().contains(
+        "<input name=\"domain\" id=\"domain\" "
+            + "type=\"text\" value=\"&amp;&lt;>"));
+   }
+
+  public void testXmlEscapingMultiLineField() {
+    config.put("exclude_3", "&<>.");
+    ConfigureResponse response = type.getPopulatedConfigForm(config,
+        Locale.getDefault());
+    assertEquals("", response.getMessage());
+    assertBalancedTags(response.getFormSnippet());
+    assertTrue("Unexpected form snippet " + response.getFormSnippet(),
+        response.getFormSnippet().contains(
+        "<input name=\"exclude_3\" id=\"exclude_3\" "
+            + "size=\"80\" value=\"&amp;&lt;>.\">"));
+    }
 }
