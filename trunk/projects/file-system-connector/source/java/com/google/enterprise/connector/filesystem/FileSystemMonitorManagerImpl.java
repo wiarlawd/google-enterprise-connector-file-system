@@ -220,9 +220,11 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     }
 
     String monitorName = makeMonitorNameFromStartPath(startPath);
+    FileDocumentSnapshotIterable<?> query = new FileDocumentSnapshotIterable(root, FILE_SINK,
+        filePatternMatcher, traversalContext);
     FileSystemMonitor monitor =
-        new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.newCallback(),
-            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK, startCp);
+        new FileSystemMonitor(monitorName, query, snapshotStore, changeQueue.newCallback(),
+            checksumGenerator, traversalContext, FILE_SINK, startCp);
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
   }

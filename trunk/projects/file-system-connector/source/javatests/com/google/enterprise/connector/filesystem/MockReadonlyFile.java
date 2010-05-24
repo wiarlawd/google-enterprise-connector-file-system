@@ -43,6 +43,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private long lastModified;
   private String fileContents;
   private IOException exception;
+  private IOException lengthException;
 
   /**
    * Create a file or directory under {@code parent} with the specified {@code name}.
@@ -184,7 +185,11 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public long length() {
+  public long length() throws IOException {
+    if (lengthException != null) {
+      throw lengthException;
+    }
+
     return fileContents.length();
   }
 
@@ -274,6 +279,10 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    */
   public void setFlaky(IOException execeptionToThrow) {
     this.exception = execeptionToThrow;
+  }
+
+  public void setLenghException(IOException exceptionToThrow) {
+    this.lengthException = exceptionToThrow;
   }
 
   /**

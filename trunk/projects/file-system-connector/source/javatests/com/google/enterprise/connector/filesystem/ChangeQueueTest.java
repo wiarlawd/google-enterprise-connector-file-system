@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,30 +43,12 @@ public class ChangeQueueTest extends TestCase {
     assertEquals(MCP, c.getMonitorCheckpoint());
   }
 
-  /**
-   * Make sure directory-related changes are ignored.
-   */
-  public void testNewDir() throws InterruptedException {
-    MockReadonlyFile foo = root.addSubdir("foo");
-    callback.newDirectory(foo, MCP);
-    assertNull(queue.getNextChange());
-  }
-
   public void testDeletedFile() throws InterruptedException {
     MockReadonlyFile foo = root.addFile("foo", "");
     callback.deletedFile(foo, MCP);
     Change c = queue.getNextChange();
     assertEquals(Action.DELETE_FILE, c.getAction());
     assertEquals(MCP, c.getMonitorCheckpoint());
-  }
-
-  /**
-   * Make sure directory-related changes are ignored.
-   */
-  public void testDeletedDir() throws InterruptedException {
-    MockReadonlyFile foo = root.addSubdir("foo");
-    callback.deletedDirectory(foo, MCP);
-    assertNull(queue.getNextChange());
   }
 
   public void testContentChange() throws InterruptedException {
@@ -87,15 +69,6 @@ public class ChangeQueueTest extends TestCase {
     assertEquals(MCP, c.getMonitorCheckpoint());
   }
 
-  /**
-   * Make sure directory-related changes are ignored.
-   */
-  public void testDirMetadataChange() throws InterruptedException {
-    MockReadonlyFile foo = root.addSubdir("foo");
-    callback.changedDirectoryMetadata(foo, MCP);
-    assertNull(queue.getNextChange());
-  }
-
   public void testEmptyQueue() throws InterruptedException {
     MockReadonlyFile foo = root.addFile("foo", "");
     MockReadonlyFile bar = root.addFile("bar", "");
@@ -103,7 +76,6 @@ public class ChangeQueueTest extends TestCase {
 
     callback.newFile(foo, MCP);
     callback.newFile(bar, MCP);
-    callback.newDirectory(zoo, MCP);
     assertEquals(foo.getPath(), queue.getNextChange().getPath());
     assertEquals(bar.getPath(), queue.getNextChange().getPath());
     assertNull(queue.getNextChange());

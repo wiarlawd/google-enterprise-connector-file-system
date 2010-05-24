@@ -264,7 +264,8 @@ public class SnapshotRecord implements FileInfo {
     return type == Type.FILE;
   }
 
-  public String toString() { 
+  @Override
+  public String toString() {
     return getJson().toString();
   }
 }

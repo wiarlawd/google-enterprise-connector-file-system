@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,7 +26,6 @@ import java.util.concurrent.BlockingQueue;
  *
  */
 class ChangeQueue implements ChangeSource {
-  private final Callback callback;
   private final BlockingQueue<Change> todo;
 
   /** Milliseconds to sleep after a file-system scan that finds no changes. */
@@ -41,11 +40,6 @@ class ChangeQueue implements ChangeSource {
 
     public void passBegin() {
       changeCount = 0;
-    }
-
-    /* @Override */
-    public void changedDirectoryMetadata(FileInfo dir, MonitorCheckpoint mcp) {
-      // Ignored; this is not needed for the GSA.
     }
 
     /* @Override */
@@ -65,19 +59,9 @@ class ChangeQueue implements ChangeSource {
     }
 
     /* @Override */
-    public void deletedDirectory(FileInfo dir, MonitorCheckpoint mcp) {
-      // Ignored; this is not needed for the GSA.
-    }
-
-    /* @Override */
     public void deletedFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException {
       ++changeCount;
       todo.put(new Change(Action.DELETE_FILE, file.getFileSystemType(), file.getPath(), mcp));
-    }
-
-    /* @Override */
-    public void newDirectory(FileInfo dir, MonitorCheckpoint mcp) {
-      // Ignored; this is not needed for the GSA.
     }
 
     /* @Override */
@@ -100,7 +84,6 @@ class ChangeQueue implements ChangeSource {
 
   public ChangeQueue(int size, long sleepInterval) {
     todo = new ArrayBlockingQueue<Change>(size);
-    callback = new Callback();
     this.sleepInterval = sleepInterval;
   }
 
@@ -119,7 +102,7 @@ class ChangeQueue implements ChangeSource {
     return todo.poll();
   }
 
-  /** Makes empty by removing all references from data structure. */  
+  /** Makes empty by removing all references from data structure. */
   void clear() {
     todo.clear();
   }
