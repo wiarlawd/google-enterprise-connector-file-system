@@ -20,20 +20,20 @@ import java.util.Iterator;
  * objects from a repository. The returned objects are are sorted
  * by {@link DocumentSnapshot#getDocumentId()} values.
  */
-public interface DocumentSnapshotIterable extends Iterable<DocumentSnapshot> {
+public interface SnapshotRepository extends Iterable<DocumentSnapshot> {
 
   /**
-   * Returns an {@link Iterator} to access the requested list
+   * Returns an {@link Iterator} to access the
    * of {@link DocumentSnapshot} objects from the repository.
    * The returned {@link Iterator} must return {@link DocumentSnapshot}
    * objects in {@link DocumentSnapshot#getDocumentId()} order.
    * <p>
    * The returned {@link Iterator} may throw the unchecked
-   * {@link DocumentSnapshotIterableRuntimeException} if {@link Iterator#hasNext()}
-   * or {@link Iterator#next()} fails. The returned
+   * {@link SnapshotRepositoryRuntimeException} if
+   * {@link Iterator#hasNext()} or {@link Iterator#next()} fails. The returned
    * {@link Iterator} need not implement {@link Iterator#remove()}.
    */
   /* @Override */
   Iterator<DocumentSnapshot> iterator()
-      throws DocumentSnapshotIterableRuntimeException;
+      throws SnapshotRepositoryRuntimeException;
 }

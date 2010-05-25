@@ -17,24 +17,31 @@ package com.google.enterprise.connector.diffing;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 /**
  * Interface for constructing a {@link Document} representing a change
  * to be applied to the GSA after fetching any needed information from
  * the repository holding the document.
  */
-public interface Change {
+public interface DocumentHandle {
+  /**
+   * Returns the Documents id. The returned id may not be null and
+   * and must match the value returned by calling
+   * <code>getDocument().findProperty(PROPNAME_DOCID))</code>
+   */
+  String getDocumentId();
 
   /**
-   * Returns the {@link Document} for applying this change to the Google
-   * Search Appliance.
+   * Returns the non null {@link Document} for applying this change
+   * to the Google Search Appliance.
    */
   Document getDocument() throws RepositoryException;
 
   /**
-   * Returns a {@link JSONObject} for persisting this {@link Change}.
+   * Returns serialized {@link String} representation of this {@link
+   * DocumentHandle} suitable for deserialization using {@link
+   * DocumentHandleFactory#fromString(String)}. The return value must
+   * not be null.
    */
-  JSONObject getJson() throws JSONException;
+  @Override
+  String toString();
 }

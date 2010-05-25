@@ -14,17 +14,17 @@
 
 package com.google.enterprise.connector.diffing;
 
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
- * Interface for constructing a {@link Change} from its
- * {@link JSONObject} representation.
+ * Interface for constructing a {@link DocumentHandle} from its
+ * {@link String} representation.
  */
-public interface ChangeFactory {
+public interface DocumentHandleFactory {
   /**
-   * Creates a {@link Change} from its {@link JSONObject} representation
-   * that was created using {@link Change#getJson()}.
+   * Creates a {@link DocumentHandle} from its {@link String}
+   * representation created using {@link DocumentHandle#toString()}.
+   * This may not return null.
+   * @throws IllegalArgumentException if stringForm is not valid.
    */
-  Change newChange(JSONObject json) throws JSONException;
+  DocumentHandle fromString(String stringForm);
 }

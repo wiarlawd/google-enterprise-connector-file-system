@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentSnapshotIterableRuntimeException;
+import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;
@@ -253,7 +253,7 @@ public class FileSystemMonitor implements Runnable {
     } catch (SnapshotStoreException e) {
       String msg = "Problem with snapshot store.";
       LOG.log(Level.SEVERE, msg, e);
-    } catch (DocumentSnapshotIterableRuntimeException e) {
+    } catch (SnapshotRepositoryRuntimeException e) {
       //TODO: Improve this message
       String msg = "Failed listing directory.";
       LOG.log(Level.SEVERE, msg, e);

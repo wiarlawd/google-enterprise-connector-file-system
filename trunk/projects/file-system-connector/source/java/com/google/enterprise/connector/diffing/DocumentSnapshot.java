@@ -16,46 +16,33 @@ package com.google.enterprise.connector.diffing;
 
 import com.google.enterprise.connector.spi.RepositoryException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 /**
  * Interface for a local copy of a document that is stored on the GSA.
  */
-public interface DocumentSnapshot extends Comparable<DocumentSnapshot> {
+public interface DocumentSnapshot {
   /**
    * Returns the id for the document.
    */
   String getDocumentId();
 
   /**
-   * Called by the diffing connector framework to indicate the
-   * {@link DocumentSnapshot} corresponding to the
-   * version of the referenced document on the GSA. If no
-   * version of the referenced document is on the GSA the
-   * diffing framework will pass in null.
+   * Returns a {@link DocumentHandle} for updating the referenced
+   * document on the GSA or null if the document on the GSA
+   * does not need updating.
    * <p>
    * The diffing framework will call this before calling
-   * <ol>
-   * <li> {@link #getChange()}
-   * <li> {@link #getJson()}
-   * </ol>
+   * {@link #toString()} to persist this {@link DocumentSnapshot}.
+   * @throws RepositoryException
    */
-  void setGsaDocumentSnapshot(DocumentSnapshot onGsa)
+  DocumentHandle getUpdate(DocumentSnapshot onGsa)
       throws RepositoryException;
 
   /**
-   * Returns a {@link Change} for updating the referenced
-   * document on the GSA.
-   * @return The {@link Change} for updating the referenced
-   *   document on the gsa or null if the the document on the gsa
-   *   is up to date.
-   * @throws RepositoryException
+   * Returns a serialized {@link String} representation of this
+   * {@link DocumentSnapshot} suitable deserialization with
+   * {@link DocumentSnapshotFactory#fromString(
+   * String)}. The returned value must not be null.
    */
-  Change getChange() throws RepositoryException;
-
-  /**
-   * Returns a {@link JSONObject} for persisting this {@link DocumentSnapshot}.
-   */
-  JSONObject getJson() throws JSONException;
+  @Override
+  String toString();
 }

@@ -13,7 +13,7 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentSnapshotIterableRuntimeException;
+import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;
@@ -41,17 +41,17 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
   }
 
   /* @Override */
-  public Iterator<T> iterator() throws DocumentSnapshotIterableRuntimeException {
+  public Iterator<T> iterator() throws SnapshotRepositoryRuntimeException {
     List<T> l = new ArrayList<T>();
     l.add(root);
     return new FileIterator(l);
   }
 
-  private List<T> listFiles(T dir) throws DocumentSnapshotIterableRuntimeException {
+  private List<T> listFiles(T dir) throws SnapshotRepositoryRuntimeException {
     try {
       return dir.listFiles();
     } catch (IOException ioe) {
-      throw new DocumentSnapshotIterableRuntimeException(
+      throw new SnapshotRepositoryRuntimeException(
           "Directory Listing failed", ioe);
     }
   }
@@ -82,7 +82,7 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
     }
 
     private void setPositionToNextFile()
-        throws DocumentSnapshotIterableRuntimeException {
+        throws SnapshotRepositoryRuntimeException {
       while (traversalStateStack.size() > 0) {
         List<T> l = traversalStateStack.get(traversalStateStack.size() - 1);
 
@@ -102,7 +102,7 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
         }
     }
 
-    boolean isQualifiyingFile(T f) throws DocumentSnapshotIterableRuntimeException {
+    boolean isQualifiyingFile(T f) throws SnapshotRepositoryRuntimeException {
       try {
         if ((traversalContext != null)
             && (traversalContext.maxDocumentSize() < f.length())) {
@@ -123,13 +123,13 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
     }
 
     @Override
-    public boolean hasNext() throws DocumentSnapshotIterableRuntimeException {
+    public boolean hasNext() throws SnapshotRepositoryRuntimeException {
       setPositionToNextFile();
       return !traversalStateStack.isEmpty();
     }
 
     @Override
-    public T next() throws DocumentSnapshotIterableRuntimeException {
+    public T next() throws SnapshotRepositoryRuntimeException {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }

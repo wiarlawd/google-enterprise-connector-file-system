@@ -14,19 +14,17 @@
 
 package com.google.enterprise.connector.diffing;
 
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /**
  * Interface for constructing a {@link DocumentSnapshot} from its
- * {@link JSONObject} representation.
+ * {@link String} representation.
  */
 public interface DocumentSnapshotFactory {
   /**
-   * Creates a {@link DocumentSnapshot} from its {@link JSONObject}
-   * representation that was created using {@link
-   * DocumentSnapshot#getJson()}.
+   * Creates a {@link DocumentSnapshot} from its serialized {@link String}
+   * representation that was created by {@link DocumentSnapshot#toString()}.
+   * The returned value must not be null.
+   * @throws IllegalArgumentException if stringForm is not valid.
    */
-  DocumentSnapshot newDocumentSnapshot(JSONObject json)
-      throws JSONException;
+  DocumentSnapshot fromString(String stringForm);
 }

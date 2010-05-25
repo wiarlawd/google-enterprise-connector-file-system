@@ -16,13 +16,13 @@ package com.google.enterprise.connector.diffing;
 /**
  * Exception for reporting a problem (such as loss of network
  * connectivity to a repository) that precludes getting or using
- * the {@link java.util.Iterator} for a {@link DocumentSnapshotIterable}
+ * the {@link java.util.Iterator} for a {@link SnapshotRepository}
  */
-public class DocumentSnapshotIterableRuntimeException extends RuntimeException{
+public class SnapshotRepositoryRuntimeException extends RuntimeException{
   /**
-   * Construct a {@link DocumentSnapshotIterableRuntimeException}.
+   * Construct a {@link SnapshotRepositoryRuntimeException}.
   */
-  public DocumentSnapshotIterableRuntimeException(String message, Throwable cause) {
+  public SnapshotRepositoryRuntimeException(String message, Throwable cause) {
     super(message, cause);
   }
 }
