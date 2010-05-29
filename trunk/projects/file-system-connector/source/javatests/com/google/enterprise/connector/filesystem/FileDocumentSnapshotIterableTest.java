@@ -229,7 +229,7 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
   private static class TestFileSink implements FileSink {
     private final List<SinkHolder> sunk = new ArrayList<SinkHolder>();
 
-    @Override
+    /* @Override */
     public void add(FileInfo fileInfo, FileFilterReason reason) {
       SinkHolder holder = new SinkHolder(fileInfo.getPath(), reason);
       sunk.add(holder);

@@ -122,13 +122,13 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
       }
     }
 
-    @Override
+    /* @Override */
     public boolean hasNext() throws SnapshotRepositoryRuntimeException {
       setPositionToNextFile();
       return !traversalStateStack.isEmpty();
     }
 
-    @Override
+    /* @Override */
     public T next() throws SnapshotRepositoryRuntimeException {
       if (!hasNext()) {
         throw new NoSuchElementException();
@@ -137,7 +137,7 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
       return next;
     }
 
-    @Override
+    /* @Override */
     public void remove() {
       throw new UnsupportedOperationException();
     }
