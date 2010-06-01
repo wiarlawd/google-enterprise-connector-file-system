@@ -14,20 +14,19 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
- * Enumerations for reasons for the file connector to filter files rather than
- * send them to the GSA.
+ * A {@link DocumentSink} that logs filtered documents.
  */
-public enum FileFilterReason {
-  /** File path does note match start patterns or matches exclude patterns. */
-  PATTERN_MISMATCH,
+class LoggingDocumentSink implements DocumentSink {
 
-  /** File is larger than the maximum allowed. */
-  TOO_BIG,
+  private static final Logger LOG = Logger.getLogger(LoggingDocumentSink.class.getName());
 
-  /** File has an unsupported mime type. */
-  UNSUPPORTED_MIME_TYPE,
-
-  /** IO error occured while processing. */
-  IO_EXCEPTION
+  /* @Override */
+  public void add(String documentId, FilterReason reason) {
+    LOG.log(Level.FINER, "Skipping Document {0} with reason {1}",
+        new String[]{documentId, reason.toString()});
+  }
 }

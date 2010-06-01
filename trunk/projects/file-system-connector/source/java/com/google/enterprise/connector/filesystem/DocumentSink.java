@@ -15,12 +15,12 @@
 package com.google.enterprise.connector.filesystem;
 
 /**
- * A destination for {@link FileInfo} objects that are filtered and not
+ * A destination for tracking documents that are filtered and not
  * sent on to the GSA.
  */
-interface FileSink {
+interface DocumentSink {
   /**
-   * Adds the {@link FileInfo}.
+   * Adds a filtered document and the reason it was filtered.
    */
-  public void add(FileInfo fileInfo, FileFilterReason reason);
+  public void add(String documentId, FilterReason reason);
 }

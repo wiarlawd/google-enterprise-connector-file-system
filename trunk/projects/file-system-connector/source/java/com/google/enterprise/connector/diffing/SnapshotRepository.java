@@ -20,7 +20,7 @@ import java.util.Iterator;
  * objects from a repository. The returned objects are are sorted
  * by {@link DocumentSnapshot#getDocumentId()} values.
  */
-public interface SnapshotRepository extends Iterable<DocumentSnapshot> {
+public interface  SnapshotRepository<T extends DocumentSnapshot> extends Iterable<T> {
 
   /**
    * Returns an {@link Iterator} to access the
@@ -34,6 +34,6 @@ public interface SnapshotRepository extends Iterable<DocumentSnapshot> {
    * {@link Iterator} need not implement {@link Iterator#remove()}.
    */
   /* @Override */
-  Iterator<DocumentSnapshot> iterator()
+  Iterator<T> iterator()
       throws SnapshotRepositoryRuntimeException;
 }

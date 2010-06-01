@@ -13,7 +13,10 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
+import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;
@@ -22,34 +25,57 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
-    implements Iterable<T> {
+/**
+ * {@link SnapshotRepository} for returning {@link ReadonlyFile} objects
+ * for files
+ * <ol>
+ * <li> under a root direcotry
+ * <li> representing files rather than directories {@link ReadonlyFile#isRegularFile()}
+ * <li> matching a {@link FilePatternMatcher}
+ * <li> conforming to the size limit specified by {@link TraversalContext#maxDocumentSize()}
+ * </ol>
+ * Files are returned in an order matching a depth first traversal of the
+ * directory tree. Within each directory entries are processed in lexical
+ * order. It is required that the returned {@link
+ * DocumentSnapshot#getDocumentId()}.
+ */
+public class FileDocumentSnapshotRepository
+    implements SnapshotRepository<FileDocumentSnapshot> {
 
-  private final T root;
-  private final FileSink fileSink;
+  private final ReadonlyFile<?> root;
+  private final DocumentSink fileSink;
   private final FilePatternMatcher matcher;
   private final TraversalContext traversalContext;
+  private final ChecksumGenerator checksumGenerator;
+  private final Clock clock;
+  private final MimeTypeFinder mimeTypeFinder;
 
 
 
-  FileDocumentSnapshotIterable(T root, FileSink fileSink, FilePatternMatcher matcher,
-      TraversalContext traversalContext) {
+  FileDocumentSnapshotRepository(ReadonlyFile<?> root, DocumentSink fileSink, FilePatternMatcher matcher,
+      TraversalContext traversalContext, ChecksumGenerator checksomeGenerator, Clock clock,
+      MimeTypeFinder mimeTypeFinder) {
     this.root = root;
     this.fileSink = fileSink;
     this.traversalContext = traversalContext;
     this.matcher = matcher;
+    this.checksumGenerator = checksomeGenerator;
+    this.clock = clock;
+    this.mimeTypeFinder = mimeTypeFinder;
   }
 
   /* @Override */
-  public Iterator<T> iterator() throws SnapshotRepositoryRuntimeException {
-    List<T> l = new ArrayList<T>();
+  public Iterator<FileDocumentSnapshot> iterator() throws SnapshotRepositoryRuntimeException {
+    List<ReadonlyFile<?>> l = new ArrayList<ReadonlyFile<?>>();
     l.add(root);
     return new FileIterator(l);
   }
 
-  private List<T> listFiles(T dir) throws SnapshotRepositoryRuntimeException {
+  private List<? extends ReadonlyFile<?>> listFiles(ReadonlyFile<?> dir)
+      throws SnapshotRepositoryRuntimeException {
     try {
-      return dir.listFiles();
+      List<? extends ReadonlyFile<?>> result = dir.listFiles();
+      return result;
     } catch (IOException ioe) {
       throw new SnapshotRepositoryRuntimeException(
           "Directory Listing failed", ioe);
@@ -67,7 +93,7 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
    * Files are filtered based on calling {@link
    * #isQualifiyingFile(ReadonlyFile)}
    */
-  private class FileIterator implements Iterator<T> {
+  private class FileIterator implements Iterator<FileDocumentSnapshot> {
     /**
      * Stack for tracking the state of the ongoing
      * in-order traversal. Each level starting
@@ -76,24 +102,24 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
      * have not yet been traversed. The stack
      * becomes empty when the traversal completes.
      */
-    List<List<T>> traversalStateStack = new ArrayList<List<T>>();
-    private FileIterator(List<T> rootFiles) {
+    List<List<ReadonlyFile<?>>> traversalStateStack = new ArrayList<List<ReadonlyFile<?>>>();
+    private FileIterator(List<ReadonlyFile<?>> rootFiles) {
       traversalStateStack.add(rootFiles);
     }
 
     private void setPositionToNextFile()
         throws SnapshotRepositoryRuntimeException {
       while (traversalStateStack.size() > 0) {
-        List<T> l = traversalStateStack.get(traversalStateStack.size() - 1);
+        List<ReadonlyFile<?>> l = traversalStateStack.get(traversalStateStack.size() - 1);
 
         if (l.isEmpty()) {
           traversalStateStack.remove(traversalStateStack.size() - 1);
         } else {
-          T f = l.get(0);
+          ReadonlyFile<?> f = l.get(0);
           if (f.isDirectory()) {
             l.remove(0);
             // Copy of the returned list because we modify our copy.
-            traversalStateStack.add(new ArrayList<T>(listFiles(f)));
+            traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(listFiles(f)));
           } else if (!isQualifiyingFile(f)) {
             l.remove(0);
           } else
@@ -102,22 +128,22 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
         }
     }
 
-    boolean isQualifiyingFile(T f) throws SnapshotRepositoryRuntimeException {
+    boolean isQualifiyingFile(ReadonlyFile<?> f) throws SnapshotRepositoryRuntimeException {
       try {
         if ((traversalContext != null)
             && (traversalContext.maxDocumentSize() < f.length())) {
-          fileSink.add(f, FileFilterReason.TOO_BIG);
+          fileSink.add(f.getPath(), FilterReason.TOO_BIG);
           return false;
         }
 
         if (!f.acceptedBy(matcher)) {
-          fileSink.add(f, FileFilterReason.PATTERN_MISMATCH);
+          fileSink.add(f.getPath(), FilterReason.PATTERN_MISMATCH);
           return false;
         }
 
         return true;
       } catch (IOException ioe) {
-        fileSink.add(f, FileFilterReason.IO_EXCEPTION);
+        fileSink.add(f.getPath(), FilterReason.IO_EXCEPTION);
         return false;
       }
     }
@@ -129,12 +155,14 @@ public class FileDocumentSnapshotIterable<T extends ReadonlyFile<T>>
     }
 
     /* @Override */
-    public T next() throws SnapshotRepositoryRuntimeException {
+    public FileDocumentSnapshot next() throws SnapshotRepositoryRuntimeException {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      T next = traversalStateStack.get(traversalStateStack.size() - 1).remove(0);
-      return next;
+      ReadonlyFile<?> next = traversalStateStack.get(traversalStateStack.size() - 1).remove(0);
+      return new FileDocumentSnapshot(next, checksumGenerator,
+          clock,  traversalContext, mimeTypeFinder,
+          fileSink);
     }
 
     /* @Override */

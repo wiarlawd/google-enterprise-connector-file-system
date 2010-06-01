@@ -14,6 +14,9 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
+import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
 
@@ -22,22 +25,41 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class FileDocumentSnapshotIterableTest extends TestCase {
+public class FileDocumentSnapshotRepositoryTest extends TestCase {
 
   private static final List<String> INCLUDE_ALL_PATTERNS = ImmutableList.of("/");
   private static final List<String> EXCLUDE_NONE_PATTERNS = ImmutableList.of();
   private static final FilePatternMatcher ALL_MATCHER =
-    new FilePatternMatcher(INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS);
+      new FilePatternMatcher(INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS);
+  private static final FileChecksumGenerator CHECKSUM_GENERATOR =
+      new FileChecksumGenerator("SHA1");
+  private static final TraversalContext TRAVERSAL_CONTEXT =
+      new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE);
+  private static Clock SYSTEM_CLOCK = new FileSystemMonitor.Clock() {
+    /* @Override */
+    public long getTime() {
+      return System.currentTimeMillis();
+    }
+  };
+  private static MimeTypeFinder MIME_TYPE_FINDER = new MimeTypeFinder();
+
+  private static FileDocumentSnapshotRepository
+      newFileDocumentSnapshotRepository(ReadonlyFile<?> root,
+          TestFileSink sink, FilePatternMatcher matcher) {
+    FileDocumentSnapshotRepository result =
+        new FileDocumentSnapshotRepository(root, sink, matcher,
+            TRAVERSAL_CONTEXT, CHECKSUM_GENERATOR, SYSTEM_CLOCK, MIME_TYPE_FINDER);
+    return result;
+  }
 
   public void testQuery_emptyRoot() throws Exception {
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink, null,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
-    Iterator<MockReadonlyFile> it = frq.iterator();
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, ALL_MATCHER);
+    Iterator<FileDocumentSnapshot> it = dsr.iterator();
     assertFalse(it.hasNext());
-    it = frq.iterator();
+    it = dsr.iterator();
     assertFalse(it.hasNext());
     assertEquals(0, sink.getCountSunk());
   }
@@ -46,13 +68,12 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
     MockReadonlyFile f1 = root.addFile("f1", "f1d");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink, ALL_MATCHER,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, ALL_MATCHER);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       assertEquals(0, sink.getCountSunk());
     }
@@ -63,15 +84,14 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile f1 = root.addFile("f1", "f1d");
     MockReadonlyFile f2 = root.addFile("f2", "f2d");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink, ALL_MATCHER,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, ALL_MATCHER);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<? extends DocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getDocumentId());
       assertTrue(it.hasNext());
-      assertEquals(f2, it.next());
+      assertEquals(f2.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       assertEquals(0, sink.getCountSunk());
     }
@@ -82,13 +102,12 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile f1 = root.addFile("f1", "f1d");
     MockReadonlyFile d1 = root.addSubdir("d1");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink,  ALL_MATCHER,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, ALL_MATCHER);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       assertEquals(0, sink.getCountSunk());
     }
@@ -106,17 +125,16 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile d2d2 = d2.addSubdir("d2d2");
 
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink,  ALL_MATCHER,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, ALL_MATCHER);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(d1f1, it.next());
+      assertEquals(d1f1.getPath(), it.next().getDocumentId());
       assertTrue(it.hasNext());
-      assertEquals(d2f1, it.next());
+      assertEquals(d2f1.getPath(), it.next().getDocumentId());
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       assertEquals(0, sink.getCountSunk());
     }
@@ -133,19 +151,20 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile d1f1 = d1.addFile("d1f1", maxSizeData);
     MockReadonlyFile d1fTooBig1 = d1.addFile("d1fTooBig1", tooBigData);
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink,  ALL_MATCHER,
-          new FakeTraversalContext(maxSizeData.length()));
+    FileDocumentSnapshotRepository dsr =
+      new FileDocumentSnapshotRepository(root, sink, ALL_MATCHER,
+          new FakeTraversalContext(maxSizeData.length()), CHECKSUM_GENERATOR,
+          SYSTEM_CLOCK, MIME_TYPE_FINDER);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(d1f1, it.next());
+      assertEquals(d1f1.getPath(), it.next().getDocumentId());
       assertEquals(0, sink.getCountSunk());
       assertTrue(it.hasNext());
       assertEquals(2, sink.getCountSunk());
-      assertTrue(sink.contains(fTooBig1.getPath(), FileFilterReason.TOO_BIG));
-      assertTrue(sink.contains(d1fTooBig1.getPath(), FileFilterReason.TOO_BIG));
-      assertEquals(fx, it.next());
+      assertTrue(sink.contains(fTooBig1.getPath(), FilterReason.TOO_BIG));
+      assertTrue(sink.contains(d1fTooBig1.getPath(), FilterReason.TOO_BIG));
+      assertEquals(fx.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       sink.reset();
     }
@@ -161,21 +180,20 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile d1 = root.addSubdir("d1");
     MockReadonlyFile notIncluded = d1.addFile("f1", "always me");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink,  matcher,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, matcher);
+
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getPath());
       assertFalse(it.hasNext());
       assertEquals(1, sink.getCountSunk());
       //Note d1 is not included either but FileRepositoryQuery traverses
       //it anyway.
-      assertTrue(sink.contains(notIncluded.getPath(), FileFilterReason.PATTERN_MISMATCH));
+      assertTrue(sink.contains(notIncluded.getPath(), FilterReason.PATTERN_MISMATCH));
       sink.reset();
     }
-
   }
 
   public void testQuery_filterExcludePattern() throws Exception {
@@ -187,18 +205,17 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     MockReadonlyFile d1 = root.addSubdir("d1");
     MockReadonlyFile excluded = d1.addFile("f1.txt", "always me");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink,  matcher,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, matcher);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       assertEquals(1, sink.getCountSunk());
       //Note d1 is not included either but FileRepositoryQuery traverses
       //it anyway.
-      assertTrue(sink.contains(excluded.getPath(), FileFilterReason.PATTERN_MISMATCH));
+      assertTrue(sink.contains(excluded.getPath(), FilterReason.PATTERN_MISMATCH));
       sink.reset();
     }
   }
@@ -210,28 +227,27 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
     fail1.setLenghException(new IOException("Expected IOException"));
     MockReadonlyFile f2 = root.addFile("f2", "f2d");
     TestFileSink sink = new TestFileSink();
-    FileDocumentSnapshotIterable<MockReadonlyFile> frq =
-      new FileDocumentSnapshotIterable<MockReadonlyFile>(root, sink, ALL_MATCHER,
-          new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE));
+    FileDocumentSnapshotRepository dsr =
+      newFileDocumentSnapshotRepository(root, sink, ALL_MATCHER);
     for(int ix= 0; ix < 2; ix++) {
-      Iterator<MockReadonlyFile> it = frq.iterator();
+      Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());
-      assertEquals(f1, it.next());
+      assertEquals(f1.getPath(), it.next().getDocumentId());
       assertTrue(it.hasNext());
-      assertEquals(f2, it.next());
+      assertEquals(f2.getPath(), it.next().getDocumentId());
       assertFalse(it.hasNext());
       assertEquals(1, sink.getCountSunk());
-      assertTrue(sink.contains(fail1.getPath(), FileFilterReason.IO_EXCEPTION));
+      assertTrue(sink.contains(fail1.getPath(), FilterReason.IO_EXCEPTION));
       sink.reset();
     }
   }
 
-  private static class TestFileSink implements FileSink {
+  private static class TestFileSink implements DocumentSink {
     private final List<SinkHolder> sunk = new ArrayList<SinkHolder>();
 
     /* @Override */
-    public void add(FileInfo fileInfo, FileFilterReason reason) {
-      SinkHolder holder = new SinkHolder(fileInfo.getPath(), reason);
+    public void add(String documentId, FilterReason reason) {
+      SinkHolder holder = new SinkHolder(documentId, reason);
       sunk.add(holder);
     }
 
@@ -243,15 +259,15 @@ public class FileDocumentSnapshotIterableTest extends TestCase {
       sunk.clear();
     }
 
-    boolean contains(String id, FileFilterReason reason) {
+    boolean contains(String id, FilterReason reason) {
       return sunk.contains(new SinkHolder(id, reason));
     }
 
     private static class SinkHolder {
       private final String id;
-      private final FileFilterReason reason;
+      private final FilterReason reason;
 
-      SinkHolder(String id, FileFilterReason reason) {
+      SinkHolder(String id, FilterReason reason) {
         this.id = id;
         this.reason = reason;
       }

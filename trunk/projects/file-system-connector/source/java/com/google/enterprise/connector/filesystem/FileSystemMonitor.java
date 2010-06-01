@@ -14,66 +14,43 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
-import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A service that monitors a file system and makes callbacks when changes occur.
+ * A service that monitors a {@link SnapshotRepository} and makes callbacks
+ * when changes occur.
  *
- * <p>This implementation works as follows. It repeatedly scans all the files and
- * directories in a file system. On each pass, it compares the current contents
- * of the file system to a record of what it saw on the previous pass. The
- * record is stored as a file in the local file system. Each discrepancy between
- * the file system and the snapshot is propagated to the client.
- *
- * <p>A note about deciding whether a file has changed: One way to do this is to
- * calculate a strong checksum (e.g., SHA or MD5) for each file every time we
- * encounter it. However, that would be really expensive since it means reading
- * every byte in the file system once per pass. We would rather use the
- * last-modified time. Unfortunately, the granularity of the last-modified time
- * is not fine enough to detect every change. (It could happen that we upload a
- * file and then it is changed within the same second.) Another issue is that we
- * don't want to assume that the clocks of the connector manager and the file
- * system are necessarily synchronized; due to misconfiguration, they often are
- * not.
- *
- * <p>So here is the theory of operation: suppose we checksum a file, then some
- * minimum interval of time passes (as measured at the connector manager), and
- * then we checksum the file again and find that it has not changed. At point we
- * label the file "stable", and assume that if the file subsequently changes,
- * the last-modified time will also change. That means that on subsequent passes
- * we can skip the checksum if the modification time has not changed. This
- * assumes a couple things:
- * <ul>
- * <li>No one is playing tricks by modifying the file and then resetting the
- * last-modified time; if that is happening, then last-modified time is never
- * going to be useful.</li>
- * <li>Although the skew between the file system's clock and the connector
- * manager's clock may be arbitrarily large, they are at least running at
- * roughly the same rate.</li>
- * </ul>
+ * <p>This implementation works as follows. It repeatedly scans all the
+ * {@link DocumentSnapshot} entries returned by
+ * {@link SnapshotRepository#iterator()}. On each pass, it compares the current
+ * contents of the repository to a record of what it saw on the previous pass.
+ * The record is stored as a file in the local file system. Each discrepancy
+ * is propagated to the client.
  *
  * <p>Using a local snapshot of the file system has some serious flaws for
  * continuous crawl:
  * <ul>
  * <li>The local snapshot can diverge from the actual contents of the GSA. This
- * can lead to situations where discrepancies between the file system and the
- * GSA are never corrected.</li>
+ * can lead to situations where discrepancies are not corrected.</li>
  * <li>If the local snapshot gets corrupted, there is no way to recover short of
- * deleting all documents in the cloud that came from this file system and
- * starting over.</li>
+ * deleting all on the GSA and starting again.</li>
  * </ul>
- * A much more robust solution is to obtain snapshots directly from the cloud at
- * least part of the time. (However, to save bandwidth, it may still be useful
- * to keep local snapshots and only get an "authoritative" snapshot from the
- * cloud occasionally. E.g., once a week or if the local snapshot is corrupted.)
- * When an API to do that is available, this implementation should be fixed to
- * use it.
- *
+ * A much more robust solution is to obtain snapshots directly from the GSA
+ * at least part of the time. (However, to save bandwidth, it may still be
+ * useful to keep local snapshots and only get an "authoritative" snapshot
+ * from the cloud occasionally. E.g., once a week or if the local snapshot
+ * is corrupted.)
+ * <p>
+ * When an API to do that is available, this implementation should be fixed
+ * to use it.
  */
 // TODO: Retrieve authoritative snapshots from GSA when appropriate.
 public class FileSystemMonitor implements Runnable {
@@ -102,14 +79,11 @@ public class FileSystemMonitor implements Runnable {
   }
 
   /** Compare files using{@link FileInfo#getPath()} */
-  private static int pathCompare(FileInfo one, FileInfo two) {
-    if (one.isDirectory()) {
-      throw new IllegalArgumentException("directory not supported " + one);
-    }
+  private static int pathCompare(String one, FileInfo two) {
     if (two.isDirectory()) {
       throw new IllegalArgumentException("directory not supported " + two);
     }
-    return one.getPath().compareTo(two.getPath());
+    return one.compareTo(two.getPath());
   }
 
   /**
@@ -123,7 +97,7 @@ public class FileSystemMonitor implements Runnable {
   private final SnapshotStore snapshotStore;
 
   /** The root of the file system to monitor */
-  private final FileDocumentSnapshotIterable<?> query;
+  private final SnapshotRepository<? extends DocumentSnapshot> query;
 
   /** Reader for the current snapshot. */
   private SnapshotReader snapshotReader;
@@ -137,29 +111,16 @@ public class FileSystemMonitor implements Runnable {
   /** The snapshot we are currently writing */
   private SnapshotWriter snapshotWriter;
 
-  /** Something to use to create file checksums. */
-  private final ChecksumGenerator checksumGenerator;
-
-  /** Clock to use for generating scan times. */
-  private Clock clock;
-
   private final String name;
 
-  private final TraversalContext traversalContext;
+  private final DocumentSink documentSink;
 
-  private final MimeTypeFinder mimeTypeFinder;
-
-  private final FileSink fileSink;
+  // The file system name for this file system monitor
+  // TODO Remvoe after refactoring Callback
+  private final String filesys;
 
   /* Contains a checkpoint confirmation from CM. */
   private MonitorCheckpoint guaranteeCheckpoint;
-
-  /**
-   * Minimum interval in ms between identical checksums for a file to be deemed
-   * "stable". This should be at least several times the granularity of the
-   * last-modified time.
-   */
-  private static final long STABLE_INTERVAL_MS = 5000L;
 
   /**
    * Creates a FileSystemMonitor that monitors the file system rooted at {@code
@@ -169,41 +130,20 @@ public class FileSystemMonitor implements Runnable {
    * @param query query for files
    * @param snapshotStore where snapshots are stored
    * @param callback client callback
-   * @param checksumGenerator object to generate checksums
-   * @param traversalContext null means accept any size/mime-type
-   * @param fileSink destination for filtered out file info
+   * @param documentSink destination for filtered out file info
    * @param initialCp checkpoint when system initiated, could be null
    */
-  public FileSystemMonitor(String name, FileDocumentSnapshotIterable<?> query, SnapshotStore snapshotStore,
-      Callback callback, ChecksumGenerator checksumGenerator,
-      TraversalContext traversalContext, FileSink fileSink, MonitorCheckpoint initialCp) {
+  public FileSystemMonitor(String name, SnapshotRepository<? extends DocumentSnapshot> query,
+      SnapshotStore snapshotStore, Callback callback, DocumentSink documentSink,
+      MonitorCheckpoint initialCp, String filesys) {
     this.name = name;
     this.query = query;
     this.snapshotStore = snapshotStore;
-    this.callback = new FilteringCallback(callback);
-    this.checksumGenerator = checksumGenerator;
-    this.traversalContext = traversalContext;
+    this.callback = callback;
 
-    // The default clock just uses the current time.
-    this.clock = new Clock() {
-      /* @Override */
-      public long getTime() {
-        return System.currentTimeMillis();
-      }
-    };
-
-    this.mimeTypeFinder = new MimeTypeFinder();
-    this.fileSink = fileSink;
+    this.documentSink = documentSink;
     guaranteeCheckpoint = initialCp;
-  }
-
-  /**
-   * Installs a custom clock. This is probably only useful for testing.
-   *
-   * @param clock
-   */
-  public void setClock(Clock clock) {
-    this.clock = clock;
+    this.filesys = filesys;
   }
 
   /**
@@ -254,8 +194,7 @@ public class FileSystemMonitor implements Runnable {
       String msg = "Problem with snapshot store.";
       LOG.log(Level.SEVERE, msg, e);
     } catch (SnapshotRepositoryRuntimeException e) {
-      //TODO: Improve this message
-      String msg = "Failed listing directory.";
+      String msg = "Failed reading repository.";
       LOG.log(Level.SEVERE, msg, e);
     }
   }
@@ -324,12 +263,12 @@ public class FileSystemMonitor implements Runnable {
       // Create an snapshot writer for this pass.
       this.snapshotWriter = snapshotStore.openNewSnapshotWriter();
 
-      for(ReadonlyFile<?> f : query) {
+      for(DocumentSnapshot ss : query) {
         if (Thread.currentThread().isInterrupted()) {
           throw new InterruptedException();
         }
-        processDeletes(f);
-        safelyProcessFile(f);
+        processDeletes(ss);
+        safelyProcessDocumentSnapshot(ss);
       }
       // Take care of any trailing paths in the snapshot.
       processDeletes(null);
@@ -363,48 +302,59 @@ public class FileSystemMonitor implements Runnable {
    * {@code file}. Or, if {@code file} is null, process all remaining snapshot
    * entries as deletes.
    *
-   * @param file where to stop
+   * @param documentSnapshot where to stop
+   * @throws SnapshotReaderException
    * @throws InterruptedException
    */
-  private void processDeletes(ReadonlyFile<?> file) throws SnapshotReaderException,
+  private void processDeletes(DocumentSnapshot documentSnapshot) throws SnapshotReaderException,
       InterruptedException {
-    while (current != null && (file == null || pathCompare(file, current) > 0)) {
+    while (current != null
+        && (documentSnapshot == null
+            || pathCompare(documentSnapshot.getDocumentId(), current) > 0)) {
       callback.deletedFile(current, getCheckpoint());
       current = snapshotReader.read();
     }
   }
 
-  private void safelyProcessFile(ReadonlyFile<?> file) throws  InterruptedException,
+  private void safelyProcessDocumentSnapshot(DocumentSnapshot snapshot) throws  InterruptedException,
       SnapshotReaderException, SnapshotWriterException {
     try {
-      processFile(file);
-    } catch (IOException e) {
-      fileSink.add(file, FileFilterReason.IO_EXCEPTION);
+      processDocument(snapshot);
+    } catch (RepositoryException re) {
+      //TODO Log the exception or its message? in document sink perhaps.
+      documentSink.add(snapshot.getDocumentId(), FilterReason.IO_EXCEPTION);
     }
   }
 
   /**
    * Processes a file found in the file system.
    *
-   * @param file
-   * @throws IOException
+   * @param documentSnapshot
+   * @throws RepositoryException
    * @throws InterruptedException
    * @throws SnapshotReaderException
    * @throws SnapshotWriterException
    */
-  private void processFile(ReadonlyFile<?> file) throws  InterruptedException,
-      IOException, SnapshotReaderException, SnapshotWriterException {
+  private void processDocument(DocumentSnapshot documentSnapshot) throws  InterruptedException,
+      RepositoryException, SnapshotReaderException, SnapshotWriterException {
     // At this point 'current' >= 'file', or possibly current == null if
     // we've processed the previous snapshot entirely.
-    if (current != null && (pathCompare(current, file) == 0)) {
-      processPossibleFileChange(file);
+    if (current != null && (pathCompare(documentSnapshot.getDocumentId(), current) == 0)) {
+      processPossibleChange(documentSnapshot);
     } else {
       // This file didn't exist during the previous scan.
-      FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
-      writeFileSnapshot(file.getFileSystemType(), file.getPath(),
-          file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
-          false);
-      callback.newFile(file, getCheckpoint(-1));
+      // TODO The following code converts from DcoumentSnapshot/DcoumentHandle to
+      //      Changes/SnapshotRecords until the SnapshotWriter and ChangeQueue
+      //      are converted.
+      FileDocumentSnapshot fds = (FileDocumentSnapshot)documentSnapshot;
+      FileDocumentHandle fdh  = fds.getUpdate(null);
+      writeFileSnapshot(fds.getFilesys(), fds.getDocumentId(),
+          fds.getLastModified(), fds.getAcl(), fds.getChecksum(),
+          fds.getScanTime(), false);
+      // Null if filtered due to mime-type.
+      if (fdh != null) {
+        callback.newFile(new DocumentSnapshotFileInfo(documentSnapshot), getCheckpoint(-1));
+      }
     }
   }
 
@@ -413,37 +363,49 @@ public class FileSystemMonitor implements Runnable {
    * scan. Determines whether the file has changed, propagates changes to the
    * client and writes the snapshot record.
    *
-   * @param file
-   * @throws IOException
+   * @param documentSnapshot
+   * @throws RepositoryException
    * @throws InterruptedException
    * @throws SnapshotWriterException
    * @throws SnapshotReaderException
    */
-  private void processPossibleFileChange(ReadonlyFile<?> file) throws
-      IOException, InterruptedException, SnapshotWriterException, SnapshotReaderException {
-    FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
-    if (current.getLastModified() != file.getLastModified()
-        || !current.getAcl().equals(infoCache.getAcl())
-        || (!current.isStable() && !current.getChecksum().equals(
-            infoCache.getChecksum()))) {
-      writeFileSnapshot(file.getFileSystemType(), file.getPath(),
-          file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
-          false);
-      callback.changedFileContent(file, getCheckpoint());
-    } else {
-      boolean isStable = current.isStable()
-          || current.getScanTime() + STABLE_INTERVAL_MS < clock.getTime();
+  private void processPossibleChange(DocumentSnapshot documentSnapshot) throws RepositoryException,
+      InterruptedException, SnapshotWriterException, SnapshotReaderException {
+
+    // TODO The following code converts from DcoumentSnapshot/DcoumentHandle to
+    //      Changes/SnapshotRecords until the SnapshotWriter and ChangeQueue
+    //      are converted.
+    DocumentSnapshot currentDocumentSnapshot = new FileDocumentSnapshot(current.getFileSystemType(),
+        current.getPath(), current.getLastModified(), current.getAcl(), current.getChecksum(),
+        current.getScanTime(), current.isStable());
+    FileDocumentSnapshot fds = (FileDocumentSnapshot)documentSnapshot;
+    FileDocumentHandle fdh = fds.getUpdate(currentDocumentSnapshot);
+    if (fdh == null) {
+      // No change.
       writeFileSnapshot(current.getFileSystemType(), current.getPath(),
           current.getLastModified(), current.getAcl(), current.getChecksum(),
-          isStable);
+          current.getScanTime(), fds.isStable());
+    } else if (fdh.isDelete()) {
+      // Changed and now has unsupported mime-type - write the snapshot but
+      // send the gsa a delete.
+      writeFileSnapshot(fds.getFilesys(), fds.getPath(),
+          fds.getLastModified(), fds.getAcl(), fds.getChecksum(),
+          current.getScanTime(), false);
+      callback.deletedFile(new DocumentSnapshotFileInfo(fds), getCheckpoint());
+    } else {
+      // Normal change - send the gsa an update.
+      writeFileSnapshot(fds.getFilesys(), fds.getPath(),
+          fds.getLastModified(), fds.getAcl(), fds.getChecksum(),
+          fds.getScanTime(), false);
+      callback.changedFileContent(new DocumentSnapshotFileInfo(fds), getCheckpoint());
     }
     current = snapshotReader.read();
   }
 
   void writeFileSnapshot(String fileSystemType, String path, long lastModified,
-      Acl acl, String checksum, boolean stable) throws SnapshotWriterException {
+      Acl acl, String checksum, long scanTime, boolean stable) throws SnapshotWriterException {
     SnapshotRecord rec = new SnapshotRecord(fileSystemType, path,
-        SnapshotRecord.Type.FILE, lastModified, acl, checksum, clock.getTime(),
+        SnapshotRecord.Type.FILE, lastModified, acl, checksum, scanTime,
         stable);
     snapshotWriter.write(rec);
   }
@@ -454,93 +416,48 @@ public class FileSystemMonitor implements Runnable {
     guaranteeCheckpoint = cp;
   }
 
-  /**
-   * Callback for filtering files that do not have supported mime types.
-   * <p>
-   * Determining a file's mime type can be an expensive operation and
-   * require reading the file. To avoid computing the mime type for every file
-   * on every pass we add files with unsupported mime types to the snapshot.
-   * This allows us to cheaply ignore the file on future passes based on an
-   * inexpensive time stamp check. This class filters files with unsupported
-   * mime types to avoid sending them on to the GSA.
-   * <p>
-   * Possible improvements
-   * <ol>
-   * <li>Store a flag in the snapshot to indicate the file has not been sent to
-   * the GSA. This would enhance the usefulness of the snapshot as a recode of
-   * the content of the GSA.
-   * <li>Store the mime type in the {@link Change} to avoid recomputing the
-   * value in {@link FileFetcher}. This requires detecting modifications to the
-   * file between the time the mime type is added to the change and the time the
-   * file is sent to the GSA. There is already a race related to the fact
-   * computing the mime type and reading the file are not atomic.
-   * </ol>
-   */
-  private class FilteringCallback implements Callback {
-    private final Callback delegate;
-
-    FilteringCallback(Callback delegate) {
-      this.delegate = delegate;
+  //TODO Temporary bridge between document snapshots and FileInfo's
+  //     until ChangeQueue is converted to work with
+  //     DocumentSnapshots.
+  private class DocumentSnapshotFileInfo implements FileInfo {
+    private final DocumentSnapshot documentSnapshot;
+    DocumentSnapshotFileInfo(DocumentSnapshot documentSnapshot) {
+      this.documentSnapshot = documentSnapshot;
     }
 
-    public void passBegin() throws InterruptedException {
-      delegate.passBegin();
-    }
-
-    public void changedFileContent(FileInfo fileInfo, MonitorCheckpoint mcp)
-        throws InterruptedException {
-      if (isMimeTypeSupported(fileInfo)) {
-        delegate.changedFileContent(fileInfo, mcp);
-      } else {
-        delegate.deletedFile(fileInfo, mcp);
-      }
-    }
-
-    public void changedFileMetadata(FileInfo fileInfo, MonitorCheckpoint mcp) {
+    /* @Override */
+    public Acl getAcl() {
       throw new UnsupportedOperationException();
     }
 
-    public void deletedFile(FileInfo file, MonitorCheckpoint mcp)
-        throws InterruptedException {
-      delegate.deletedFile(file, mcp);
+    /* @Override */
+    public String getFileSystemType() {
+      return filesys;
     }
 
-    public void newFile(FileInfo fileInfo, MonitorCheckpoint mcp)
-        throws InterruptedException {
-      if (isMimeTypeSupported(fileInfo)) {
-        delegate.newFile(fileInfo, mcp);
-      }
+    /* @Override */
+    public InputStream getInputStream() {
+      throw new UnsupportedOperationException();
     }
 
-    public void passComplete(MonitorCheckpoint mcp)
-        throws InterruptedException {
-      delegate.passComplete(mcp);
+    /* @Override */
+    public long getLastModified() {
+      throw new UnsupportedOperationException();
     }
 
-    public boolean hasEnqueuedAtLeastOneChangeThisPass() {
-      return delegate.hasEnqueuedAtLeastOneChangeThisPass();
+    /* @Override */
+    public String getPath() {
+      return documentSnapshot.getDocumentId();
     }
 
-    private boolean isMimeTypeSupported(FileInfo f) {
-      if (traversalContext == null) {
-        return true;
-      }
-      try {
-        String mimeType = mimeTypeFinder.find(traversalContext, f.getPath(),
-            new FileInfoInputStreamFactory(f));
-        boolean isSupported =
-            traversalContext.mimeTypeSupportLevel(mimeType) > 0;
-        if (!isSupported) {
-          fileSink.add(f, FileFilterReason.UNSUPPORTED_MIME_TYPE);
-        }
-        return isSupported;
-      } catch (IOException ioe) {
-        // Note the GSA will filter files with unsuported mime types so by
-        // sending the file we may expend computer resources but will avoid
-        // incorrectly dropping files.
-        LOG.warning("Failed to determine mime type for " + f.getPath());
-        return true;
-      }
+    /* @Override */
+    public boolean isDirectory() {
+      throw new UnsupportedOperationException();
+    }
+
+    /* @Override */
+    public boolean isRegularFile() {
+     throw new UnsupportedOperationException();
     }
   }
 }

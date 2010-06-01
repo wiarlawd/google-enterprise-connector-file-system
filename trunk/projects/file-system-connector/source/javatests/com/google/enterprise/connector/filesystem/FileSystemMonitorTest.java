@@ -15,6 +15,9 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.SnapshotRepository;
+import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
@@ -33,6 +36,13 @@ import java.util.Set;
  * Tests for the {@link FileSystemMonitor}
  */
 public class  FileSystemMonitorTest extends TestCase {
+  private static Clock SYSTEM_CLOCK = new FileSystemMonitor.Clock() {
+    /* @Override */
+    public long getTime() {
+      return System.currentTimeMillis();
+    }
+  };
+
   private FileSystemMonitor monitor;
   private CountingVisitor visitor;
   private MockReadonlyFile root;
@@ -256,17 +266,17 @@ public class  FileSystemMonitorTest extends TestCase {
     }
   }
 
-  private static class TestSink implements FileSink {
-    private final List<FileFilterReason> reasons = new ArrayList<FileFilterReason>();
+  private static class TestSink implements DocumentSink {
+    private final List<FilterReason> reasons = new ArrayList<FilterReason>();
 
     /* @Override */
-    public void add(FileInfo fileInfo, FileFilterReason reason) {
+    public void add(String documentId, FilterReason reason) {
       reasons.add(reason);
     }
 
-    int count(FileFilterReason countMe) {
+    int count(FilterReason countMe) {
       int result = 0;
-      for (FileFilterReason reason : reasons) {
+      for (FilterReason reason : reasons) {
         if (reason.equals(countMe)) {
           result++;
         }
@@ -285,39 +295,41 @@ public class  FileSystemMonitorTest extends TestCase {
 
   private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator,
       FilePatternMatcher myMatcher, TraversalContext traversalContext,
-      FileSink fileSink) {
-    FileDocumentSnapshotIterable<?> query = new FileDocumentSnapshotIterable<MockReadonlyFile>(
-        root, fileSink, myMatcher, traversalContext);
-    return new FileSystemMonitor("name", query, store, visitor, generator,
-        traversalContext, fileSink, null);
+      DocumentSink fileSink, Clock clock, FileSystemMonitor.Callback customVisitor) {
+    SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
+        new FileDocumentSnapshotRepository(
+            root, fileSink, myMatcher, traversalContext, generator, clock,
+            new MimeTypeFinder());
+    return new FileSystemMonitor("name", snapshotRepository, store, customVisitor,
+        fileSink, null, root.getFileSystemType());
   }
 
   private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
     return newFileSystemMonitor(checksumGenerator, myMatcher,
-        new FakeTraversalContext(), new LoggingFileSink());
+        new FakeTraversalContext(), new LoggingDocumentSink(),
+        SYSTEM_CLOCK, visitor);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator) {
+  private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator, Clock clock) {
     return newFileSystemMonitor(generator, matcher, new FakeTraversalContext(),
-        new LoggingFileSink());
+        new LoggingDocumentSink(), clock, visitor);
   }
 
   private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext) {
     return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
-        new LoggingFileSink());
+        new LoggingDocumentSink(), SYSTEM_CLOCK, visitor);
   }
 
   private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext,
-      FileSink fileSink) {
-    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext, fileSink);
+      DocumentSink fileSink) {
+    return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
+        fileSink, SYSTEM_CLOCK, visitor);
   }
 
   private FileSystemMonitor newFileSystemMonitor(FileSystemMonitor.Callback customVisitor) {
-    TraversalContext traversalContext = new FakeTraversalContext();
-    FileDocumentSnapshotIterable<?> query = new FileDocumentSnapshotIterable<MockReadonlyFile>(
-        root, new LoggingFileSink(), matcher, traversalContext);
-    return new FileSystemMonitor("name", query, store, customVisitor, checksumGenerator,
-        traversalContext, new LoggingFileSink(), null);
+    return newFileSystemMonitor(checksumGenerator, matcher,
+        new FakeTraversalContext(), new LoggingDocumentSink(), SYSTEM_CLOCK,
+        customVisitor);
   }
 
   @Override
@@ -453,7 +465,7 @@ public class  FileSystemMonitorTest extends TestCase {
     }
     runMonitorAndCheck(0, 0, 0, 0);
     assertEquals(bigCount, sink.count());
-    assertEquals(bigCount, sink.count(FileFilterReason.TOO_BIG));
+    assertEquals(bigCount, sink.count(FilterReason.TOO_BIG));
   }
 
   public void testAllFilesTooBig() throws Exception {
@@ -461,7 +473,7 @@ public class  FileSystemMonitorTest extends TestCase {
     monitor = newFileSystemMonitor(new FakeTraversalContext(0), sink);
     runMonitorAndCheck(0, 0, 0, 0);
     assertEquals(baseFiles, sink.count());
-    assertEquals(baseFiles, sink.count(FileFilterReason.TOO_BIG));
+    assertEquals(baseFiles, sink.count(FilterReason.TOO_BIG));
   }
 
   public void testMaximumSize() {
@@ -511,7 +523,7 @@ public class  FileSystemMonitorTest extends TestCase {
         "not a real zip file");
     runMonitorAndCheck(baseFiles, 0, 0, 0);
     assertEquals(1, sink.count());
-    assertEquals(1, sink.count(FileFilterReason.UNSUPPORTED_MIME_TYPE));
+    assertEquals(1, sink.count(FilterReason.UNSUPPORTED_MIME_TYPE));
   }
 
   public void testSupportedToNotSupportedMimeType() {
@@ -749,10 +761,8 @@ public class  FileSystemMonitorTest extends TestCase {
   public void testStability() throws SnapshotStoreException {
     UseCountingGenerator gen = new UseCountingGenerator();
     store = new SnapshotStore(snapshotDir);
-    monitor = newFileSystemMonitor(gen);
-
     IncrementableClock clock = new IncrementableClock();
-    monitor.setClock(clock);
+    monitor = newFileSystemMonitor(gen, clock);
 
     runMonitorAndCheck(baseFiles, 0, 0, 0);
     assertEquals(baseFiles, gen.count);
@@ -775,10 +785,8 @@ public class  FileSystemMonitorTest extends TestCase {
   public void testChangeAclNotStable() throws Exception {
     UseCountingGenerator gen = new UseCountingGenerator();
     store = new SnapshotStore(snapshotDir);
-    monitor = newFileSystemMonitor(gen);
-
     IncrementableClock clock = new IncrementableClock();
-    monitor.setClock(clock);
+    monitor = newFileSystemMonitor(gen, clock);
 
     //Update an ACL
     MockReadonlyFile dir0 = root.get("dir.0");
@@ -816,10 +824,8 @@ public class  FileSystemMonitorTest extends TestCase {
   public void testChangeChangeAclStable() throws Exception {
     UseCountingGenerator gen = new UseCountingGenerator();
     store = new SnapshotStore(snapshotDir);
-    monitor = newFileSystemMonitor(gen);
-
     IncrementableClock clock = new IncrementableClock();
-    monitor.setClock(clock);
+    monitor = newFileSystemMonitor(gen, clock);
 
     //Update an ACL
     MockReadonlyFile dir0 = root.get("dir.0");
@@ -1113,13 +1119,17 @@ public class  FileSystemMonitorTest extends TestCase {
     FailingSnapshotStore failingStore =
       new FailingSnapshotStore(saveOldestSnapshotToKeep, false);
     TraversalContext traversalContext = new FakeTraversalContext();
-    FileDocumentSnapshotIterable<?> query = new FileDocumentSnapshotIterable<MockReadonlyFile>(
-        root, new LoggingFileSink(), matcher, traversalContext);
+
+    DocumentSink documentSink = new LoggingDocumentSink();
+    SnapshotRepository<? extends DocumentSnapshot> query =
+        new FileDocumentSnapshotRepository(root, documentSink, matcher,
+            traversalContext, checksumGenerator, SYSTEM_CLOCK,
+            new MimeTypeFinder());
 
     visitor = new CountingVisitor();
-    monitor = new FileSystemMonitor("name", query, failingStore,
-        visitor, checksumGenerator, traversalContext,
-        new LoggingFileSink(), saveOldestMonitorCp);
+    monitor = new FileSystemMonitor("name", query, failingStore, visitor,
+        new LoggingDocumentSink(), saveOldestMonitorCp,
+        root.getFileSystemType());
 
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(1);
@@ -1193,14 +1203,17 @@ public class  FileSystemMonitorTest extends TestCase {
           true);
 
     TraversalContext traversalContext = new FakeTraversalContext();
-    FileDocumentSnapshotIterable<?> query = new FileDocumentSnapshotIterable<MockReadonlyFile>(
-        root, new LoggingFileSink(), matcher, traversalContext);
+    DocumentSink documentSink = new LoggingDocumentSink();
+    SnapshotRepository<? extends DocumentSnapshot>  snapshotRepository =
+        new FileDocumentSnapshotRepository(
+        root, documentSink, matcher, traversalContext, checksumGenerator,
+        SYSTEM_CLOCK, new MimeTypeFinder());
 
     visitor = new CountingVisitor();
 
-    monitor = new FileSystemMonitor("name", query, failingStore,
-        visitor, checksumGenerator, traversalContext,
-        new LoggingFileSink(), saveOldestMonitorCp);
+    monitor = new FileSystemMonitor("name", snapshotRepository, failingStore,
+        visitor,  documentSink, saveOldestMonitorCp,
+        root.getFileSystemType());
 
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(1);

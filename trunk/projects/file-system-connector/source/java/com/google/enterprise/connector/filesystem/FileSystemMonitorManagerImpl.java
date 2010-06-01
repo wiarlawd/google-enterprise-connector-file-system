@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.SnapshotRepository;
+import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
@@ -40,9 +43,18 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   /** Maximum time to wait for background threads to terminate (in ms). */
   private static final long MAX_SHUTDOWN_MS = 5000;
 
-  private static final FileSink FILE_SINK = new LoggingFileSink();
+  private static final DocumentSink DOCUMENT_SINK = new LoggingDocumentSink();
 
   private static final Logger LOG = Logger.getLogger(FileSystemMonitorManagerImpl.class.getName());
+
+  private static final Clock SYSTEM_CLOCK = new FileSystemMonitor.Clock() {
+
+    /* @Override */
+    public long getTime() {
+      return System.currentTimeMillis();
+    }
+
+  };
 
   private String makeMonitorNameFromStartPath(String startPath) {
     String monitorName = checksumGenerator.getChecksum(startPath);
@@ -220,11 +232,12 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     }
 
     String monitorName = makeMonitorNameFromStartPath(startPath);
-    FileDocumentSnapshotIterable<?> query = new FileDocumentSnapshotIterable(root, FILE_SINK,
-        filePatternMatcher, traversalContext);
+    SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
+        new FileDocumentSnapshotRepository(root, DOCUMENT_SINK, filePatternMatcher,
+            traversalContext, checksumGenerator, SYSTEM_CLOCK, new MimeTypeFinder());
     FileSystemMonitor monitor =
-        new FileSystemMonitor(monitorName, query, snapshotStore, changeQueue.newCallback(),
-            checksumGenerator, traversalContext, FILE_SINK, startCp);
+        new FileSystemMonitor(monitorName, snapshotRepository, snapshotStore, changeQueue.newCallback(),
+            DOCUMENT_SINK, startCp, root.getFileSystemType());
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
   }
