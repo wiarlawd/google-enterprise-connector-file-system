@@ -16,7 +16,6 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
-import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;

@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package com.google.enterprise.connector.filesystem;
 
 import java.io.ByteArrayInputStream;
@@ -26,10 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * A mock (in-memory) ReadonlyFile.
- *
- */
 public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private static final String SEPARATOR = "/";
 
@@ -37,6 +32,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private final String name;
   private final boolean isDir;
   private final List<MockReadonlyFile> directoryContents;
+  private final Clock clock;
 
   private boolean readable = true;
   private Acl acl;
@@ -51,7 +47,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    * @param name
    * @param isDir
    */
-  private MockReadonlyFile(MockReadonlyFile parent, String name, boolean isDir) {
+  private MockReadonlyFile(MockReadonlyFile parent, String name, boolean isDir,
+      Clock clock) {
     if (parent == null && name.endsWith(SEPARATOR)) {
       throw new RuntimeException("mock root ends with " + SEPARATOR);
     }
@@ -64,9 +61,10 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.fileContents = isDir ? null : "";
     this.directoryContents = isDir ? new ArrayList<MockReadonlyFile>() : null;
     this.readable = true;
-    this.lastModified = System.currentTimeMillis();
+    this.lastModified = clock.getTimeMillis();
     this.exception = null;
     this.acl = Acl.newPublicAcl();
+    this.clock = clock;
   }
 
   /**
@@ -74,7 +72,12 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    * @return a new mock directory at the given path
    */
   public static MockReadonlyFile createRoot(String path) {
-    return new MockReadonlyFile(null, path, true);
+    return createRoot(path, SystemClock.INSTANCE);
+  }
+
+  public static MockReadonlyFile createRoot(String path,
+      Clock clock) {
+    return new MockReadonlyFile(null, path, true, clock);
   }
 
   /**
@@ -84,7 +87,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    * @return the new directory
    */
   public MockReadonlyFile addSubdir(String directoryName) {
-    MockReadonlyFile result = new MockReadonlyFile(this, directoryName, true);
+    MockReadonlyFile result = new MockReadonlyFile(this, directoryName, true,
+        clock);
     directoryContents.add(result);
     return result;
   }
@@ -101,7 +105,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     if (!isDir) {
       throw new RuntimeException("cannot add a file to non-directory");
     }
-    MockReadonlyFile result = new MockReadonlyFile(this, fileName, false);
+    MockReadonlyFile result = new MockReadonlyFile(this, fileName, false,
+        clock);
     result.setFileContents(fileData);
     directoryContents.add(result);
     return result;

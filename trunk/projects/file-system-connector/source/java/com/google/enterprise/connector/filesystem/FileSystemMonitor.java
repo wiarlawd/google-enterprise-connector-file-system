@@ -86,13 +86,6 @@ public class FileSystemMonitor implements Runnable {
     return one.compareTo(two.getPath());
   }
 
-  /**
-   * Injectable clock to allow better testing.
-   */
-  public interface Clock {
-    long getTime();
-  }
-
   /** Directory that contains snapshots. */
   private final SnapshotStore snapshotStore;
 

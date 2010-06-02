@@ -76,7 +76,7 @@ public class MimeTypeFinder {
    *
    * @throws IOException
    */
-  String find(TraversalContext traversalContext, String fileName,
+  public String find(TraversalContext traversalContext, String fileName,
       InputStreamFactory inputStreamFactory) throws IOException {
     // We munge the file name we pass to getMimeTypes so that it will
     // not find the file exists, open it and perform content based
@@ -134,7 +134,7 @@ public class MimeTypeFinder {
     }
     return trim(result, bytesRead);
   }
-  
+
     /**
      * Trims the passed in array to the desired length and
      * returns the result. If the passed in array is already
@@ -143,7 +143,7 @@ public class MimeTypeFinder {
      * <p>
      * When the FileConnector drops support for java 1.5 this
      * can probably be replaced with {@link Arrays#copyOf}.
-     */ 
+     */
   private static byte[] trim(byte[] input, int desiredLength) {
     if (input.length == desiredLength) {
       return input;

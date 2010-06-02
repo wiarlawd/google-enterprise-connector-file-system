@@ -15,7 +15,6 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
-import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
@@ -35,12 +34,6 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
       new FileChecksumGenerator("SHA1");
   private static final TraversalContext TRAVERSAL_CONTEXT =
       new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE);
-  private static Clock SYSTEM_CLOCK = new FileSystemMonitor.Clock() {
-    /* @Override */
-    public long getTime() {
-      return System.currentTimeMillis();
-    }
-  };
   private static MimeTypeFinder MIME_TYPE_FINDER = new MimeTypeFinder();
 
   private static FileDocumentSnapshotRepository
@@ -48,7 +41,8 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
           TestFileSink sink, FilePatternMatcher matcher) {
     FileDocumentSnapshotRepository result =
         new FileDocumentSnapshotRepository(root, sink, matcher,
-            TRAVERSAL_CONTEXT, CHECKSUM_GENERATOR, SYSTEM_CLOCK, MIME_TYPE_FINDER);
+            TRAVERSAL_CONTEXT, CHECKSUM_GENERATOR, SystemClock.INSTANCE,
+            MIME_TYPE_FINDER);
     return result;
   }
 
@@ -154,7 +148,7 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
     FileDocumentSnapshotRepository dsr =
       new FileDocumentSnapshotRepository(root, sink, ALL_MATCHER,
           new FakeTraversalContext(maxSizeData.length()), CHECKSUM_GENERATOR,
-          SYSTEM_CLOCK, MIME_TYPE_FINDER);
+          SystemClock.INSTANCE, MIME_TYPE_FINDER);
     for(int ix= 0; ix < 2; ix++) {
       Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());

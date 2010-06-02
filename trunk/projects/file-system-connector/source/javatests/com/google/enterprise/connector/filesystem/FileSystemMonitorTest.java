@@ -17,7 +17,6 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
-import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
@@ -36,13 +35,6 @@ import java.util.Set;
  * Tests for the {@link FileSystemMonitor}
  */
 public class  FileSystemMonitorTest extends TestCase {
-  private static Clock SYSTEM_CLOCK = new FileSystemMonitor.Clock() {
-    /* @Override */
-    public long getTime() {
-      return System.currentTimeMillis();
-    }
-  };
-
   private FileSystemMonitor monitor;
   private CountingVisitor visitor;
   private MockReadonlyFile root;
@@ -266,33 +258,6 @@ public class  FileSystemMonitorTest extends TestCase {
     }
   }
 
-  private static class TestSink implements DocumentSink {
-    private final List<FilterReason> reasons = new ArrayList<FilterReason>();
-
-    /* @Override */
-    public void add(String documentId, FilterReason reason) {
-      reasons.add(reason);
-    }
-
-    int count(FilterReason countMe) {
-      int result = 0;
-      for (FilterReason reason : reasons) {
-        if (reason.equals(countMe)) {
-          result++;
-        }
-      }
-      return result;
-    }
-
-    int count() {
-      return reasons.size();
-    }
-
-    void clear() {
-      reasons.clear();
-    }
-  }
-
   private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator,
       FilePatternMatcher myMatcher, TraversalContext traversalContext,
       DocumentSink fileSink, Clock clock, FileSystemMonitor.Callback customVisitor) {
@@ -307,7 +272,7 @@ public class  FileSystemMonitorTest extends TestCase {
   private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
     return newFileSystemMonitor(checksumGenerator, myMatcher,
         new FakeTraversalContext(), new LoggingDocumentSink(),
-        SYSTEM_CLOCK, visitor);
+        SystemClock.INSTANCE, visitor);
   }
 
   private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator, Clock clock) {
@@ -317,19 +282,20 @@ public class  FileSystemMonitorTest extends TestCase {
 
   private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext) {
     return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
-        new LoggingDocumentSink(), SYSTEM_CLOCK, visitor);
+        new LoggingDocumentSink(), SystemClock.INSTANCE, visitor);
   }
 
   private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext,
       DocumentSink fileSink) {
     return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
-        fileSink, SYSTEM_CLOCK, visitor);
+        fileSink, SystemClock.INSTANCE, visitor);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(FileSystemMonitor.Callback customVisitor) {
+  private FileSystemMonitor newFileSystemMonitor(
+      FileSystemMonitor.Callback customVisitor) {
     return newFileSystemMonitor(checksumGenerator, matcher,
-        new FakeTraversalContext(), new LoggingDocumentSink(), SYSTEM_CLOCK,
-        customVisitor);
+        new FakeTraversalContext(), new LoggingDocumentSink(),
+        SystemClock.INSTANCE, customVisitor);
   }
 
   @Override
@@ -454,7 +420,7 @@ public class  FileSystemMonitorTest extends TestCase {
   private static final String BIG_CONTENT = mkBigContent();
 
   public void testSomeFilesTooBig() throws Exception {
-    TestSink sink = new TestSink();
+    TestDocumentSink sink = new TestDocumentSink();
     monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length() - 1),
         sink);
     runMonitorAndCheck(baseFiles, 0, 0, 0);
@@ -469,7 +435,7 @@ public class  FileSystemMonitorTest extends TestCase {
   }
 
   public void testAllFilesTooBig() throws Exception {
-    TestSink sink = new TestSink();
+    TestDocumentSink sink = new TestDocumentSink();
     monitor = newFileSystemMonitor(new FakeTraversalContext(0), sink);
     runMonitorAndCheck(0, 0, 0, 0);
     assertEquals(baseFiles, sink.count());
@@ -477,7 +443,7 @@ public class  FileSystemMonitorTest extends TestCase {
   }
 
   public void testMaximumSize() {
-    TestSink sink = new TestSink();
+    TestDocumentSink sink = new TestDocumentSink();
     monitor = newFileSystemMonitor(new FakeTraversalContext(BIG_CONTENT.length()),
         sink);
     runMonitorAndCheck(baseFiles, 0, 0, 0);
@@ -517,7 +483,7 @@ public class  FileSystemMonitorTest extends TestCase {
   }
 
   public void testAddNotSupportedMimeType() {
-    TestSink sink = new TestSink();
+    TestDocumentSink sink = new TestDocumentSink();
     monitor = newFileSystemMonitor(new FakeTraversalContext(), sink);
     root.addFile("unsupported." + FakeTraversalContext.TAR_DOT_GZ_EXTENSION,
         "not a real zip file");
@@ -731,11 +697,11 @@ public class  FileSystemMonitorTest extends TestCase {
     runMonitorAndCheck(0, 0, 0, 0);
   }
 
-  private static class IncrementableClock implements FileSystemMonitor.Clock {
+  private static class IncrementableClock implements Clock {
     private long increment = 0;
 
     /* @Override */
-    public long getTime() {
+    public long getTimeMillis() {
       return System.currentTimeMillis() + increment;
     }
 
@@ -1123,7 +1089,7 @@ public class  FileSystemMonitorTest extends TestCase {
     DocumentSink documentSink = new LoggingDocumentSink();
     SnapshotRepository<? extends DocumentSnapshot> query =
         new FileDocumentSnapshotRepository(root, documentSink, matcher,
-            traversalContext, checksumGenerator, SYSTEM_CLOCK,
+            traversalContext, checksumGenerator, SystemClock.INSTANCE,
             new MimeTypeFinder());
 
     visitor = new CountingVisitor();
@@ -1207,7 +1173,7 @@ public class  FileSystemMonitorTest extends TestCase {
     SnapshotRepository<? extends DocumentSnapshot>  snapshotRepository =
         new FileDocumentSnapshotRepository(
         root, documentSink, matcher, traversalContext, checksumGenerator,
-        SYSTEM_CLOCK, new MimeTypeFinder());
+        SystemClock.INSTANCE, new MimeTypeFinder());
 
     visitor = new CountingVisitor();
 

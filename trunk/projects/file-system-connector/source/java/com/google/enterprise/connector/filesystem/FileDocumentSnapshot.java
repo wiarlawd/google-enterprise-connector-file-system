@@ -15,7 +15,6 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.diffing.DocumentHandle;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
-import com.google.enterprise.connector.filesystem.FileSystemMonitor.Clock;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
 
@@ -35,7 +34,7 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
    * "stable". This should be at least several times the granularity of the
    * last-modified time.
    */
-  private static final long STABLE_INTERVAL_MS = 5000L;
+  static final long STABLE_INTERVAL_MS = 5000L;
 
   static enum Field {
     FILESYS, PATH, MODTIME, ACL, CHECKSUM, SCANTIME, STABLE
@@ -70,7 +69,8 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
     this.path = path;
   }
 
-  FileDocumentSnapshot(ReadonlyFile<?> file, ChecksumGenerator checksomeGenerator,
+  FileDocumentSnapshot(ReadonlyFile<?> file,
+      ChecksumGenerator checksomeGenerator,
       Clock clock, TraversalContext traversalContext,
       MimeTypeFinder mimeTypeFinder,
       DocumentSink documentSink) {
@@ -176,6 +176,72 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
     }
   }
 
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((acl == null) ? 0 : acl.hashCode());
+    result = prime * result + ((checksum == null) ? 0 : checksum.hashCode());
+    result = prime * result + ((filesys == null) ? 0 : filesys.hashCode());
+    result = prime * result + (isStable ? 1231 : 1237);
+    result = prime * result + (int) (lastModified ^ (lastModified >>> 32));
+    result = prime * result + ((path == null) ? 0 : path.hashCode());
+    result = prime * result + (int) (scanTime ^ (scanTime >>> 32));
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    FileDocumentSnapshot other = (FileDocumentSnapshot) obj;
+    if (acl == null) {
+      if (other.acl != null) {
+        return false;
+      }
+    } else if (!acl.equals(other.acl)) {
+      return false;
+    }
+    if (checksum == null) {
+      if (other.checksum != null) {
+        return false;
+      }
+    } else if (!checksum.equals(other.checksum)) {
+      return false;
+    }
+    if (filesys == null) {
+      if (other.filesys != null) {
+        return false;
+      }
+    } else if (!filesys.equals(other.filesys)) {
+      return false;
+    }
+    if (isStable != other.isStable) {
+      return false;
+    }
+    if (lastModified != other.lastModified) {
+      return false;
+    }
+    if (path == null) {
+      if (other.path != null) {
+        return false;
+      }
+    } else if (!path.equals(other.path)) {
+      return false;
+    }
+    if (scanTime != other.scanTime) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Support object for determining if a file has changed since it was added
    * to the GSA index and for generating a {@link FileDocumentHandle} to
@@ -265,36 +331,41 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
 
      * @throws RepositoryException
      */
-    public FileDocumentHandle getUpdate(DocumentSnapshot onGsa) throws RepositoryException {
+    public FileDocumentHandle getUpdate(DocumentSnapshot onGsa)
+        throws RepositoryException {
       try {
         FileDocumentSnapshot gsaSnapshot = castGsaSnapshot(onGsa);
         FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
         lastModified = file.getLastModified();
         acl = infoCache.getAcl();
 
-        if (gsaSnapshot == null || gsaSnapshot.getLastModified() != getLastModified()
+        if (gsaSnapshot == null
+            || gsaSnapshot.getLastModified() != getLastModified()
             || !gsaSnapshot.getAcl().equals(infoCache.getAcl())
             || (!gsaSnapshot.isStable() && !gsaSnapshot.getChecksum().equals(
                 infoCache.getChecksum()))) {
           checksum = infoCache.getChecksum();
-          scanTime = clock.getTime();
+          scanTime = clock.getTimeMillis();
           isStable = false;
-          // Calculating the mime type is expensive so we only do this when we see a change.
+          // Calculating the mime type is expensive so we only do this when
+          // we see a change.
           if (isMimeTypeSupported(file)) {
             return new FileDocumentHandle(getFilesys(), getPath(), false);
-          } else if (gsaSnapshot != null){
-            return new FileDocumentHandle(getFilesys(), getPath(), true);
-          } else {
+          } else if (gsaSnapshot == null){
             return null;
+          } else {
+            return new FileDocumentHandle(getFilesys(), getPath(), true);
           }
         } else {
           checksum = gsaSnapshot.getChecksum();
           scanTime = gsaSnapshot.getScanTime();
-          isStable = getScanTime() + STABLE_INTERVAL_MS < clock.getTime();
+          isStable = gsaSnapshot.isStable() ? true
+              : getScanTime() + STABLE_INTERVAL_MS < clock.getTimeMillis();
           return null;
         }
       } catch (IOException ioe) {
-        throw new RepositoryException("Failed to get update for " + getDocumentId(), ioe);
+        throw new RepositoryException("Failed to get update for "
+            + getDocumentId(), ioe);
       }
     }
 
