@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -79,11 +80,8 @@ public class FileSystemMonitor implements Runnable {
   }
 
   /** Compare files using{@link FileInfo#getPath()} */
-  private static int pathCompare(String one, FileInfo two) {
-    if (two.isDirectory()) {
-      throw new IllegalArgumentException("directory not supported " + two);
-    }
-    return one.compareTo(two.getPath());
+  private static int pathCompare(String one, DocumentSnapshot two) {
+    return one.compareTo(two.getDocumentId());
   }
 
   /** Directory that contains snapshots. */
@@ -99,12 +97,14 @@ public class FileSystemMonitor implements Runnable {
   private final Callback callback;
 
   /** Current record from the snapshot. */
-  private SnapshotRecord current;
+  private DocumentSnapshot current;
 
   /** The snapshot we are currently writing */
   private SnapshotWriter snapshotWriter;
 
   private final String name;
+
+  private final DocumentSnapshotFactory documentSnapshotFactory;
 
   private final DocumentSink documentSink;
 
@@ -126,14 +126,16 @@ public class FileSystemMonitor implements Runnable {
    * @param documentSink destination for filtered out file info
    * @param initialCp checkpoint when system initiated, could be null
    */
-  public FileSystemMonitor(String name, SnapshotRepository<? extends DocumentSnapshot> query,
-      SnapshotStore snapshotStore, Callback callback, DocumentSink documentSink,
-      MonitorCheckpoint initialCp, String filesys) {
+  public FileSystemMonitor(String name,
+      SnapshotRepository<? extends DocumentSnapshot> query,
+      SnapshotStore snapshotStore, Callback callback,
+      DocumentSink documentSink, MonitorCheckpoint initialCp,
+      String filesys, DocumentSnapshotFactory documentSnapshotFactory) {
     this.name = name;
     this.query = query;
     this.snapshotStore = snapshotStore;
     this.callback = callback;
-
+    this.documentSnapshotFactory = documentSnapshotFactory;
     this.documentSink = documentSink;
     guaranteeCheckpoint = initialCp;
     this.filesys = filesys;
@@ -225,7 +227,8 @@ public class FileSystemMonitor implements Runnable {
       throw new IllegalStateException(msg);
     } else {
       try {
-        SnapshotStore.stich(snapshotStore.getDirectory(), guaranteeCheckpoint);
+        SnapshotStore.stitch(snapshotStore.getDirectory(), guaranteeCheckpoint,
+            documentSnapshotFactory);
         LOG.info("FileSystemMonitor " + name + " restiched snapshot.");
       } catch (IOException e) {
         String msg = "FileSystemMonitor " + name + " has failed and stopped.";
@@ -304,7 +307,8 @@ public class FileSystemMonitor implements Runnable {
     while (current != null
         && (documentSnapshot == null
             || pathCompare(documentSnapshot.getDocumentId(), current) > 0)) {
-      callback.deletedFile(current, getCheckpoint());
+      callback.deletedFile(new DocumentSnapshotFileInfo(current),
+          getCheckpoint());
       current = snapshotReader.read();
     }
   }
@@ -337,13 +341,11 @@ public class FileSystemMonitor implements Runnable {
     } else {
       // This file didn't exist during the previous scan.
       // TODO The following code converts from DcoumentSnapshot/DcoumentHandle to
-      //      Changes/SnapshotRecords until the SnapshotWriter and ChangeQueue
-      //      are converted.
+      //      Changes until the ChangeQueue are converted.
       FileDocumentSnapshot fds = (FileDocumentSnapshot)documentSnapshot;
       FileDocumentHandle fdh  = fds.getUpdate(null);
-      writeFileSnapshot(fds.getFilesys(), fds.getDocumentId(),
-          fds.getLastModified(), fds.getAcl(), fds.getChecksum(),
-          fds.getScanTime(), false);
+      snapshotWriter.write(fds);
+
       // Null if filtered due to mime-type.
       if (fdh != null) {
         callback.newFile(new DocumentSnapshotFileInfo(documentSnapshot), getCheckpoint(-1));
@@ -366,43 +368,22 @@ public class FileSystemMonitor implements Runnable {
       InterruptedException, SnapshotWriterException, SnapshotReaderException {
 
     // TODO The following code converts from DcoumentSnapshot/DcoumentHandle to
-    //      Changes/SnapshotRecords until the SnapshotWriter and ChangeQueue
-    //      are converted.
-    DocumentSnapshot currentDocumentSnapshot = new FileDocumentSnapshot(current.getFileSystemType(),
-        current.getPath(), current.getLastModified(), current.getAcl(), current.getChecksum(),
-        current.getScanTime(), current.isStable());
+    //      Changes until ChangeQueue are converted.
     FileDocumentSnapshot fds = (FileDocumentSnapshot)documentSnapshot;
-    FileDocumentHandle fdh = fds.getUpdate(currentDocumentSnapshot);
+    FileDocumentHandle fdh = fds.getUpdate(current);
+    snapshotWriter.write(fds);
     if (fdh == null) {
       // No change.
-      writeFileSnapshot(current.getFileSystemType(), current.getPath(),
-          current.getLastModified(), current.getAcl(), current.getChecksum(),
-          current.getScanTime(), fds.isStable());
     } else if (fdh.isDelete()) {
       // Changed and now has unsupported mime-type - write the snapshot but
       // send the gsa a delete.
-      writeFileSnapshot(fds.getFilesys(), fds.getPath(),
-          fds.getLastModified(), fds.getAcl(), fds.getChecksum(),
-          current.getScanTime(), false);
       callback.deletedFile(new DocumentSnapshotFileInfo(fds), getCheckpoint());
     } else {
       // Normal change - send the gsa an update.
-      writeFileSnapshot(fds.getFilesys(), fds.getPath(),
-          fds.getLastModified(), fds.getAcl(), fds.getChecksum(),
-          fds.getScanTime(), false);
       callback.changedFileContent(new DocumentSnapshotFileInfo(fds), getCheckpoint());
     }
     current = snapshotReader.read();
   }
-
-  void writeFileSnapshot(String fileSystemType, String path, long lastModified,
-      Acl acl, String checksum, long scanTime, boolean stable) throws SnapshotWriterException {
-    SnapshotRecord rec = new SnapshotRecord(fileSystemType, path,
-        SnapshotRecord.Type.FILE, lastModified, acl, checksum, scanTime,
-        stable);
-    snapshotWriter.write(rec);
-  }
-
 
   void acceptGuarantee(MonitorCheckpoint cp) {
     snapshotStore.acceptGuarantee(cp);

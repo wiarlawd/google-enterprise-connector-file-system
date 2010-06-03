@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -50,16 +53,20 @@ public class SnapshotStore {
 
   private static final Pattern SNAPSHOT_PATTERN = Pattern.compile("snap.([0-9]*)");
   private final File snapshotDir;
+  private final DocumentSnapshotFactory documentSnapshotFactory;
   private boolean aWriterIsActive = false;  // Whether there is a current writer or not.
 
   protected volatile long oldestSnapshotToKeep;
   /**
    * @param snapshotDirectory directory in which to store the snapshots. Must be
    *        non-null. If it does not exist, it will be created.
+   * @param documentSnapshotFactory
    * @throws SnapshotStoreException if the snapshot directory does not exist and
    *         cannot be created.
    */
-  public SnapshotStore(File snapshotDirectory) throws SnapshotStoreException {
+  public SnapshotStore(File snapshotDirectory,
+      DocumentSnapshotFactory documentSnapshotFactory)
+      throws SnapshotStoreException {
     Check.notNull(snapshotDirectory);
     if (!snapshotDirectory.exists()) {
       if (!snapshotDirectory.mkdirs()) {
@@ -68,6 +75,7 @@ public class SnapshotStore {
       }
     }
     this.snapshotDir = snapshotDirectory;
+    this.documentSnapshotFactory = documentSnapshotFactory;
     this.oldestSnapshotToKeep = 0;
   }
 
@@ -101,7 +109,8 @@ public class SnapshotStore {
     SnapshotReader result;
     for (long snapshotNumber : getExistingSnapshots()) {
       try {
-        result = openSnapshot(snapshotDir, snapshotNumber);
+        result = openSnapshot(snapshotDir, snapshotNumber,
+            documentSnapshotFactory);
         LOG.fine("opened snapshot: " + snapshotNumber);
         return result;
       } catch (SnapshotReaderException e) {
@@ -198,13 +207,15 @@ public class SnapshotStore {
    * @return a snapshot reader for snapshot {@code number}
    * @throws SnapshotStoreException
    */
-  static private SnapshotReader openSnapshot(File snapshotDir, long number)
+  static private SnapshotReader openSnapshot(File snapshotDir, long number,
+      DocumentSnapshotFactory documentSnapshotFactory)
       throws SnapshotStoreException {
     File input = getSnapshotFile(snapshotDir, number);
     try {
       InputStream is = new FileInputStream(input);
       Reader r = new InputStreamReader(is, UTF_8);
-      return new SnapshotReader(new BufferedReader(r), input.getAbsolutePath(), number);
+      return new SnapshotReader(new BufferedReader(r), input.getAbsolutePath(),
+          number, documentSnapshotFactory);
     } catch (FileNotFoundException e) {
       throw new SnapshotStoreException("failed to open snapshot: " + number);
     }
@@ -228,7 +239,8 @@ public class SnapshotStore {
     }
   }
 
-  static void stich(File snapshotDir, MonitorCheckpoint checkpoint)
+  static void stitch(File snapshotDir, MonitorCheckpoint checkpoint,
+      DocumentSnapshotFactory documentSnapshotFactory)
       throws IOException, SnapshotStoreException, InterruptedException {
     long readSnapshotIndex = checkpoint.getSnapshotNumber();
     long writeSnapshotIndex = readSnapshotIndex + 1;
@@ -250,20 +262,22 @@ public class SnapshotStore {
     SnapshotWriter writer =
         new SnapshotWriter(new OutputStreamWriter(os, UTF_8), os.getFD(), out.getAbsolutePath());
     try {
-      SnapshotReader part1 = openSnapshot(snapshotDir, checkpoint.getSnapshotNumber() + 1);
+      SnapshotReader part1 = openSnapshot(snapshotDir,
+          checkpoint.getSnapshotNumber() + 1, documentSnapshotFactory);
       try {
         for (long k = 0; k < checkpoint.getOffset2(); ++k) {
           handleInterrupt();
-          SnapshotRecord rec = part1.read();
+          DocumentSnapshot rec = part1.read();
           writer.write(rec);
         }
       } finally {
         part1.close();
       }
-      SnapshotReader part2 = openSnapshot(snapshotDir, checkpoint.getSnapshotNumber());
+      SnapshotReader part2 = openSnapshot(snapshotDir,
+          checkpoint.getSnapshotNumber(), documentSnapshotFactory);
       try {
         part2.skipRecords(checkpoint.getOffset1());
-        SnapshotRecord rec = part2.read();
+        DocumentSnapshot rec = part2.read();
         while (rec != null) {
           handleInterrupt();
           writer.write(rec);

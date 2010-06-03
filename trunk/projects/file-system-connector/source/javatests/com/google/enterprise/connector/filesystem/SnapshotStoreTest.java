@@ -14,29 +14,26 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+
 import junit.framework.TestCase;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  */
 public class SnapshotStoreTest extends TestCase {
   private File snapshotDir;
   private SnapshotStore store;
-  private Acl acl;
 
   @Override
   public void setUp() throws Exception {
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
     File rootDir = testDirectoryManager.makeDirectory("rootDir");
     snapshotDir = new File(rootDir, "snapshots");
-    store = new SnapshotStore(new File(rootDir, "snapshots"));
-    List<String> users = Arrays.asList("d1\\bob", "d1\\tom");
-    List<String> groups = Arrays.asList("d1\\loosers");
-    acl =  Acl.newAcl(users, groups);
+    store = new SnapshotStore(new File(rootDir, "snapshots"),
+        new MockDocumentSnapshotFactory());
   }
 
   /**
@@ -59,13 +56,11 @@ public class SnapshotStoreTest extends TestCase {
   public void testWriteRead() throws Exception {
     SnapshotWriter out = store.openNewSnapshotWriter();
 
-    SnapshotRecord before =
-        new SnapshotRecord("java", "/foo/bar", SnapshotRecord.Type.DIR, 12345L, acl, "check sum",
-            123456L, false);
+    MockDocumentSnapshot before = new MockDocumentSnapshot("0", "extra.0");
     out.write(before);
 
     SnapshotReader in = store.openMostRecentSnapshot();
-    SnapshotRecord after = in.read();
+    DocumentSnapshot after = in.read();
     assertEquals(before, after);
     assertNull(in.read());
     store.close(in, out);
@@ -82,13 +77,12 @@ public class SnapshotStoreTest extends TestCase {
     for (int k = 0; k < 10; ++k) {
       SnapshotWriter out = store.openNewSnapshotWriter();
       String path = String.format("/foo/bar/%d", k);
-      SnapshotRecord before =
-          new SnapshotRecord("java", path, SnapshotRecord.Type.DIR, 12345L, acl, "check sum",
-              123456L, false);
+      DocumentSnapshot before = new MockDocumentSnapshot(Integer.toString(k),
+          "extra." + k);
       out.write(before);
 
       SnapshotReader in = store.openMostRecentSnapshot();
-      SnapshotRecord after = in.read();
+      DocumentSnapshot after = in.read();
       assertEquals(before, after);
       store.close(in, out);
     }
@@ -131,13 +125,13 @@ public class SnapshotStoreTest extends TestCase {
       InterruptedException {
     // Create the first snapshot with modification time 12345.
     SnapshotWriter ss1 = store.openNewSnapshotWriter();
-    writeRecords(ss1, 12345);
+    writeRecords(ss1, "12345");
     store.close(null, ss1);
 
     // Create a second snapshot with the same files, but modification time
     // 23456.
     SnapshotWriter ss2 = store.openNewSnapshotWriter();
-    writeRecords(ss2, 23456);
+    writeRecords(ss2, "23456");
     store.close(null, ss2);
 
     // Now pretend that the file-system monitor has scanned the first 7 records
@@ -146,30 +140,32 @@ public class SnapshotStoreTest extends TestCase {
     // as if the first 7 changes have been sent to the GSA.
     MonitorCheckpoint cp = new MonitorCheckpoint("foo", 1, 7, 7);
 
-    SnapshotStore.stich(snapshotDir, cp);
-    SnapshotStore after = new SnapshotStore(snapshotDir);
+    SnapshotStore.stitch(snapshotDir, cp, new MockDocumentSnapshotFactory());
+    SnapshotStore after = new SnapshotStore(snapshotDir,
+        new MockDocumentSnapshotFactory());
     SnapshotReader reader = after.openMostRecentSnapshot();
     assertEquals(3, reader.getSnapshotNumber());
 
     // Snapshot should contain the first 7 records from snapshot 2 and the rest
     // from snapshot 1.
     for (int k = 0; k < 100; ++k) {
-      SnapshotRecord rec = reader.read();
+      DocumentSnapshot rec = reader.read();
       assertNotNull(rec);
-      assertEquals((k < 7) ? 23456 : 12345, rec.getLastModified());
+      String suffix = (k < 7) ? "23456" : "12345";
+      assertTrue(rec.getDocumentId().endsWith(suffix));
     }
     store.close(reader, null);
   }
   public void testStitchWithIntterupt() throws Exception {
     // Create the first snapshot with modification time 12345.
     SnapshotWriter ss1 = store.openNewSnapshotWriter();
-    writeRecords(ss1, 12345);
+    writeRecords(ss1, "12345");
     store.close(null, ss1);
 
     // Create a second snapshot with the same files, but modification time
     // 23456.
     SnapshotWriter ss2 = store.openNewSnapshotWriter();
-    writeRecords(ss2, 23456);
+    writeRecords(ss2, "23456");
     store.close(null, ss2);
 
     // Now pretend that the file-system monitor has scanned the first 7 records
@@ -179,7 +175,8 @@ public class SnapshotStoreTest extends TestCase {
     MonitorCheckpoint cp = new MonitorCheckpoint("foo", 1, 7, 7);
     try {
       Thread.currentThread().interrupt();
-      SnapshotStore.stich(snapshotDir, cp);
+      SnapshotStore.stitch(snapshotDir, cp,
+          new MockDocumentSnapshotFactory());
       fail();
     } catch (InterruptedException ie) {
       // Expected.
@@ -187,7 +184,8 @@ public class SnapshotStoreTest extends TestCase {
       assertFalse(Thread.interrupted());
     }
 
-    SnapshotStore after = new SnapshotStore(snapshotDir);
+    SnapshotStore after = new SnapshotStore(snapshotDir,
+        new MockDocumentSnapshotFactory());
     // Verify stitch did not create a new snapshot.
     SnapshotReader reader = after.openMostRecentSnapshot();
     assertEquals(2, reader.getSnapshotNumber());
@@ -199,16 +197,15 @@ public class SnapshotStoreTest extends TestCase {
    * time.
    *
    * @param writer
-   * @param lastModified
+   * @param suffix
    * @throws SnapshotWriterException
    */
-  private void writeRecords(SnapshotWriter writer, long lastModified)
+  private void writeRecords(SnapshotWriter writer, String suffix)
       throws SnapshotWriterException {
     for (int k = 0; k < 100; ++k) {
       String path = String.format("/foo/bar/%d", k);
-      SnapshotRecord rec =
-          new SnapshotRecord("java", path, SnapshotRecord.Type.FILE, lastModified, acl,
-              "check sum", 123456L, false);
+      DocumentSnapshot rec = new MockDocumentSnapshot(k + "."
+          + suffix, "extra." + "k");
       writer.write(rec);
     }
   }

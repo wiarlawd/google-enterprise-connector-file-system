@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.spi.TraversalContext;
 
@@ -43,6 +44,7 @@ public class  FileSystemMonitorTest extends TestCase {
   private int baseFiles;
   private FilePatternMatcher matcher;
   private SnapshotStore store;
+  private DocumentSnapshotFactory documentSnapshotFactory;
   private FileChecksumGenerator checksumGenerator;
 
   private class CountingVisitor implements FileSystemMonitor.Callback {
@@ -265,8 +267,9 @@ public class  FileSystemMonitorTest extends TestCase {
         new FileDocumentSnapshotRepository(
             root, fileSink, myMatcher, traversalContext, generator, clock,
             new MimeTypeFinder());
-    return new FileSystemMonitor("name", snapshotRepository, store, customVisitor,
-        fileSink, null, root.getFileSystemType());
+    return new FileSystemMonitor("name", snapshotRepository, store,
+        customVisitor, fileSink, null, root.getFileSystemType(),
+        documentSnapshotFactory);
   }
 
   private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
@@ -314,7 +317,9 @@ public class  FileSystemMonitorTest extends TestCase {
     visitor = new CountingVisitor();
     checksumGenerator = new FileChecksumGenerator("SHA1");
 
-    store = new SnapshotStore(snapshotDir);
+    documentSnapshotFactory = new FileDocumentSnapshotFactory();
+
+    store = new SnapshotStore(snapshotDir, documentSnapshotFactory);
 
     List<String> include = ImmutableList.of("/");
     List<String> exclude = ImmutableList.of();
@@ -726,7 +731,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
   public void testStability() throws SnapshotStoreException {
     UseCountingGenerator gen = new UseCountingGenerator();
-    store = new SnapshotStore(snapshotDir);
+    store = new SnapshotStore(snapshotDir, documentSnapshotFactory);
     IncrementableClock clock = new IncrementableClock();
     monitor = newFileSystemMonitor(gen, clock);
 
@@ -750,7 +755,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
   public void testChangeAclNotStable() throws Exception {
     UseCountingGenerator gen = new UseCountingGenerator();
-    store = new SnapshotStore(snapshotDir);
+    store = new SnapshotStore(snapshotDir, documentSnapshotFactory);
     IncrementableClock clock = new IncrementableClock();
     monitor = newFileSystemMonitor(gen, clock);
 
@@ -789,7 +794,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
   public void testChangeChangeAclStable() throws Exception {
     UseCountingGenerator gen = new UseCountingGenerator();
-    store = new SnapshotStore(snapshotDir);
+    store = new SnapshotStore(snapshotDir, documentSnapshotFactory);
     IncrementableClock clock = new IncrementableClock();
     monitor = newFileSystemMonitor(gen, clock);
 
@@ -906,11 +911,12 @@ public class  FileSystemMonitorTest extends TestCase {
         = new StopAfterSpecificAddVisitor("fila.b"); // Sorts before fila.brazila
     monitor = newFileSystemMonitor(stoppingVisitor);
     monitor.run();
-    SnapshotStore.stich(snapshotDir, stoppingVisitor.checkpoint);
+    SnapshotStore.stitch(snapshotDir, stoppingVisitor.checkpoint,
+        documentSnapshotFactory);
     SnapshotReader reader = store.openMostRecentSnapshot();
     ArrayList<String> paths = new ArrayList<String>();
-    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
-      paths.add(r.getPath());
+    for (DocumentSnapshot r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getDocumentId());
     }
     List<String> sorted = new ArrayList<String>(paths);
     Collections.sort(sorted);
@@ -928,11 +934,12 @@ public class  FileSystemMonitorTest extends TestCase {
         = new StopAfterSpecificAddVisitor("xxlast"); // Sorts after xlast
     monitor = newFileSystemMonitor(stoppingVisitor);
     monitor.run();
-    SnapshotStore.stich(snapshotDir, stoppingVisitor.checkpoint);
+    SnapshotStore.stitch(snapshotDir, stoppingVisitor.checkpoint,
+        documentSnapshotFactory);
     SnapshotReader reader = store.openMostRecentSnapshot();
     ArrayList<String> paths = new ArrayList<String>();
-    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
-      paths.add(r.getPath());
+    for (DocumentSnapshot r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getDocumentId());
     }
     List<String> sorted = new ArrayList<String>(paths);
     Collections.sort(sorted);
@@ -950,11 +957,12 @@ public class  FileSystemMonitorTest extends TestCase {
         = new StopAfterReplaceFileVisitor("file.6.txt");
     monitor = newFileSystemMonitor(replaceVisitor);
     monitor.run();
-    SnapshotStore.stich(snapshotDir, replaceVisitor.checkpoint);
+    SnapshotStore.stitch(snapshotDir, replaceVisitor.checkpoint,
+        documentSnapshotFactory);
     SnapshotReader reader = store.openMostRecentSnapshot();
     ArrayList<String> paths = new ArrayList<String>();
-    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
-      paths.add(r.getPath());
+    for (DocumentSnapshot r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getDocumentId());
     }
     List<String> sorted = new ArrayList<String>(paths);
     Collections.sort(sorted);
@@ -974,11 +982,12 @@ public class  FileSystemMonitorTest extends TestCase {
         = new StopAfterReplaceFileVisitor(dirToFileName);
     monitor = newFileSystemMonitor(replaceVisitor);
     monitor.run();
-    SnapshotStore.stich(snapshotDir, replaceVisitor.checkpoint);
+    SnapshotStore.stitch(snapshotDir, replaceVisitor.checkpoint,
+        documentSnapshotFactory);
     SnapshotReader reader = store.openMostRecentSnapshot();
     ArrayList<String> paths = new ArrayList<String>();
-    for (SnapshotRecord r = reader.read(); r != null; r = reader.read()) {
-      paths.add(r.getPath());
+    for (DocumentSnapshot r = reader.read(); r != null; r = reader.read()) {
+      paths.add(r.getDocumentId());
     }
     List<String> sorted = new ArrayList<String>(paths);
     Collections.sort(sorted);
@@ -1007,9 +1016,9 @@ public class  FileSystemMonitorTest extends TestCase {
     }
 
     @Override
-    public void write(SnapshotRecord rec) throws SnapshotWriterException {
+    public void write(DocumentSnapshot dss) throws SnapshotWriterException {
       if (threw || timesToWriteBeforeThrow > 0) {
-        super.write(rec);
+        super.write(dss);
         timesToWriteBeforeThrow--;
       } else {
         try {
@@ -1032,7 +1041,7 @@ public class  FileSystemMonitorTest extends TestCase {
     private final boolean interrupt;
     FailingSnapshotStore(long oldestSnapshotToKeep, boolean interrupt)
         throws SnapshotStoreException {
-      super(snapshotDir);
+      super(snapshotDir, documentSnapshotFactory);
       this.oldestSnapshotToKeep = oldestSnapshotToKeep;
       this.interrupt = interrupt;
     }
@@ -1050,8 +1059,8 @@ public class  FileSystemMonitorTest extends TestCase {
     try {
       SnapshotReader reader = store.openMostRecentSnapshot();
       ArrayList<String> records = new ArrayList<String>();
-      for (SnapshotRecord record = reader.read(); record != null; record = reader.read()) {
-        records.add(record.getPath());  // Use paths cause scan times are different.
+      for (DocumentSnapshot record = reader.read(); record != null; record = reader.read()) {
+        records.add(record.getDocumentId());  // Use paths cause scan times are different.
       }
       return records;
     } catch (Exception e) {
@@ -1095,7 +1104,7 @@ public class  FileSystemMonitorTest extends TestCase {
     visitor = new CountingVisitor();
     monitor = new FileSystemMonitor("name", query, failingStore, visitor,
         new LoggingDocumentSink(), saveOldestMonitorCp,
-        root.getFileSystemType());
+        root.getFileSystemType(), documentSnapshotFactory);
 
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(1);
@@ -1179,7 +1188,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
     monitor = new FileSystemMonitor("name", snapshotRepository, failingStore,
         visitor,  documentSink, saveOldestMonitorCp,
-        root.getFileSystemType());
+        root.getFileSystemType(), documentSnapshotFactory);
 
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(1);

@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -64,6 +65,10 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   private final ChangeQueue changeQueue;
   private final Credentials credentials;
   private final Collection<String> startPaths;
+  // TODO: make extend constructor and require user
+  //       pass in a DocumentSnapshotFactory.
+  private final DocumentSnapshotFactory documentSnapshotFactory =
+      new FileDocumentSnapshotFactory();
 
   FileSystemMonitorManagerImpl(File snapshotDir, ChecksumGenerator checksumGenerator,
       PathParser pathParser, ChangeQueue changeQueue,
@@ -127,10 +132,12 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
             + " monitor checkpoint=" + monitorPoints.get(monitorName));
         delete(dir);
       } else {
-        SnapshotStore.stich(dir, monitorPoints.get(monitorName));
+        SnapshotStore.stitch(dir, monitorPoints.get(monitorName),
+            documentSnapshotFactory);
       }
 
-      SnapshotStore snapshotStore = new SnapshotStore(dir);
+      SnapshotStore snapshotStore = new SnapshotStore(dir,
+          documentSnapshotFactory);
 
       snapshotStores.put(monitorName, snapshotStore);
     }
@@ -222,6 +229,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     }
 
     String monitorName = makeMonitorNameFromStartPath(startPath);
+    // TODO: Change API so caller passes in repository.
     SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
         new FileDocumentSnapshotRepository(root, DOCUMENT_SINK, filePatternMatcher,
             traversalContext, checksumGenerator, SystemClock.INSTANCE,
@@ -229,7 +237,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     FileSystemMonitor monitor =
         new FileSystemMonitor(monitorName, snapshotRepository, snapshotStore,
             changeQueue.newCallback(), DOCUMENT_SINK, startCp,
-            root.getFileSystemType());
+            root.getFileSystemType(), documentSnapshotFactory);
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
   }

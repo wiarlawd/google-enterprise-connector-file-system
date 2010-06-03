@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+
+import java.io.BufferedWriter;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.Writer;
@@ -38,7 +41,7 @@ public class SnapshotWriter {
    */
   public SnapshotWriter(Writer output, FileDescriptor fileDescriptor, String path)
       throws SnapshotWriterException {
-    this.output = output;
+    this.output = new BufferedWriter(output);
     this.fileDescriptor = fileDescriptor;
     this.path = path;
     this.count = 0;
@@ -47,16 +50,20 @@ public class SnapshotWriter {
   /**
    * Appends a record to the output stream.
    *
-   * @param rec record to write
+   * @param snapshot record to write
    * @throws SnapshotWriterException
+   * @throws IllegalArgumentException
    */
-  public void write(SnapshotRecord rec) throws SnapshotWriterException {
+  public void write(DocumentSnapshot snapshot) throws SnapshotWriterException,
+      IllegalArgumentException {
     try {
-      String line = rec.getJson().toString();
-      if (line == null) {
-        throw new SnapshotWriterException("failed to stringify record");
+      String stringForm = snapshot.toString();
+      if (stringForm == null) {
+        throw new IllegalArgumentException("DocumentSnapshot.toString returned null.");
       }
-      output.write(rec.getJson().toString());
+      //TODO: Write snapshots in a manner that supports \n in
+      //      stringForm
+      output.write(stringForm);
       output.write("\n");
       output.flush();
       if (fileDescriptor != null) {

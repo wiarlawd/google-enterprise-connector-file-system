@@ -14,8 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,8 +27,10 @@ import java.io.IOException;
 public class SnapshotReader {
   private final String inputPath;
   private final BufferedReader in;
-  private long lineNumber;
   private final long snapshotNumber;
+  private final DocumentSnapshotFactory documentSnapshotFactory;
+
+  private long lineNumber;
   private boolean done;
   /**
    * @param in input for the reader
@@ -36,12 +38,14 @@ public class SnapshotReader {
    * @param snapshotNumber the number of the snapshot being read
    * @throws SnapshotReaderException
    */
-  public SnapshotReader(BufferedReader in, String inputPath, long snapshotNumber)
+  public SnapshotReader(BufferedReader in, String inputPath, long snapshotNumber,
+      DocumentSnapshotFactory documentSnapshotFactory)
       throws SnapshotReaderException {
     this.in = in;
     this.inputPath = inputPath;
     this.lineNumber = 0;
     this.snapshotNumber = snapshotNumber;
+    this.documentSnapshotFactory = documentSnapshotFactory;
   }
 
   /**
@@ -49,35 +53,40 @@ public class SnapshotReader {
    *         end of the snapshot.
    * @throws SnapshotReaderException
    */
-  public SnapshotRecord read() throws SnapshotReaderException {
+  public DocumentSnapshot read() throws SnapshotReaderException {
+    String stringForm = readStringForm();
+    if (stringForm == null) {
+      return null;
+    }
+    try {
+      return documentSnapshotFactory.fromString(stringForm);
+    } catch (IllegalArgumentException iae) {
+      throw new SnapshotReaderException(String.format("failed to parse JSON (%s, line %d)",
+          inputPath, lineNumber), iae);
+    }
+  }
+
+  private String readStringForm() throws SnapshotReaderException {
     if (done) {
       throw new IllegalStateException();
     }
-    String line;
+    String stringForm = null;
     try {
-      line = in.readLine();
+      stringForm = in.readLine();
     } catch (IOException e) {
       throw new SnapshotReaderException(String.format(
           "failed to read snapshot record (%s, line %d)", inputPath, lineNumber), e);
-    }
-    if (line == null) {
+    } finally {
       lineNumber++;
-      done = true;
-      return null;
+      if (stringForm == null) {
+        done = true;
+      }
     }
-    JSONObject json;
-    try {
-      json = new JSONObject(line);
-    } catch (JSONException e) {
-      throw new SnapshotReaderException(String.format("failed to parse JSON (%s, line %d)",
-          inputPath, lineNumber), e);
-    }
-    ++lineNumber;
-    return SnapshotRecord.fromJson(json);
+    return stringForm;
   }
 
   /**
-   * @return path to the CSV input file, for logging purposes.
+   * @return path to the input file, for logging purposes.
    */
   public String getPath() {
     return inputPath;
@@ -100,21 +109,18 @@ public class SnapshotReader {
    */
   public void skipRecords(long number) throws SnapshotReaderException,
       InterruptedException {
-    try {
-      for (int k = 0; k < number; ++k) {
-        if (Thread.interrupted()) {
-          throw new InterruptedException();
-        }
-        if (in.readLine() == null) {
-          throw new SnapshotReaderException(String.format(
-              "failed to skip %d records; snapshot contains only %d", number, lineNumber));
-        }
-        ++lineNumber;
+    for (int k = 0; k < number; ++k) {
+      if (Thread.interrupted()) {
+        throw new InterruptedException();
       }
-    } catch (IOException e) {
-      throw new SnapshotReaderException("failed to read snapshot", e);
-    }
+      if (readStringForm() == null) {
+        throw new SnapshotReaderException(String.format(
+            "failed to skip %d records; snapshot contains only %d",
+            number, lineNumber));
+        }
+      }
   }
+
   /**
    * @return the number of the snapshot this reader is reading from.
    */

@@ -40,7 +40,6 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
     FILESYS, PATH, MODTIME, ACL, CHECKSUM, SCANTIME, STABLE
   }
 
-
   /**
    * State set by all constructors.
    */
