@@ -31,9 +31,9 @@ public class FileDocumentSnapshotFactory implements DocumentSnapshotFactory {
           json.getString(Field.PATH.name()),
           json.getLong(Field.MODTIME.name()),
           Acl.fromJson(json.getJSONObject(Field.ACL.name())),
-          json.getString(Field.CHECKSUM.toString()),
-          json.getLong(Field.SCANTIME.toString()),
-          json.getBoolean(Field.STABLE.toString()));
+          json.getString(Field.CHECKSUM.name()),
+          json.getLong(Field.SCANTIME.name()),
+          json.getBoolean(Field.STABLE.name()));
     } catch (JSONException je) {
         throw new IllegalArgumentException(
             "Unable to parse serialized JSON Object " + stringForm, je);
@@ -45,7 +45,7 @@ public class FileDocumentSnapshotFactory implements DocumentSnapshotFactory {
     StringBuilder buf = new StringBuilder();
     for (Field f : Field.values()) {
       if (!o.has(f.name())) {
-        buf.append(f);
+        buf.append(f.name());
         buf.append(", ");
       }
     }

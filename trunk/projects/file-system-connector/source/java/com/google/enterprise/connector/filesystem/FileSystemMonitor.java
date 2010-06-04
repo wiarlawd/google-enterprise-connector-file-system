@@ -125,6 +125,10 @@ public class FileSystemMonitor implements Runnable {
    * @param callback client callback
    * @param documentSink destination for filtered out file info
    * @param initialCp checkpoint when system initiated, could be null
+   * @param filesys name of file system type for this
+   *        {@link FileSystemMonitor} (TODO remove)
+   * @param documentSnapshotFactory for un-serializing
+   *        {@link DocumentSnapshot} objects.
    */
   public FileSystemMonitor(String name,
       SnapshotRepository<? extends DocumentSnapshot> query,
