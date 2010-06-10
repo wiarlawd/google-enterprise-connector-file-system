@@ -14,8 +14,10 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Session;
+import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
 
@@ -25,24 +27,27 @@ import java.util.Arrays;
 /** Test Session aspect of FileConnector. */
 public class FileSessionTest extends TestCase {
   private Session session;
-  private FileFetcher fetcher;
   private ChangeSource changes;
   private FileAuthorizationManager authz;
   private FakeFileSystemMonitorManager fileSystemMonitorManager;
 
   @Override
   public void setUp() throws IOException {
-    fetcher =
-        new FileFetcher(new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType())),
-            new MimeTypeFinder());
-    fetcher.setTraversalContext(new FakeTraversalContext());
     changes = new ChangeQueue(100, 10);
     FileSystemTypeRegistry fileSystemTypeRegistry =
       new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
           new SmbFileSystemType(false)));
-    authz = new FileAuthorizationManager(new PathParser(fileSystemTypeRegistry));
-    fileSystemMonitorManager = new FakeFileSystemMonitorManager(changes, this);
-    session = new FileConnector(fetcher, authz, fileSystemMonitorManager);
+    authz = new FileAuthorizationManager(new PathParser(
+        fileSystemTypeRegistry));
+    TraversalContext traversalContext = new FakeTraversalContext();
+    TraversalContextManager tcm = new TraversalContextManager();
+    tcm.setTraversalContext(traversalContext);
+    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
+        fileSystemTypeRegistry, false, true, null, null, null,
+        new MimeTypeFinder(), tcm);
+    fileSystemMonitorManager = new FakeFileSystemMonitorManager(changes, this,
+        new DeleteDocumentHandleFactory(), clientFactory);
+    session = new FileConnector(authz, fileSystemMonitorManager, tcm);
   }
 
   public void testAuthn() throws RepositoryException {

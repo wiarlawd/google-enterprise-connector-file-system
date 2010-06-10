@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.RepositoryException;
 
@@ -25,9 +26,9 @@ import java.util.List;
  * An implementation of DocumentList for files.
  *
  */
+// TODO: Rename
 public class FileDocumentList implements DocumentList {
   private final Iterator<CheckpointAndChange> checkpointAndChangeIterator;
-  private final FileFetcher fetcher;
   private String checkpoint;
 
   /**
@@ -36,11 +37,10 @@ public class FileDocumentList implements DocumentList {
    *
    * @throws IOException if persisting fails
    */
-  public FileDocumentList(CheckpointAndChangeQueue queue, String checkpoint, FileFetcher fetcher) 
+  public FileDocumentList(CheckpointAndChangeQueue queue, String checkpoint)
       throws IOException {
     List<CheckpointAndChange> guaranteedChanges = queue.resume(checkpoint);
     checkpointAndChangeIterator = guaranteedChanges.iterator();
-    this.fetcher = fetcher;
     this.checkpoint = checkpoint;
   }
 
@@ -50,11 +50,12 @@ public class FileDocumentList implements DocumentList {
   }
 
   /* @Override */
-  public GenericDocument nextDocument() throws RepositoryException {
+  public Document nextDocument() throws RepositoryException {
     if (checkpointAndChangeIterator.hasNext()) {
-      CheckpointAndChange checkpointAndChange = checkpointAndChangeIterator.next();
+      CheckpointAndChange checkpointAndChange =
+        checkpointAndChangeIterator.next();
       checkpoint = checkpointAndChange.getCheckpoint().toString();
-      return fetcher.getFile(checkpointAndChange.getChange());
+      return checkpointAndChange.getChange().getDocumentHandle().getDocument();
     } else {
       return null;
     }

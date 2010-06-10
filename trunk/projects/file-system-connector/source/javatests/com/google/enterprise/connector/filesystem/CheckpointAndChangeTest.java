@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,25 +16,56 @@ package com.google.enterprise.connector.filesystem;
 
 import junit.framework.TestCase;
 
+import org.json.JSONObject;
+
 /**
  * Test for {@link CheckpointAndChange}.
  */
 public class CheckpointAndChangeTest extends TestCase {
-  private MockReadonlyFile root;
-  FileSystemType fileSystemType;
+  private static final MonitorCheckpoint MCP =
+    new MonitorCheckpoint("foo", 13, 9876543210L, 1234567890L);
+
+  private DeleteDocumentHandleFactory internalFactory;
+  private MockDocumentHandleFactory clientFactory;
 
   @Override
   public void setUp() {
-    root = MockReadonlyFile.createRoot("/foo");
-    fileSystemType = new MockFileSystemType(root);
+    internalFactory = new DeleteDocumentHandleFactory();
+    clientFactory = new MockDocumentHandleFactory();
   }
 
-  public void testCheckpointAndChange() {
+  public void testCheckpointAndChange_internal() throws Exception {
     FileConnectorCheckpoint fccp = FileConnectorCheckpoint.newFirst();
-    Change c = new Change(Change.Action.ADD_FILE, fileSystemType.getName(), root.getPath(),
-        new MonitorCheckpoint("foo", 1, 2, 3));
+    DeleteDocumentHandle ddh = new DeleteDocumentHandle("abc");
+    Change c = new Change(Change.FactoryType.INTERNAL, ddh, MCP);
     CheckpointAndChange checkpointAndChange = new CheckpointAndChange(fccp, c);
-    assertEquals(fccp, checkpointAndChange.getCheckpoint());
-    assertEquals(c, checkpointAndChange.getChange());
+    String stringForm = checkpointAndChange.getJson().toString();
+    JSONObject json = new JSONObject(stringForm);
+    CheckpointAndChange copy = new CheckpointAndChange(json, internalFactory,
+        clientFactory);
+    assertEquals(fccp, copy.getCheckpoint());
+    assertEquals(c.getMonitorCheckpoint(),
+        copy.getChange().getMonitorCheckpoint());
+    assertEquals(c.getDocumentHandle().getDocumentId(),
+        copy.getChange().getDocumentHandle().getDocumentId());
   }
+
+  public void testCheckpointAndChange_client() throws Exception {
+    FileConnectorCheckpoint fccp = FileConnectorCheckpoint.newFirst();
+    MockDocumentHandle mdh = new MockDocumentHandle("abc", "data");
+    Change c = new Change(Change.FactoryType.CLIENT, mdh, MCP);
+    CheckpointAndChange checkpointAndChange = new CheckpointAndChange(fccp, c);
+    String stringForm = checkpointAndChange.getJson().toString();
+    JSONObject json = new JSONObject(stringForm);
+    CheckpointAndChange copy = new CheckpointAndChange(json, internalFactory,
+        clientFactory);
+    assertEquals(fccp, copy.getCheckpoint());
+    assertEquals(c.getMonitorCheckpoint(),
+        copy.getChange().getMonitorCheckpoint());
+    MockDocumentHandle mdhCopy =
+        (MockDocumentHandle)copy.getChange().getDocumentHandle();
+    assertEquals(mdh.getDocumentId(), mdhCopy.getDocumentId());
+    assertEquals(mdh.getExtra(), mdhCopy.getExtra());
+  }
+
 }

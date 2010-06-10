@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -23,17 +24,15 @@ import com.google.enterprise.connector.spi.TraversalManager;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 /** Implementation of TraversalManager for file systems. */
 public class FileTraversalManager implements TraversalManager,
     TraversalContextAware {
-  private static final Logger LOG = Logger.getLogger(FileTraversalManager.class.getName());
-  private final FileFetcher fetcher;
+  private static final Logger LOG = Logger.getLogger(
+      FileTraversalManager.class.getName());
   private final FileSystemMonitorManager fileSystemMonitorManager;
-  private final AtomicReference<TraversalContext> traversalContext
-      = new AtomicReference<TraversalContext>();
+  private final TraversalContextManager traversalContextManager;
   /**
    * Boolean to mark TraversalManager as invalid.
    * It's possible for Connector Manager to keep a reference to
@@ -44,14 +43,14 @@ public class FileTraversalManager implements TraversalManager,
 
   /**
    * Creates a {@link FileTraversalManager}
-   * @param fetcher the FileFetcher to use
    * @param fileSystemMonitorManager the {@link FileSystemMonitorManager} for
    *        use accessing a {@link ChangeSource}
    */
-  public FileTraversalManager(FileFetcher fetcher,
-      FileSystemMonitorManager fileSystemMonitorManager) {
-    this.fetcher = fetcher;
+  public FileTraversalManager(
+      FileSystemMonitorManager fileSystemMonitorManager,
+      TraversalContextManager traversalContextManager) {
     this.fileSystemMonitorManager = fileSystemMonitorManager;
+    this.traversalContextManager = traversalContextManager;
   }
 
   private DocumentList newDocumentList(String checkpoint)
@@ -63,8 +62,8 @@ public class FileTraversalManager implements TraversalManager,
     try {
       FileDocumentList documentList = new FileDocumentList(
           checkpointAndChangeQueue,
-          CheckpointAndChangeQueue.initializeCheckpointStringIfNull(checkpoint),
-          fetcher);
+          CheckpointAndChangeQueue.initializeCheckpointStringIfNull(
+              checkpoint));
 
       Map<String, MonitorCheckpoint> guaranteesMade =
           checkpointAndChangeQueue.getMonitorRestartPoints();
@@ -80,7 +79,8 @@ public class FileTraversalManager implements TraversalManager,
   /* @Override */
   public synchronized void setBatchHint(int batchHint) {
     if (isActive()) {
-      fileSystemMonitorManager.getCheckpointAndChangeQueue().setMaximumQueueSize(batchHint);
+      fileSystemMonitorManager.getCheckpointAndChangeQueue()
+          .setMaximumQueueSize(batchHint);
     }
   }
 
@@ -94,7 +94,8 @@ public class FileTraversalManager implements TraversalManager,
       // With no state issue crawl command from null (beginning) checkpoint.
       return resumeTraversal(null);
     } else {
-      throw new RepositoryException("Inactive FileTraversalManager referanced.");
+      throw new RepositoryException(
+          "Inactive FileTraversalManager referanced.");
     }
   }
 
@@ -114,20 +115,20 @@ public class FileTraversalManager implements TraversalManager,
     */
     if (isActive()) {
       if (!fileSystemMonitorManager.isRunning()) {
-        fileSystemMonitorManager.start(checkpoint, traversalContext.get());
+        fileSystemMonitorManager.start(checkpoint);
       }
       return newDocumentList(checkpoint);
     } else {
-      throw new RepositoryException("Inactive FileTraversalManager referanced.");
+      throw new RepositoryException(
+          "Inactive FileTraversalManager referanced.");
     }
   }
 
   /* @Override */
-  public synchronized void setTraversalContext(TraversalContext traversalContext) {
+  public synchronized void setTraversalContext(
+      TraversalContext traversalContext) {
     if (isActive()) {
-      this.traversalContext.set(traversalContext);
-      fetcher.setTraversalContext(traversalContext);
-      // TODO: Update the traversalContext in the fileSystemMonitorManager.
+      this.traversalContextManager.setTraversalContext(traversalContext);
     }
   }
 

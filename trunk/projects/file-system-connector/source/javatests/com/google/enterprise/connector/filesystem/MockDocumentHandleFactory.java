@@ -13,19 +13,19 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
-import com.google.enterprise.connector.filesystem.MockDocumentSnapshot.Field;
+import com.google.enterprise.connector.diffing.DocumentHandleFactory;
+import com.google.enterprise.connector.filesystem.MockDocumentHandle.Field;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MockDocumentSnapshotFactory implements DocumentSnapshotFactory {
+public class MockDocumentHandleFactory implements DocumentHandleFactory {
 
-  public MockDocumentSnapshot fromString(String stringForm) {
+  public MockDocumentHandle fromString(String stringForm) {
     try {
       JSONObject json = new JSONObject(stringForm);
       checkForMissingRequiredFields(json);
-      return new MockDocumentSnapshot(
+      return new MockDocumentHandle(
           json.getString(Field.DOCUMENT_ID.name()),
           json.getString(Field.EXTRA.name()));
     } catch (JSONException je) {

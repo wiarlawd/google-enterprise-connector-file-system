@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.base.Charsets;
+import com.google.enterprise.connector.diffing.DocumentHandleFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -50,16 +51,21 @@ import java.util.logging.Logger;
 class CheckpointAndChangeQueue {
   public static final int DEFAULT_MAXIMUM_QUEUE_SIZE = 500;
 
-  private static final Logger LOG = Logger.getLogger(CheckpointAndChangeQueue.class.getName());
+  private static final Logger LOG = Logger.getLogger(
+      CheckpointAndChangeQueue.class.getName());
 
   private static final String SENTINAL = "SENTINAL";
   private static final String RECOVERY_FILE_PREFIX = "recovery.";
   private static final String QUEUE_JSON_TAG = "Q";
   private static final String MONITOR_STATE_JSON_TAG = "MON";
 
-  private final AtomicInteger maximumQueueSize = new AtomicInteger(DEFAULT_MAXIMUM_QUEUE_SIZE);
+  private final AtomicInteger maximumQueueSize =
+      new AtomicInteger(DEFAULT_MAXIMUM_QUEUE_SIZE);
   private final List<CheckpointAndChange> checkpointAndChangeList;
   private final ChangeSource changeSource;
+  private final DocumentHandleFactory internalDocumentHandleFactory;
+  private final DocumentHandleFactory clientDocumentHandleFactory;
+
   private volatile FileConnectorCheckpoint lastCheckpoint;
   private final File persistDir;  // place to persist enqueued values
   private MonitorRestartState monitorPoints = new MonitorRestartState();
@@ -104,11 +110,15 @@ class CheckpointAndChangeQueue {
     }
   }
 
-  CheckpointAndChangeQueue(ChangeSource changeSource, File persistDir) {
+  CheckpointAndChangeQueue(ChangeSource changeSource, File persistDir,
+      DocumentHandleFactory internalDocumentHandleFactory,
+      DocumentHandleFactory clientDocumentHandleFactory) {
     this.changeSource = changeSource;
     this.checkpointAndChangeList
         = Collections.synchronizedList(new ArrayList<CheckpointAndChange>(maximumQueueSize.get()));
     this.persistDir = persistDir;
+    this.internalDocumentHandleFactory = internalDocumentHandleFactory;
+    this.clientDocumentHandleFactory = clientDocumentHandleFactory;
     ensurePersistDirExists();
   }
 
@@ -267,7 +277,8 @@ class CheckpointAndChangeQueue {
       JSONArray jsonQueue = json.getJSONArray(QUEUE_JSON_TAG);
       for (int i = 0; i < jsonQueue.length(); i++) {
         JSONObject chnch = jsonQueue.getJSONObject(i);
-        checkpointAndChangeList.add(new CheckpointAndChange(chnch));
+        checkpointAndChangeList.add(new CheckpointAndChange(chnch,
+            internalDocumentHandleFactory, clientDocumentHandleFactory));
       }
       JSONObject jsonMonPoints = json.getJSONObject(MONITOR_STATE_JSON_TAG);
       monitorPoints = new MonitorRestartState(jsonMonPoints);

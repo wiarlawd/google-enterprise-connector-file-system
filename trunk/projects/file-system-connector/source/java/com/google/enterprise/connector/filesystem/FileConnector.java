@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.AuthenticationManager;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.Connector;
@@ -30,23 +31,23 @@ import java.util.logging.Logger;
 public class FileConnector implements Connector, ConnectorShutdownAware, Session {
   private static final Logger LOG = Logger.getLogger(FileConnector.class.getName());
 
-  private final FileFetcher fetcher;
   private final AuthorizationManager authorizationManager;
   private final FileSystemMonitorManager fileSystemMonitorManager;
+  private final TraversalContextManager traversalContextmanager;
   private FileTraversalManager traversalManager = null;
 
   /**
    * Creates a file connector.
    *
-   * @param fetcher
    * @param authorizationManager
    * @param fileSystemMonitorManager
    */
-  public FileConnector(FileFetcher fetcher, AuthorizationManager authorizationManager,
-      FileSystemMonitorManager fileSystemMonitorManager) {
-    this.fetcher = fetcher;
+  public FileConnector(AuthorizationManager authorizationManager,
+      FileSystemMonitorManager fileSystemMonitorManager,
+      TraversalContextManager traversalContextManager) {
     this.authorizationManager = authorizationManager;
     this.fileSystemMonitorManager = fileSystemMonitorManager;
+    this.traversalContextmanager = traversalContextManager;
   }
 
   public static Credentials newCredentials(String domainName, String userName,
@@ -118,7 +119,8 @@ public class FileConnector implements Connector, ConnectorShutdownAware, Session
     if (traversalManager != null) {
       deactivate();
     }
-    traversalManager = new FileTraversalManager(fetcher, fileSystemMonitorManager);
+    traversalManager = new FileTraversalManager(fileSystemMonitorManager,
+        traversalContextmanager);
     return traversalManager;
   }
 }

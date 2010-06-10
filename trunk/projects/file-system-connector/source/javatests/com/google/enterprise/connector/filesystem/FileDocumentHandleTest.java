@@ -14,11 +14,12 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.Change.Action;
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.Property;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SpiConstants;
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.Value;
 import com.google.enterprise.connector.spiimpl.BinaryValue;
 
@@ -34,7 +35,7 @@ import java.util.List;
 
 /**
  */
-public class FileFetcherTest extends TestCase {
+public class FileDocumentHandleTest extends TestCase {
   private static final int BUF_SIZE = 1024;
   private static final DateTime LAST_MODIFIED = new DateTime(DateTimeZone.UTC);
   private static final String ADD = SpiConstants.ActionType.ADD.toString();
@@ -66,10 +67,10 @@ public class FileFetcherTest extends TestCase {
   }
 
   public void testAddFile() throws RepositoryException, IOException {
-    MonitorCheckpoint mcp = new MonitorCheckpoint("foo", 0, 0, 0);
-    Change add = new Change(Action.ADD_FILE, fileFactory.getName(), foo.getPath(), mcp);
-    FileFetcher fetcher = makeFetcher(false, true);
-    GenericDocument addedDoc = fetcher.getFile(add);
+    FileDocumentHandle.DocumentContext context = makeContext(false, true);
+    FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
+        foo.getPath(), false, context);
+    Document addedDoc = fdh.getDocument();
     assertEquals(ADD, Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_ACTION));
     String docId = Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_DOCID);
     assertEquals(foo.getPath(), DocIdUtil.idToPath(docId));
@@ -78,7 +79,7 @@ public class FileFetcherTest extends TestCase {
     assertEquals("text/html", Value.getSingleValueString(addedDoc,
         SpiConstants.PROPNAME_MIMETYPE));
     assertEquals("contents of foo", getDocumentContents(addedDoc));
-    DateTime lastModified = 
+    DateTime lastModified =
         new DateTime(Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_LASTMODIFIED));
     assertEquals(LAST_MODIFIED.getMillis(), lastModified.getMillis());
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
@@ -87,14 +88,14 @@ public class FileFetcherTest extends TestCase {
   }
 
   public void testAddNotPublicFileWithAcl() throws RepositoryException {
-    MonitorCheckpoint mcp = new MonitorCheckpoint("foo", 0, 0, 0);
     List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
     List<String> groups = Arrays.asList("domain1\\engineers", "domain1\\product managers");
     Acl acl = Acl.newAcl(users, groups);
     foo.setAcl(acl);
-    Change add = new Change(Action.ADD_FILE, fileFactory.getName(), foo.getPath(), mcp);
-    FileFetcher fetcher = makeFetcher(true, false);
-    GenericDocument addedDoc = fetcher.getFile(add);
+    FileDocumentHandle.DocumentContext context = makeContext(true, false);
+    FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
+        foo.getPath(), false, context);
+    Document addedDoc = fdh.getDocument();
     validateNotPublic(addedDoc);
     Property usersProperty = addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS);
     validateRepeatedProperty(users, usersProperty);
@@ -102,7 +103,7 @@ public class FileFetcherTest extends TestCase {
     validateRepeatedProperty(groups, groupsProperty);
   }
 
-  private void validateNotPublic(GenericDocument addedDoc) throws RepositoryException {
+  private void validateNotPublic(Document addedDoc) throws RepositoryException {
     assertEquals(Boolean.FALSE.toString(),
         Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_ISPUBLIC));
   }
@@ -123,26 +124,26 @@ public class FileFetcherTest extends TestCase {
   }
 
   public void testAddNotPublicFileWithIndeterminateAcl() throws RepositoryException {
-    MonitorCheckpoint mcp = new MonitorCheckpoint("foo", 0, 0, 0);
     Acl acl = Acl.newAcl(null, null);
     foo.setAcl(acl);
-    Change add = new Change(Action.ADD_FILE, fileFactory.getName(), foo.getPath(), mcp);
-    FileFetcher fetcher = makeFetcher(true, false);
-    GenericDocument addedDoc = fetcher.getFile(add);
+    FileDocumentHandle.DocumentContext context = makeContext(true, false);
+    FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
+        foo.getPath(), false, context);
+    Document addedDoc = fdh.getDocument();
     validateNotPublic(addedDoc);
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
   }
 
   public void testAddNotPublicFileWithPushAclsFalse() throws RepositoryException {
-    MonitorCheckpoint mcp = new MonitorCheckpoint("foo", 0, 0, 0);
     List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
     List<String> groups = Arrays.asList("domain1\\engineers", "domain1\\product managers");
     Acl acl = Acl.newAcl(users, groups);
     foo.setAcl(acl);
-    Change add = new Change(Action.ADD_FILE, fileFactory.getName(), foo.getPath(), mcp);
-    FileFetcher fetcher = makeFetcher(false, false);
-    GenericDocument addedDoc = fetcher.getFile(add);
+    FileDocumentHandle.DocumentContext context = makeContext(false, false);
+    FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
+        foo.getPath(), false, context);
+    Document addedDoc = fdh.getDocument();
     validateNotPublic(addedDoc);
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
@@ -154,25 +155,18 @@ public class FileFetcherTest extends TestCase {
     List<String> groups = Arrays.asList("domain1\\engineers", "domain1\\product managers");
     Acl acl = Acl.newAcl(users, groups);
     foo.setAcl(acl);
-    Change add = new Change(Action.ADD_FILE, fileFactory.getName(), foo.getPath(), mcp);
-    FileFetcher fetcher = makeFetcher(false, true);
-    GenericDocument addedDoc = fetcher.getFile(add);
+    FileDocumentHandle.DocumentContext context = makeContext(false, true);
+    FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
+        foo.getPath(), false, context);
+    Document addedDoc = fdh.getDocument();
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
   }
 
-  private FileFetcher makeFetcher(boolean pushAcls, boolean markAllDocumentsPublic) {
-    FileFetcher fetcher =
-      new FileFetcher(new FileSystemTypeRegistry(Arrays.asList(fileFactory)), pushAcls,
-        markAllDocumentsPublic, null, null, null, new MimeTypeFinder());
-    fetcher.setTraversalContext(new FakeTraversalContext());
-    return fetcher;
-  }
-
   public void testPushAllAclsWithMarkAllDocumentsPublic() {
     try {
-      makeFetcher(true, true);
+      makeContext(true, true);
       fail();
     } catch (IllegalArgumentException iae) {
       assertTrue(iae.getMessage().contains("pushAcls not supported with markAllDocumentsPublic"));
@@ -181,12 +175,29 @@ public class FileFetcherTest extends TestCase {
 
   public void testDeleteFile() throws RepositoryException {
     MonitorCheckpoint mcp = new MonitorCheckpoint("foo", 0, 0, 0);
-    Change delete = new Change(Action.DELETE_FILE, fileFactory.getName(), foo.getPath(), mcp);
-    FileFetcher fetcher = makeFetcher(false, true);
-    GenericDocument deletedDoc = fetcher.getFile(delete);
+    FileDocumentHandle.DocumentContext context = makeContext(false, true);
+    FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
+        foo.getPath(), true, context);
+    Document deletedDoc = fdh.getDocument();
     assertEquals(DELETE, Value.getSingleValueString(deletedDoc, SpiConstants.PROPNAME_ACTION));
     String docId = Value.getSingleValueString(deletedDoc, SpiConstants.PROPNAME_DOCID);
-    assertEquals(foo.getPath(), DocIdUtil.idToPath(docId)); 
+    assertEquals(foo.getPath(), DocIdUtil.idToPath(docId));
     assertEquals(2, deletedDoc.getPropertyNames().size());
+  }
+
+  private FileDocumentHandle.DocumentContext makeContext(boolean pushAcls,
+      boolean markAllDocumentsPublic) {
+    TraversalContextManager traversalContextManager =
+        new TraversalContextManager();
+    TraversalContext traversalContext =
+        new FakeTraversalContext();
+    traversalContextManager.setTraversalContext(traversalContext);
+    FileDocumentHandle.DocumentContext result =
+      new FileDocumentHandle.DocumentContext(
+          new FileSystemTypeRegistry(Arrays.asList(fileFactory)),
+          pushAcls, markAllDocumentsPublic,
+          FileConnector.newCredentials(null, null, null),
+          new MimeTypeFinder(), traversalContextManager);
+    return result;
   }
 }

@@ -14,8 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.Change.Action;
-
 import junit.framework.TestCase;
 
 /**
@@ -25,59 +23,51 @@ public class ChangeQueueTest extends TestCase {
 
   ChangeQueue queue;
   FileSystemMonitor.Callback callback;
-  private MockReadonlyFile root;
 
   @Override
   public void setUp() {
     this.queue = new ChangeQueue(10, 0L);
     this.callback = queue.newCallback();
-    this.root = MockReadonlyFile.createRoot("/root");
   }
 
-  public void testNewFile() throws InterruptedException {
-    MockReadonlyFile foo = root.addFile("foo", "");
-    callback.newFile(foo, MCP);
+  public void testNewDocument() throws Exception {
+    MockDocumentHandle mdh = new MockDocumentHandle("id", "extra");
+    callback.newDocument(mdh, MCP);
     Change c = queue.getNextChange();
-    assertEquals(Action.ADD_FILE, c.getAction());
-    assertEquals(foo.getPath(), c.getPath());
+    assertEquals(Change.FactoryType.CLIENT.name(),
+        c.getJson().get(Change.Field.FACTORY_TYPE.name()));
+    assertEquals(mdh, c.getDocumentHandle());
     assertEquals(MCP, c.getMonitorCheckpoint());
   }
 
-  public void testDeletedFile() throws InterruptedException {
-    MockReadonlyFile foo = root.addFile("foo", "");
-    callback.deletedFile(foo, MCP);
+  public void testDelete() throws Exception {
+    DeleteDocumentHandle ddh = new DeleteDocumentHandle("id");
+    callback.deletedDocument(ddh, MCP);
     Change c = queue.getNextChange();
-    assertEquals(Action.DELETE_FILE, c.getAction());
+    assertEquals(Change.FactoryType.INTERNAL.name(),
+        c.getJson().get(Change.Field.FACTORY_TYPE.name()));
+    assertEquals(ddh, c.getDocumentHandle());
     assertEquals(MCP, c.getMonitorCheckpoint());
   }
 
-  public void testContentChange() throws InterruptedException {
-    MockReadonlyFile foo = root.addFile("foo", "");
-    callback.changedFileContent(foo, MCP);
+  public void testChange() throws Exception {
+    MockDocumentHandle mdh = new MockDocumentHandle("id", "extra");
+    callback.changedDocument(mdh, MCP);
     Change c = queue.getNextChange();
-    assertEquals(Action.UPDATE_FILE_CONTENT, c.getAction());
-    assertEquals(foo.getPath(), c.getPath());
+    assertEquals(Change.FactoryType.CLIENT.name(),
+        c.getJson().get(Change.Field.FACTORY_TYPE.name()));
+    assertEquals(mdh, c.getDocumentHandle());
     assertEquals(MCP, c.getMonitorCheckpoint());
   }
 
-  public void testFileMetadataChange() throws InterruptedException {
-    MockReadonlyFile foo = root.addFile("foo", "");
-    callback.changedFileMetadata(foo, MCP);
-    Change c = queue.getNextChange();
-    assertEquals(Action.UPDATE_FILE_METADATA, c.getAction());
-    assertEquals(foo.getPath(), c.getPath());
-    assertEquals(MCP, c.getMonitorCheckpoint());
-  }
+  public void testEmptyQueue() throws Exception {
+    MockDocumentHandle mdhFoo = new MockDocumentHandle("foo", "extra");
+    MockDocumentHandle mdhBar = new MockDocumentHandle("foo", "extra");
 
-  public void testEmptyQueue() throws InterruptedException {
-    MockReadonlyFile foo = root.addFile("foo", "");
-    MockReadonlyFile bar = root.addFile("bar", "");
-    MockReadonlyFile zoo = root.addSubdir("zoo");
-
-    callback.newFile(foo, MCP);
-    callback.newFile(bar, MCP);
-    assertEquals(foo.getPath(), queue.getNextChange().getPath());
-    assertEquals(bar.getPath(), queue.getNextChange().getPath());
+    callback.newDocument(mdhFoo, MCP);
+    callback.newDocument(mdhBar, MCP);
+    assertEquals(mdhFoo, queue.getNextChange().getDocumentHandle());
+    assertEquals(mdhBar, queue.getNextChange().getDocumentHandle());
     assertNull(queue.getNextChange());
     assertNull(queue.getNextChange());
   }
@@ -89,7 +79,8 @@ public class ChangeQueueTest extends TestCase {
       public void run() {
         for (int k = 0; k < Integer.MAX_VALUE && !isInterrupted(); ++k) {
           try {
-            callback.newFile(root.addFile(String.format("%d", k), ""), MCP);
+            callback.newDocument(new MockDocumentHandle(
+                String.format("/root/%d", k), ""), MCP);
           } catch (InterruptedException e) {
             return;
           }
@@ -103,7 +94,8 @@ public class ChangeQueueTest extends TestCase {
     for (int k = 0; k < 1000; ++k) {
       Change c = queue.getNextChange();
       if (c != null) {
-        assertEquals(String.format("/root/%d", count), c.getPath());
+        assertEquals(String.format("/root/%d", count),
+            c.getDocumentHandle().getDocumentId());
         ++count;
       }
     }

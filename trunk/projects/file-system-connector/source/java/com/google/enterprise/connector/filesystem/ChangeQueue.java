@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.Change.Action;
+import com.google.enterprise.connector.diffing.DocumentHandle;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -26,14 +26,13 @@ import java.util.concurrent.BlockingQueue;
  *
  */
 class ChangeQueue implements ChangeSource {
-  private final BlockingQueue<Change> todo;
+  private final BlockingQueue<Change> pendingChanges;
 
   /** Milliseconds to sleep after a file-system scan that finds no changes. */
   private final long sleepInterval;
 
   /**
-   * This callback adds file-related changes to this queue, but ignores
-   * directory-related changes.
+   * Adds changes to this queue.
    */
   private class Callback implements FileSystemMonitor.Callback {
     private int changeCount = 0;
@@ -43,31 +42,24 @@ class ChangeQueue implements ChangeSource {
     }
 
     /* @Override */
-    public void changedFileContent(FileInfo file, MonitorCheckpoint mcp)
+    public void changedDocument(DocumentHandle dh, MonitorCheckpoint mcp)
         throws InterruptedException {
       ++changeCount;
-      todo.put(new Change(Action.UPDATE_FILE_CONTENT, file.getFileSystemType(), file.getPath(),
-          mcp));
+      pendingChanges.put(new Change(Change.FactoryType.CLIENT, dh, mcp));
     }
 
-    /* @Override */
-    public void changedFileMetadata(FileInfo file, MonitorCheckpoint mcp)
+     /* @Override */
+    public void deletedDocument(DocumentHandle dh, MonitorCheckpoint mcp)
         throws InterruptedException {
       ++changeCount;
-      todo.put(new Change(Action.UPDATE_FILE_METADATA, file.getFileSystemType(), file.getPath(),
-          mcp));
+      pendingChanges.put(new Change(Change.FactoryType.INTERNAL, dh, mcp));
     }
 
     /* @Override */
-    public void deletedFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException {
+    public void newDocument(DocumentHandle dh, MonitorCheckpoint mcp)
+        throws InterruptedException {
       ++changeCount;
-      todo.put(new Change(Action.DELETE_FILE, file.getFileSystemType(), file.getPath(), mcp));
-    }
-
-    /* @Override */
-    public void newFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException {
-      ++changeCount;
-      todo.put(new Change(Action.ADD_FILE, file.getFileSystemType(), file.getPath(), mcp));
+      pendingChanges.put(new Change(Change.FactoryType.CLIENT, dh, mcp));
     }
 
     /* @Override */
@@ -83,7 +75,7 @@ class ChangeQueue implements ChangeSource {
   }
 
   public ChangeQueue(int size, long sleepInterval) {
-    todo = new ArrayBlockingQueue<Change>(size);
+    pendingChanges = new ArrayBlockingQueue<Change>(size);
     this.sleepInterval = sleepInterval;
   }
 
@@ -99,11 +91,11 @@ class ChangeQueue implements ChangeSource {
    * @return the next available change, or null if no changes are available.
    */
   public Change getNextChange() {
-    return todo.poll();
+    return pendingChanges.poll();
   }
 
   /** Makes empty by removing all references from data structure. */
   void clear() {
-    todo.clear();
+    pendingChanges.clear();
   }
 }

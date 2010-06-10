@@ -13,21 +13,19 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
-import com.google.enterprise.connector.filesystem.MockDocumentSnapshot.Field;
+import com.google.enterprise.connector.diffing.DocumentHandleFactory;
+import com.google.enterprise.connector.filesystem.DeleteDocumentHandle.Field;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MockDocumentSnapshotFactory implements DocumentSnapshotFactory {
-
-  public MockDocumentSnapshot fromString(String stringForm) {
+public class DeleteDocumentHandleFactory implements DocumentHandleFactory {
+  public DeleteDocumentHandle fromString(String stringForm) {
     try {
       JSONObject json = new JSONObject(stringForm);
       checkForMissingRequiredFields(json);
-      return new MockDocumentSnapshot(
-          json.getString(Field.DOCUMENT_ID.name()),
-          json.getString(Field.EXTRA.name()));
+      return new DeleteDocumentHandle(
+          json.getString(Field.DOCUMENT_ID.name()));
     } catch (JSONException je) {
         throw new IllegalArgumentException(
             "Unable to parse serialized JSON Object " + stringForm, je);

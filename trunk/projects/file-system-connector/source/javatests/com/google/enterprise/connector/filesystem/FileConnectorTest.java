@@ -14,12 +14,14 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.Property;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.RepositoryLoginException;
 import com.google.enterprise.connector.spi.Session;
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalManager;
 import com.google.enterprise.connector.spi.Value;
 
@@ -41,7 +43,6 @@ public class FileConnectorTest extends TestCase {
 
   FileConnector connector;
 
-  private FileFetcher fetcher;
   private ChangeQueue changeQueue;
   private FileChecksumGenerator checksumGenerator;
   private String user;
@@ -75,8 +76,12 @@ public class FileConnectorTest extends TestCase {
     FileSystemTypeRegistry fileSystemTypeRegistry =
          new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType()));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
-    fetcher = new FileFetcher(fileSystemTypeRegistry, new MimeTypeFinder());
-    fetcher.setTraversalContext(new FakeTraversalContext());
+    TraversalContext traversalContext = new FakeTraversalContext();
+    TraversalContextManager tcm = new TraversalContextManager();
+    tcm.setTraversalContext(traversalContext);
+    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
+        fileSystemTypeRegistry, false, true, null, null, null,
+        new MimeTypeFinder(), tcm);
     changeQueue = new ChangeQueue(100, 10000);
     checksumGenerator = new FileChecksumGenerator("SHA1");
     TestDirectoryManager testDirectoryManager  = new TestDirectoryManager(this);
@@ -89,13 +94,17 @@ public class FileConnectorTest extends TestCase {
     password = null;
 
     CheckpointAndChangeQueue checkpointAndChangeQueue =
-        new CheckpointAndChangeQueue(changeQueue, persistDir);
+        new CheckpointAndChangeQueue(changeQueue, persistDir,
+            new DeleteDocumentHandleFactory(), clientFactory);
+    final boolean pushAcls = true;
+    final boolean markAllDocumentsPublic = false;
     fileSystemMonitorManager =
-        new FileSystemMonitorManagerImpl(snapshotDir, checksumGenerator, pathParser, changeQueue,
-            checkpointAndChangeQueue, includePatterns, excludePatterns, null, user, password,
-            startPaths);
+        new FileSystemMonitorManagerImpl(snapshotDir, checksumGenerator,
+            pathParser, changeQueue, checkpointAndChangeQueue, includePatterns,
+            excludePatterns, null, user, password, startPaths, tcm,
+            fileSystemTypeRegistry, pushAcls , markAllDocumentsPublic);
     connector =
-        new FileConnector(fetcher, authorizationManager, fileSystemMonitorManager);
+        new FileConnector(authorizationManager, fileSystemMonitorManager, tcm);
   }
 
   public void testGetSession()  {
@@ -236,7 +245,7 @@ public class FileConnectorTest extends TestCase {
       // Being tested for.
     }
   }
-  
+
   static class DocumentsAndCheckpoints {
     List<Document> docs = new ArrayList<Document>();
     List<String> points = new ArrayList<String>();
@@ -282,7 +291,7 @@ public class FileConnectorTest extends TestCase {
     String acceptedCheckpoint = all.points.get(accepted.size() - 1);
     assertNotNull(acceptedCheckpoint);
     assertEquals(TOTAL_DOC_COUNT, accepted.size() + toRedo.size());
-   
+
     mngr = session.getTraversalManager();
     DocumentsAndCheckpoints redo = waitToGet(mngr, false, secondPartSize, acceptedCheckpoint);
     assertEquals(toRedo.size(), redo.docs.size());
@@ -305,7 +314,7 @@ public class FileConnectorTest extends TestCase {
     String acceptedCheckpoint = all.points.get(accepted.size() - 1);
     assertNotNull(acceptedCheckpoint);
     assertEquals(TOTAL_DOC_COUNT, accepted.size() + toRedo.size());
-   
+
     DocumentsAndCheckpoints redo = waitToGet(mngr, false, secondPartSize, acceptedCheckpoint);
     assertEquals(toRedo.size(), redo.docs.size());
     for (int i = 0; i < toRedo.size(); i++) {

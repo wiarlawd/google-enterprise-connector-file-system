@@ -33,11 +33,16 @@ import java.util.Map;
 public class CheckpointAndChangeQueueTest extends TestCase {
   private File persistDir;
   private TestDirectoryManager testDirectoryManager;
+  private DeleteDocumentHandleFactory internalFactory;
+  private MockDocumentHandleFactory clientFactory;
 
   @Override
   public void setUp() throws IOException {
     testDirectoryManager = new TestDirectoryManager(this);
     persistDir = testDirectoryManager.makeDirectory("queue");
+    internalFactory = new DeleteDocumentHandleFactory();
+    clientFactory = new MockDocumentHandleFactory();
+
     deleteDir(persistDir);
     assertTrue(persistDir.mkdir());
   }
@@ -54,7 +59,7 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
     MockChangeSource(int count) {
       for (int ix = 0; ix < count; ix++) {
-        original.add(newChange(ix));
+        original.add(newChange(ix, PREFIX));
       }
       pending.addAll(original);
     }
@@ -64,14 +69,16 @@ public class CheckpointAndChangeQueueTest extends TestCase {
       pending.addAll(changes);
     }
 
-    static Change newChange(int ix) {
-      return new Change(Change.Action.ADD_FILE, "mOcK", PREFIX + ix,
-          new MonitorCheckpoint("monitorName", ix, ix, ix));
+    static Change newChange(int ix, String monitorName) {
+      //TODO add some deletes
+      MockDocumentHandle mdh = new MockDocumentHandle(PREFIX + ix,
+          "extra_" + monitorName);
+      return new Change(Change.FactoryType.CLIENT, mdh,
+          new MonitorCheckpoint(monitorName, ix, ix, ix));
     }
 
-    static Change newChange(int ix, String monitorName) {
-      return new Change(Change.Action.ADD_FILE, "mOcK", PREFIX + ix,
-          new MonitorCheckpoint(monitorName, ix, ix, ix));
+    static Change newChange(int ix) {
+      return newChange(ix, PREFIX);
     }
 
     /* @Override */
@@ -80,7 +87,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     }
 
     static void validateChange(int expected, Change c) {
-      int got = Integer.parseInt(c.getPath().substring(PREFIX.length()));
+      String documentId = c.getDocumentHandle().getDocumentId();
+      int got = Integer.parseInt(documentId.substring(PREFIX.length()));
       assertEquals(expected, got);
     }
   }
@@ -109,7 +117,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testStartResumeTraversal() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     String checkpoint = null;
@@ -127,7 +136,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testRetryStartThenResume() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     String checkpoint = null;
@@ -144,7 +154,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testRetryThenResume() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     String checkpoint = null;
@@ -163,7 +174,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testHalfStartBatch() throws IOException {
     ChangeSource changeSource = new MockChangeSource(8);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(3);
     q.start(null);
     Iterator<CheckpointAndChange> it = q.resume(null).iterator();
@@ -184,7 +196,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testStartWithEmptyChangeSource() throws IOException {
     ChangeSource changeSource = new MockChangeSource(0);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(3);
     q.start(null);
     Iterator<CheckpointAndChange> it = q.resume(null).iterator();
@@ -196,7 +209,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testResumeWithEmptyChangeSource() throws IOException {
     ChangeSource changeSource = new MockChangeSource(2);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     String checkpoint = null;
@@ -211,7 +225,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testStartWithPartialChangeSource() throws IOException {
     ChangeSource changeSource = new MockChangeSource(2);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(3);
     q.start(null);
     String checkpoint = null;
@@ -226,7 +241,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
    */
   public void testResumeWithPartialChangeSource() throws IOException {
     ChangeSource changeSource = new MockChangeSource(5);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(3);
     q.start(null);
     String checkpoint = null;
@@ -237,11 +253,14 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testRefillChangeSource() throws IOException {
     List<Change> changes =
-        Arrays.asList(MockChangeSource.newChange(0), MockChangeSource.newChange(1), null,
-            MockChangeSource.newChange(2), null, null, MockChangeSource.newChange(3),
+        Arrays.asList(MockChangeSource.newChange(0),
+            MockChangeSource.newChange(1), null,
+            MockChangeSource.newChange(2), null, null,
+            MockChangeSource.newChange(3),
             MockChangeSource.newChange(4));
     ChangeSource changeSource = new MockChangeSource(changes);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(5);
     q.start(null);
     String checkpoint = null;
@@ -269,14 +288,16 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testRecovery() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     List<CheckpointAndChange> firstBatch = q.resume(null);
     String checkpoint = firstBatch.get(1).getCheckpoint().toString();
     List<CheckpointAndChange> secondBatch = q.resume(checkpoint);
 
-    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q2.setMaximumQueueSize(2);
     q2.start(checkpoint);
     List<CheckpointAndChange> secondBatchAgain = q2.resume(checkpoint);
@@ -285,26 +306,30 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testRepeatedRecoveryAtSameCheckpoint() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     List<CheckpointAndChange> firstBatch = q.resume(null);
     String checkpoint = firstBatch.get(1).getCheckpoint().toString();
     List<CheckpointAndChange> secondBatch = q.resume(checkpoint);
 
-    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q2.setMaximumQueueSize(2);
     q2.start(checkpoint);
     List<CheckpointAndChange> secondBatchAgain = q2.resume(checkpoint);
     assertEquals(secondBatch, secondBatchAgain);
 
-    CheckpointAndChangeQueue q3 = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q3 = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory,clientFactory);
     q3.setMaximumQueueSize(2);
     q3.start(checkpoint);
     List<CheckpointAndChange> secondBatchThrice = q3.resume(checkpoint);
     assertEquals(secondBatch, secondBatchThrice);
 
-    CheckpointAndChangeQueue q4 = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q4 = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q4.setMaximumQueueSize(2);
     q4.start(checkpoint);
     List<CheckpointAndChange> secondBatchFourthTime = q4.resume(checkpoint);
@@ -313,14 +338,16 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testRepeatedResumeAtSameCheckpointOfSameQueue() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     List<CheckpointAndChange> firstBatch = q.resume(null);
     String checkpoint = firstBatch.get(1).getCheckpoint().toString();
     List<CheckpointAndChange> secondBatch = q.resume(checkpoint);
 
-    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q2.setMaximumQueueSize(2);
     q2.start(checkpoint);
     List<CheckpointAndChange> secondBatchAgain = q2.resume(checkpoint);
@@ -332,7 +359,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testPartialRecovery() throws IOException {
     ChangeSource changeSource = new MockChangeSource(10);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(4);
     q.start(null);
     List<CheckpointAndChange> firstBatch = q.resume(null);
@@ -340,7 +368,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     List<CheckpointAndChange> secondBatch = q.resume(checkpoint);
     checkpoint = secondBatch.get(1).getCheckpoint().toString();
 
-    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q2 = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q2.setMaximumQueueSize(4);
     q2.start(checkpoint);
     List<CheckpointAndChange> secondBatchRedoEnd = q2.resume(checkpoint);
@@ -351,7 +380,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
   public void testRecoveryStateCleanup() throws IOException {
     final int NUM_RESUME_CALLS = 20;
     ChangeSource changeSource = new MockChangeSource(NUM_RESUME_CALLS * 3);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     String checkpoint = null;
     q.start(checkpoint);
@@ -365,7 +395,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testTooManyRecoveryFiles() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     {
       File persistFile = new File(persistDir, "recovery.1234");
       FileWriter writer = new FileWriter(persistFile);
@@ -395,7 +426,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testInvalidRecoveryFilename() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     File persistFile = new File(persistDir, "recovery.sugar-n-spice");
     FileWriter writer = new FileWriter(persistFile);
     writer.write("oh so not relevent");
@@ -415,7 +447,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
     { /* Make recovery file that finishes 2nd batch. */
       ChangeSource changeSource = new MockChangeSource(6);
-      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirA);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+          persistDirA, internalFactory, clientFactory);
       q.setMaximumQueueSize(2);
       q.start(null);
       List<CheckpointAndChange> firstBatch = q.resume(null);
@@ -431,7 +464,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     String checkpoint;
     { /* Make recovery file that finishes 1st batch. */
       ChangeSource changeSource = new MockChangeSource(6);
-      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirB);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+          persistDirB, internalFactory, clientFactory);
       q.setMaximumQueueSize(2);
       q.start(null);
       List<CheckpointAndChange> firstBatch = q.resume(null);
@@ -442,7 +476,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     }
 
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(checkpoint);
     List<CheckpointAndChange> secondBatchAgain = q.resume(checkpoint);
@@ -458,7 +493,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     List<CheckpointAndChange> secondBatch;
     {
       ChangeSource changeSource = new MockChangeSource(6);
-      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirAux);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+          persistDirAux, internalFactory, clientFactory);
       q.setMaximumQueueSize(2);
       q.start(null);
       List<CheckpointAndChange> firstBatch = q.resume(null);
@@ -474,7 +510,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     writer.close();
 
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(checkpoint);
     List<CheckpointAndChange> secondBatchAgain = q.resume(checkpoint);
@@ -485,7 +522,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testRecoveryFromOneIncompleteFileOnly() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     File persistFile = new File(persistDir, "recovery.1234");
     FileWriter writer = new FileWriter(persistFile);
     writer.write("omonee-harmony");
@@ -501,7 +539,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
 
   public void testReStart() throws IOException {
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(null);
     List<CheckpointAndChange> firstBatch = q.resume(null);
@@ -516,7 +555,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
   public void testWithMoreResumeCallsThanFileDescriptors() throws IOException {
     final int NUM_RESUME_CALLS = 1000;
     ChangeSource changeSource = new MockChangeSource(NUM_RESUME_CALLS * 3);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     String checkpoint = null;
     q.start(checkpoint);
@@ -535,7 +575,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
         newChange(0, MON_A), newChange(0, MON_B), newChange(1, MON_A),
         newChange(1, MON_B), newChange(2, MON_B), newChange(2, MON_A)
     }));
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     String checkpoint = null;
     q.start(checkpoint);
@@ -584,7 +625,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
         newChange(1, MON_B), newChange(2, MON_B), newChange(2, MON_A),
         newChange(2, MON_E), newChange(2, MON_C), newChange(2, MON_D),
     }));
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(15);
     String checkpoint = null;
     q.start(checkpoint);
@@ -605,7 +647,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     String checkpoint = null;
     { /* Make recovery file that finishes 2nd batch. */
       ChangeSource changeSource = new MockChangeSource(6);
-      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirSeed);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+          persistDirSeed, internalFactory, clientFactory);
       q.setMaximumQueueSize(2);
       q.start(checkpoint);
       List<CheckpointAndChange> firstBatch = q.resume(checkpoint);
@@ -621,7 +664,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     }
 
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(checkpoint);
     // Note: It's important that q.resume(checkpoint) is not called.
@@ -636,7 +680,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     String checkpoint = null;
     { /* Make recovery file that finishes 2nd batch. */
       ChangeSource changeSource = new MockChangeSource(6);
-      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDirSeed);
+      CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+          persistDirSeed, internalFactory, clientFactory);
       q.setMaximumQueueSize(2);
       q.start(checkpoint);
       List<CheckpointAndChange> firstBatch = q.resume(checkpoint);
@@ -652,7 +697,8 @@ public class CheckpointAndChangeQueueTest extends TestCase {
     }
 
     ChangeSource changeSource = new MockChangeSource(6);
-    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource, persistDir);
+    CheckpointAndChangeQueue q = new CheckpointAndChangeQueue(changeSource,
+        persistDir, internalFactory, clientFactory);
     q.setMaximumQueueSize(2);
     q.start(checkpoint);
     // Note: It's important that q.resume(checkpoint) is not called.

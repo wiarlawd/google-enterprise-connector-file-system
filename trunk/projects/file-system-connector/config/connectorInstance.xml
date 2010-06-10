@@ -31,16 +31,6 @@
   <bean id="mime-type-finder" 
         class = "com.google.enterprise.connector.filesystem.MimeTypeFinder"/>
 
-  <bean id="file-fetcher" class="com.google.enterprise.connector.filesystem.FileFetcher">
-    <constructor-arg index="0" ref="file-system-type-registry"/>
-    <constructor-arg index="1" value="true"/>
-    <constructor-arg index="2" value="false"/>
-    <constructor-arg index="3" value="${domain}"/>
-    <constructor-arg index="4" value="${user}"/>
-    <constructor-arg index="5" value="${password}"/>
-    <constructor-arg index="6" ref="mime-type-finder"/>
-  </bean>
-
   <bean id = "change-queue"
         class = "com.google.enterprise.connector.filesystem.ChangeQueue">
     <constructor-arg index="0" value="100"/>
@@ -58,11 +48,36 @@
         singleton = "false">
     <constructor-arg index="0" value="${googleConnectorWorkDir}/snapshots"/>
   </bean>
+  
+  <bean id = "internal-document-handle-factory"
+        class = "com.google.enterprise.connector.filesystem.DeleteDocumentHandleFactory"
+        singleton = "true">
+  </bean>
+  
+  <bean id = "traversal-context-manager"
+        class = "com.google.enterprise.connector.diffing.TraversalContextManager"
+        singleton = "true">
+  </bean>
+  
+  <bean id = "client-document-handle-factory"
+        class = "com.google.enterprise.connector.filesystem.FileDocumentHandleFactory"
+        singleton = "true">
+    <constructor-arg ref="file-system-type-registry"/>
+    <constructor-arg value="true"/>
+    <constructor-arg value="false"/>
+    <constructor-arg value="${domain}"/>
+    <constructor-arg value="${user}"/>
+    <constructor-arg value="${password}"/>
+    <constructor-arg ref="mime-type-finder"/>
+    <constructor-arg ref="traversal-context-manager"/>
+  </bean>
 
   <bean id = "checkpoint-and-change-queue"
         class = "com.google.enterprise.connector.filesystem.CheckpointAndChangeQueue">
-    <constructor-arg index="0" ref="change-queue"/>
-    <constructor-arg index="1" ref="queue-dir"/>
+    <constructor-arg ref="change-queue"/>
+    <constructor-arg ref="queue-dir"/>
+    <constructor-arg ref="internal-document-handle-factory"/>
+    <constructor-arg ref="client-document-handle-factory"/>
   </bean>
 
   <bean id = "checksum-generator"
@@ -171,13 +186,17 @@
         <value>${start_23}</value>
       </list>
     </constructor-arg>
+    <constructor-arg index="11" ref="traversal-context-manager"/>
+    <constructor-arg index="12" ref="file-system-type-registry"/>
+    <constructor-arg index="13" value="true"/>
+    <constructor-arg index="14" value="false"/>
   </bean>
 
   <bean id = "file-connector"
         class = "com.google.enterprise.connector.filesystem.FileConnector"
         singleton = "false">
-    <constructor-arg index="0" ref="file-fetcher"/>
-    <constructor-arg index="1" ref="authz"/>
-    <constructor-arg index="2" ref="filesystem-monitor-manager"/>
+    <constructor-arg ref="authz"/>
+    <constructor-arg ref="filesystem-monitor-manager"/>
+    <constructor-arg ref="traversal-context-manager"/>
   </bean>
 </beans>

@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentHandle;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
@@ -21,7 +22,6 @@ import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeExceptio
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -64,15 +64,14 @@ public class FileSystemMonitor implements Runnable {
   public static interface Callback {
     public void passBegin() throws InterruptedException;
 
-    public void newFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException;
+    public void newDocument(DocumentHandle documentHandle,
+        MonitorCheckpoint mcp) throws InterruptedException;
 
-    public void deletedFile(FileInfo file, MonitorCheckpoint mcp) throws InterruptedException;
+    public void deletedDocument(DocumentHandle documentHandle,
+        MonitorCheckpoint mcp) throws InterruptedException;
 
-    public void changedFileContent(FileInfo string, MonitorCheckpoint mcp)
-        throws InterruptedException;
-
-    public void changedFileMetadata(FileInfo file, MonitorCheckpoint mcp)
-        throws InterruptedException;
+    public void changedDocument(DocumentHandle documentHandle,
+        MonitorCheckpoint mcp) throws InterruptedException;
 
     public void passComplete(MonitorCheckpoint mcp) throws InterruptedException;
 
@@ -108,10 +107,6 @@ public class FileSystemMonitor implements Runnable {
 
   private final DocumentSink documentSink;
 
-  // The file system name for this file system monitor
-  // TODO Remvoe after refactoring Callback
-  private final String filesys;
-
   /* Contains a checkpoint confirmation from CM. */
   private MonitorCheckpoint guaranteeCheckpoint;
 
@@ -125,8 +120,6 @@ public class FileSystemMonitor implements Runnable {
    * @param callback client callback
    * @param documentSink destination for filtered out file info
    * @param initialCp checkpoint when system initiated, could be null
-   * @param filesys name of file system type for this
-   *        {@link FileSystemMonitor} (TODO remove)
    * @param documentSnapshotFactory for un-serializing
    *        {@link DocumentSnapshot} objects.
    */
@@ -134,7 +127,7 @@ public class FileSystemMonitor implements Runnable {
       SnapshotRepository<? extends DocumentSnapshot> query,
       SnapshotStore snapshotStore, Callback callback,
       DocumentSink documentSink, MonitorCheckpoint initialCp,
-      String filesys, DocumentSnapshotFactory documentSnapshotFactory) {
+      DocumentSnapshotFactory documentSnapshotFactory) {
     this.name = name;
     this.query = query;
     this.snapshotStore = snapshotStore;
@@ -142,7 +135,6 @@ public class FileSystemMonitor implements Runnable {
     this.documentSnapshotFactory = documentSnapshotFactory;
     this.documentSink = documentSink;
     guaranteeCheckpoint = initialCp;
-    this.filesys = filesys;
   }
 
   /**
@@ -306,19 +298,20 @@ public class FileSystemMonitor implements Runnable {
    * @throws SnapshotReaderException
    * @throws InterruptedException
    */
-  private void processDeletes(DocumentSnapshot documentSnapshot) throws SnapshotReaderException,
-      InterruptedException {
+  private void processDeletes(DocumentSnapshot documentSnapshot)
+      throws SnapshotReaderException, InterruptedException {
     while (current != null
         && (documentSnapshot == null
             || pathCompare(documentSnapshot.getDocumentId(), current) > 0)) {
-      callback.deletedFile(new DocumentSnapshotFileInfo(current),
-          getCheckpoint());
+      callback.deletedDocument(
+          new DeleteDocumentHandle(current.getDocumentId()), getCheckpoint());
       current = snapshotReader.read();
     }
   }
 
-  private void safelyProcessDocumentSnapshot(DocumentSnapshot snapshot) throws  InterruptedException,
-      SnapshotReaderException, SnapshotWriterException {
+  private void safelyProcessDocumentSnapshot(DocumentSnapshot snapshot)
+      throws InterruptedException, SnapshotReaderException,
+      SnapshotWriterException {
     try {
       processDocument(snapshot);
     } catch (RepositoryException re) {
@@ -336,23 +329,21 @@ public class FileSystemMonitor implements Runnable {
    * @throws SnapshotReaderException
    * @throws SnapshotWriterException
    */
-  private void processDocument(DocumentSnapshot documentSnapshot) throws  InterruptedException,
-      RepositoryException, SnapshotReaderException, SnapshotWriterException {
+  private void processDocument(DocumentSnapshot documentSnapshot)
+      throws InterruptedException, RepositoryException, SnapshotReaderException,
+          SnapshotWriterException {
     // At this point 'current' >= 'file', or possibly current == null if
     // we've processed the previous snapshot entirely.
     if (current != null && (pathCompare(documentSnapshot.getDocumentId(), current) == 0)) {
       processPossibleChange(documentSnapshot);
     } else {
       // This file didn't exist during the previous scan.
-      // TODO The following code converts from DcoumentSnapshot/DcoumentHandle to
-      //      Changes until the ChangeQueue are converted.
-      FileDocumentSnapshot fds = (FileDocumentSnapshot)documentSnapshot;
-      FileDocumentHandle fdh  = fds.getUpdate(null);
-      snapshotWriter.write(fds);
+      DocumentHandle documentHandle  = documentSnapshot.getUpdate(null);
+      snapshotWriter.write(documentSnapshot);
 
       // Null if filtered due to mime-type.
-      if (fdh != null) {
-        callback.newFile(new DocumentSnapshotFileInfo(documentSnapshot), getCheckpoint(-1));
+      if (documentHandle != null) {
+        callback.newDocument(documentHandle, getCheckpoint(-1));
       }
     }
   }
@@ -370,21 +361,13 @@ public class FileSystemMonitor implements Runnable {
    */
   private void processPossibleChange(DocumentSnapshot documentSnapshot) throws RepositoryException,
       InterruptedException, SnapshotWriterException, SnapshotReaderException {
-
-    // TODO The following code converts from DcoumentSnapshot/DcoumentHandle to
-    //      Changes until ChangeQueue are converted.
-    FileDocumentSnapshot fds = (FileDocumentSnapshot)documentSnapshot;
-    FileDocumentHandle fdh = fds.getUpdate(current);
-    snapshotWriter.write(fds);
-    if (fdh == null) {
+    DocumentHandle documentHandle = documentSnapshot.getUpdate(current);
+    snapshotWriter.write(documentSnapshot);
+    if (documentHandle == null) {
       // No change.
-    } else if (fdh.isDelete()) {
-      // Changed and now has unsupported mime-type - write the snapshot but
-      // send the gsa a delete.
-      callback.deletedFile(new DocumentSnapshotFileInfo(fds), getCheckpoint());
     } else {
       // Normal change - send the gsa an update.
-      callback.changedFileContent(new DocumentSnapshotFileInfo(fds), getCheckpoint());
+      callback.changedDocument(documentHandle, getCheckpoint());
     }
     current = snapshotReader.read();
   }
@@ -392,50 +375,5 @@ public class FileSystemMonitor implements Runnable {
   void acceptGuarantee(MonitorCheckpoint cp) {
     snapshotStore.acceptGuarantee(cp);
     guaranteeCheckpoint = cp;
-  }
-
-  //TODO Temporary bridge between document snapshots and FileInfo's
-  //     until ChangeQueue is converted to work with
-  //     DocumentSnapshots.
-  private class DocumentSnapshotFileInfo implements FileInfo {
-    private final DocumentSnapshot documentSnapshot;
-    DocumentSnapshotFileInfo(DocumentSnapshot documentSnapshot) {
-      this.documentSnapshot = documentSnapshot;
-    }
-
-    /* @Override */
-    public Acl getAcl() {
-      throw new UnsupportedOperationException();
-    }
-
-    /* @Override */
-    public String getFileSystemType() {
-      return filesys;
-    }
-
-    /* @Override */
-    public InputStream getInputStream() {
-      throw new UnsupportedOperationException();
-    }
-
-    /* @Override */
-    public long getLastModified() {
-      throw new UnsupportedOperationException();
-    }
-
-    /* @Override */
-    public String getPath() {
-      return documentSnapshot.getDocumentId();
-    }
-
-    /* @Override */
-    public boolean isDirectory() {
-      throw new UnsupportedOperationException();
-    }
-
-    /* @Override */
-    public boolean isRegularFile() {
-     throw new UnsupportedOperationException();
-    }
   }
 }

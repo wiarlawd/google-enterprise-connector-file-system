@@ -15,12 +15,14 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -35,14 +37,23 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
   private static final TraversalContext TRAVERSAL_CONTEXT =
       new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE);
   private static MimeTypeFinder MIME_TYPE_FINDER = new MimeTypeFinder();
+  private static final Credentials CREDENTIALS = null;
+  private static final boolean PUSH_ACLS = true;
+  private static final boolean MARK_ALL_DOCUMENTS_PUBLIC = false;
 
   private static FileDocumentSnapshotRepository
-      newFileDocumentSnapshotRepository(ReadonlyFile<?> root,
+      newFileDocumentSnapshotRepository(MockReadonlyFile root,
           TestFileSink sink, FilePatternMatcher matcher) {
+    TraversalContextManager tcm = new TraversalContextManager();
+    tcm.setTraversalContext(TRAVERSAL_CONTEXT);
+    FileSystemTypeRegistry fileSystemTypeRegistry =
+        new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
+
     FileDocumentSnapshotRepository result =
         new FileDocumentSnapshotRepository(root, sink, matcher,
-            TRAVERSAL_CONTEXT, CHECKSUM_GENERATOR, SystemClock.INSTANCE,
-            MIME_TYPE_FINDER);
+            tcm, CHECKSUM_GENERATOR, SystemClock.INSTANCE,
+            MIME_TYPE_FINDER, CREDENTIALS, fileSystemTypeRegistry,
+            PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
     return result;
   }
 
@@ -145,10 +156,15 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
     MockReadonlyFile d1f1 = d1.addFile("d1f1", maxSizeData);
     MockReadonlyFile d1fTooBig1 = d1.addFile("d1fTooBig1", tooBigData);
     TestFileSink sink = new TestFileSink();
+    TraversalContextManager tcm = new TraversalContextManager();
+    tcm.setTraversalContext(new FakeTraversalContext(maxSizeData.length()));
+    FileSystemTypeRegistry fileSystemTypeRegistry =
+      new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
     FileDocumentSnapshotRepository dsr =
       new FileDocumentSnapshotRepository(root, sink, ALL_MATCHER,
-          new FakeTraversalContext(maxSizeData.length()), CHECKSUM_GENERATOR,
-          SystemClock.INSTANCE, MIME_TYPE_FINDER);
+          tcm , CHECKSUM_GENERATOR, SystemClock.INSTANCE, MIME_TYPE_FINDER,
+          CREDENTIALS, fileSystemTypeRegistry, PUSH_ACLS,
+          MARK_ALL_DOCUMENTS_PUBLIC);
     for(int ix= 0; ix < 2; ix++) {
       Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());

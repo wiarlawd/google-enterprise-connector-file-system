@@ -15,6 +15,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.diffing.DocumentHandle;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
 
@@ -63,19 +64,21 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
   private long scanTime;
   private boolean isStable;
 
-  FileDocumentSnapshot(String filesys, String path) {
+  private FileDocumentSnapshot(String filesys, String path) {
     this.filesys = filesys;
     this.path = path;
   }
 
   FileDocumentSnapshot(ReadonlyFile<?> file,
-      ChecksumGenerator checksomeGenerator,
-      Clock clock, TraversalContext traversalContext,
-      MimeTypeFinder mimeTypeFinder,
-      DocumentSink documentSink) {
+      ChecksumGenerator checksomeGenerator, Clock clock,
+      TraversalContextManager traversalContextManager,
+      MimeTypeFinder mimeTypeFinder, DocumentSink documentSink,
+      Credentials credentials, FileSystemTypeRegistry fileSystemTypeRegistry,
+      boolean pushAcls, boolean markAllDcoumentsPublic) {
     this(file.getFileSystemType(), file.getPath());
     getUpdateSupport = new GetUpdateSupport(file, checksomeGenerator, clock,
-        traversalContext, mimeTypeFinder, documentSink);
+        traversalContextManager, mimeTypeFinder, documentSink, credentials,
+        fileSystemTypeRegistry, pushAcls, markAllDcoumentsPublic);
   }
 
   FileDocumentSnapshot(String filesys, String path, long lastModified, Acl acl,
@@ -254,19 +257,29 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
     private final ReadonlyFile<?> file;
     private final ChecksumGenerator checksumGenerator;
     private final Clock clock;
-    private final TraversalContext traversalContext;
+    private final TraversalContextManager traversalContextManager;
     private final MimeTypeFinder mimeTypeFinder;
     private final DocumentSink documentSink;
+    private final Credentials credentials;
+    private final FileSystemTypeRegistry fileSystemTyepRegistry;
+    private final boolean pushAcls;
+    private final boolean markAllDocumentsPublic;
 
-    GetUpdateSupport(ReadonlyFile<?> file, ChecksumGenerator checksomGenerator, Clock clock,
-        TraversalContext traversalContext, MimeTypeFinder mimeTypeFinder,
-        DocumentSink documentSink) {
+    GetUpdateSupport(ReadonlyFile<?> file, ChecksumGenerator checksomGenerator,
+        Clock clock, TraversalContextManager traversalContextManager,
+        MimeTypeFinder mimeTypeFinder, DocumentSink documentSink,
+        Credentials credentials, FileSystemTypeRegistry fileSystemTypeRegistry,
+        boolean pushAcls, boolean markAllDcoumentsPublic) {
       this.file = file;
       this.checksumGenerator = checksomGenerator;
       this.clock = clock;
-      this.traversalContext = traversalContext;
+      this.traversalContextManager = traversalContextManager;
       this.mimeTypeFinder = mimeTypeFinder;
       this.documentSink = documentSink;
+      this.credentials = credentials;
+      this.fileSystemTyepRegistry = fileSystemTypeRegistry;
+      this.pushAcls = pushAcls;
+      this.markAllDocumentsPublic = markAllDcoumentsPublic;
     }
 
     /**
@@ -349,11 +362,13 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
           // Calculating the mime type is expensive so we only do this when
           // we see a change.
           if (isMimeTypeSupported(file)) {
-            return new FileDocumentHandle(getFilesys(), getPath(), false);
+            return new FileDocumentHandle(getFilesys(), getPath(), false,
+                getDocumentContext());
           } else if (gsaSnapshot == null){
             return null;
           } else {
-            return new FileDocumentHandle(getFilesys(), getPath(), true);
+            return new FileDocumentHandle(getFilesys(), getPath(), true,
+                getDocumentContext());
           }
         } else {
           checksum = gsaSnapshot.getChecksum();
@@ -368,7 +383,15 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
       }
     }
 
+    private FileDocumentHandle.DocumentContext getDocumentContext() {
+      return new FileDocumentHandle.DocumentContext(fileSystemTyepRegistry,
+          pushAcls, markAllDocumentsPublic, credentials, mimeTypeFinder,
+          traversalContextManager);
+    }
+
     private boolean isMimeTypeSupported(FileInfo f) {
+      TraversalContext traversalContext =
+          traversalContextManager.getTraversalContext();
       if (traversalContext == null) {
         return true;
       }

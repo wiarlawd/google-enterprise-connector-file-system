@@ -14,17 +14,17 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.Change.Action;
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SpiConstants;
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.Value;
 
 import junit.framework.TestCase;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.LinkedList;
 
 /**
@@ -45,14 +45,16 @@ public class FileTraversalManagerTest extends TestCase {
   private static class MockChangeQueue extends ChangeQueue {
     private final LinkedList<Change> changes = new LinkedList<Change>();
 
-    public MockChangeQueue(FileSystemType fileFactory, MockReadonlyFile root, int count) {
+    public MockChangeQueue(FileSystemType fileFactory, MockReadonlyFile root,
+        int count) {
       super(1, 0);
 
       for (int k = 0; k < count; ++k) {
-        String fileName = String.format("file.%d", k);
-        ReadonlyFile<?> file = root.addFile(fileName, "");
+        String id = mkDocumentId(k);
+        MockDocumentHandle mdh = new MockDocumentHandle(id,
+            "content for " + id);
         MonitorCheckpoint mcp = new MonitorCheckpoint("foo", 0, 1L, 2L);
-        Change change = new Change(Action.ADD_FILE, fileFactory.getName(), file.getPath(), mcp);
+        Change change = new Change(Change.FactoryType.CLIENT, mdh, mcp);
         changes.add(change);
       }
     }
@@ -63,17 +65,22 @@ public class FileTraversalManagerTest extends TestCase {
     }
   }
 
+  private static String mkDocumentId(int ix) {
+    return String.format("/foo/bar/file.%d", ix);
+  }
+
   @Override
   public void setUp() throws IOException {
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
     FileSystemType fileFactory = new MockFileSystemType(root);
-    FileFetcher fileFetcher =
-        new FileFetcher(new FileSystemTypeRegistry(Arrays.asList(fileFactory)),
-            new MimeTypeFinder());
-    fileFetcher.setTraversalContext(new FakeTraversalContext());
-    queue = new MockChangeQueue(fileFactory, root, BATCH_COUNT * BATCH_SIZE + EXTRA);
-    fileSystemMonitorManager = new FakeFileSystemMonitorManager(queue, this);
-    tm = new FileTraversalManager(fileFetcher, fileSystemMonitorManager);
+    queue = new MockChangeQueue(fileFactory, root,
+        BATCH_COUNT * BATCH_SIZE + EXTRA);
+    fileSystemMonitorManager = new FakeFileSystemMonitorManager(queue, this,
+        new DeleteDocumentHandleFactory(), new MockDocumentHandleFactory());
+    TraversalContext traversalContext = new FakeTraversalContext();
+    TraversalContextManager tcm = new TraversalContextManager();
+    tcm.setTraversalContext(traversalContext);
+    tm = new FileTraversalManager(fileSystemMonitorManager, tcm);
     tm.setTraversalContext(new FakeTraversalContext());
     tm.setBatchHint(BATCH_SIZE);
   }
@@ -86,7 +93,8 @@ public class FileTraversalManagerTest extends TestCase {
   }
 
   public void testResumeFirstTime() throws Exception {
-    String checkpoint = FileConnectorCheckpoint.newFirst().nextMajor().next().next().toString();
+    String checkpoint =
+        FileConnectorCheckpoint.newFirst().nextMajor().next().next().toString();
     runTraversal(checkpoint);
   }
 
@@ -141,7 +149,7 @@ public class FileTraversalManagerTest extends TestCase {
         Document doc = docs.nextDocument();
         assertNotNull(doc);
         String docId = Value.getSingleValueString(doc, SpiConstants.PROPNAME_DOCID);
-        assertEquals(String.format("/foo/bar/file.%d", batch * BATCH_SIZE + k), 
+        assertEquals(String.format("/foo/bar/file.%d", batch * BATCH_SIZE + k),
             DocIdUtil.idToPath(docId));
       }
       assertNull(docs.nextDocument());

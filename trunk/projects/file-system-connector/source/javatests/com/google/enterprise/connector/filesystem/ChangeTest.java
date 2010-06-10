@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,48 +14,45 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.Change.Action;
-
 import junit.framework.TestCase;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
  */
 public class ChangeTest extends TestCase {
-  private static final String PATH = "smb://host.com/foo/bar.txt";
-  private static final String FILE_SYSTEM_TYPE = "smb";
-  private static final Action ACTION = Action.ADD_FILE;
   private static final MonitorCheckpoint MCP =
       new MonitorCheckpoint("foo", 13, 9876543210L, 1234567890L);
 
-  private static Change c = new Change(ACTION, FILE_SYSTEM_TYPE, PATH, MCP);
+  private DeleteDocumentHandleFactory internalFactory;
+  private MockDocumentHandleFactory clientFactory;
 
-  public void testGetters() {
-    assertEquals(ACTION, c.getAction());
-    assertEquals(FILE_SYSTEM_TYPE, c.getFileSystemType());
-    assertEquals(PATH, c.getPath());
+  @Override
+  public void setUp() {
+    internalFactory = new DeleteDocumentHandleFactory();
+    clientFactory = new MockDocumentHandleFactory();
+    }
+
+  public void testChange_fromJsonInternalFactory() throws Exception {
+    DeleteDocumentHandle ddh = new DeleteDocumentHandle("abc");
+    Change c = new Change(Change.FactoryType.INTERNAL, ddh, MCP);
+    String stringForm = c.getJson().toString();
+    JSONObject json = new JSONObject(stringForm);
+    Change copy = new Change(json, internalFactory, clientFactory);
+    assertEquals(c.getMonitorCheckpoint(), copy.getMonitorCheckpoint());
+    assertEquals(c.getDocumentHandle().getDocumentId(),
+        copy.getDocumentHandle().getDocumentId());
   }
 
-  public void testEquals() {
-    Change c2 = new Change(ACTION, FILE_SYSTEM_TYPE, PATH, MCP);
-    assertEquals(c, c2);
-
-    Change c3 = new Change(Action.ADD_DIR, FILE_SYSTEM_TYPE, PATH, MCP);
-    assertFalse(c.equals(c3));
-
-    Change c4 = new Change(Action.ADD_FILE, "java", PATH, MCP);
-    assertFalse(c.equals(c4));
-
-    Change c5 = new Change(Action.ADD_FILE, FILE_SYSTEM_TYPE, PATH + "foo", MCP);
-    assertFalse(c.equals(c5));
-
-    assertFalse(c.equals("foo"));
-  }
-
-  public void testJson() throws JSONException {
-    JSONObject json = c.getJson();
-    assertEquals(c, new Change(json));
+  public void testChange_fromJsonClientFactory() throws Exception {
+    MockDocumentHandle mdh = new MockDocumentHandle("aa", "extra");
+    Change c = new Change(Change.FactoryType.CLIENT, mdh, MCP);
+    String stringForm = c.getJson().toString();
+    JSONObject json = new JSONObject(stringForm);
+    Change copy = new Change(json, internalFactory, clientFactory);
+    assertEquals(c.getMonitorCheckpoint(), copy.getMonitorCheckpoint());
+    MockDocumentHandle mdhCopy = (MockDocumentHandle)copy.getDocumentHandle();
+    assertEquals(mdhCopy.getDocumentId(), mdh.getDocumentId());
+    assertEquals(mdhCopy.getExtra(), mdh.getExtra());
   }
 }

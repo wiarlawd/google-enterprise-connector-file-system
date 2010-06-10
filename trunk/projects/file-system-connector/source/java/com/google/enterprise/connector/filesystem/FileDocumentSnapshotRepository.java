@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;
@@ -44,23 +45,35 @@ public class FileDocumentSnapshotRepository
   private final ReadonlyFile<?> root;
   private final DocumentSink fileSink;
   private final FilePatternMatcher matcher;
-  private final TraversalContext traversalContext;
+  private final TraversalContextManager traversalContextManager;
   private final ChecksumGenerator checksumGenerator;
   private final Clock clock;
   private final MimeTypeFinder mimeTypeFinder;
+  private final Credentials credentials;
+  private final FileSystemTypeRegistry fileSystemTypeRegistry;
+  private final boolean pushAcls;
+  private final boolean markAllDcoumentsPublic;
 
 
 
-  FileDocumentSnapshotRepository(ReadonlyFile<?> root, DocumentSink fileSink, FilePatternMatcher matcher,
-      TraversalContext traversalContext, ChecksumGenerator checksomeGenerator, Clock clock,
-      MimeTypeFinder mimeTypeFinder) {
+  FileDocumentSnapshotRepository(ReadonlyFile<?> root, DocumentSink fileSink,
+      FilePatternMatcher matcher,
+      TraversalContextManager traversalContextManager,
+      ChecksumGenerator checksomeGenerator, Clock clock,
+      MimeTypeFinder mimeTypeFinder, Credentials credentials,
+      FileSystemTypeRegistry fileSystemTypeRegistry,
+      boolean pushAcls, boolean markAllDcoumentsPublic) {
     this.root = root;
     this.fileSink = fileSink;
-    this.traversalContext = traversalContext;
+    this.traversalContextManager = traversalContextManager;
     this.matcher = matcher;
     this.checksumGenerator = checksomeGenerator;
     this.clock = clock;
     this.mimeTypeFinder = mimeTypeFinder;
+    this.credentials = credentials;
+    this.fileSystemTypeRegistry = fileSystemTypeRegistry;
+    this.pushAcls = pushAcls;
+    this.markAllDcoumentsPublic = markAllDcoumentsPublic;
   }
 
   /* @Override */
@@ -129,6 +142,8 @@ public class FileDocumentSnapshotRepository
 
     boolean isQualifiyingFile(ReadonlyFile<?> f) throws SnapshotRepositoryRuntimeException {
       try {
+        TraversalContext traversalContext =
+            traversalContextManager.getTraversalContext();
         if ((traversalContext != null)
             && (traversalContext.maxDocumentSize() < f.length())) {
           fileSink.add(f.getPath(), FilterReason.TOO_BIG);
@@ -158,10 +173,12 @@ public class FileDocumentSnapshotRepository
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      ReadonlyFile<?> next = traversalStateStack.get(traversalStateStack.size() - 1).remove(0);
+      ReadonlyFile<?> next = traversalStateStack.get(
+          traversalStateStack.size() - 1).remove(0);
       return new FileDocumentSnapshot(next, checksumGenerator,
-          clock,  traversalContext, mimeTypeFinder,
-          fileSink);
+          clock,  traversalContextManager, mimeTypeFinder,
+          fileSink, credentials, fileSystemTypeRegistry,
+          pushAcls, markAllDcoumentsPublic);
     }
 
     /* @Override */

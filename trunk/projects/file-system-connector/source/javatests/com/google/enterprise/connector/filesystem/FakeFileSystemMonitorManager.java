@@ -13,7 +13,7 @@
 // limitations under the License.
 
 package com.google.enterprise.connector.filesystem;
-import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.diffing.DocumentHandleFactory;
 
 import junit.framework.TestCase;
 
@@ -33,14 +33,19 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
   private final CheckpointAndChangeQueue checkpointAndChangeQueue;
   private boolean isRunning = false;
 
-  FakeFileSystemMonitorManager(ChangeSource changeSource, TestCase testCase) throws IOException {
+  FakeFileSystemMonitorManager(ChangeSource changeSource, TestCase testCase,
+      DocumentHandleFactory internalFactory,
+      DocumentHandleFactory clientFactory)
+      throws IOException {
     File persistDir = new TestDirectoryManager(testCase).makeDirectory("queue");
-    checkpointAndChangeQueue =
-        (changeSource == null) ? null : new CheckpointAndChangeQueue(changeSource, persistDir);
+    checkpointAndChangeQueue = (changeSource == null) ? null :
+        new CheckpointAndChangeQueue(changeSource, persistDir, internalFactory,
+            clientFactory);
     try {
       this.checkpointAndChangeQueue.start(null);
     } catch (IOException e) {
-      throw new IllegalStateException("Unexpectedatly cannot start CheckpointAndChangeQueue.", e);
+      throw new IllegalStateException(
+          "Unexpectedatly cannot start CheckpointAndChangeQueue.", e);
     }
   }
 
@@ -55,7 +60,7 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
   }
 
   /* @Override */
-  public void start(String checkpoint, TraversalContext traversalContext) {
+  public void start(String checkpoint) {
     startCount.incrementAndGet();
     isRunning = true;
   }
@@ -67,7 +72,7 @@ class FakeFileSystemMonitorManager implements FileSystemMonitorManager {
   }
 
   /**
-   * Returns the number of times {@link #start(String, TraversalContext)}
+   * Returns the number of times {@link #start(String)}
    * has been called.
    */
   int getStartCount() {

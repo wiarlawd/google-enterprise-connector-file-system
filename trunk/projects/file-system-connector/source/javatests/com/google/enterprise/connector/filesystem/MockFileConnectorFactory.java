@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,8 +14,10 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Connector;
 import com.google.enterprise.connector.spi.ConnectorFactory;
+import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -26,7 +28,6 @@ import java.util.Map;
 /**
  */
 public class MockFileConnectorFactory implements ConnectorFactory {
-  private FileFetcher fetcher;
   private ChangeQueue changeQueue;
   private FileChecksumGenerator checksumGenerator;
   private final File snapshotDir;
@@ -44,29 +45,39 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType()));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
 
-    fetcher = new FileFetcher(fileSystemTypeRegistry, new MimeTypeFinder());
-    fetcher.setTraversalContext(new FakeTraversalContext());
+    TraversalContext traversalContext = new FakeTraversalContext();
+    TraversalContextManager tcm = new TraversalContextManager();
+    tcm.setTraversalContext(traversalContext);
+    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
+        fileSystemTypeRegistry, false, true, null, null, null,
+        new MimeTypeFinder(), tcm);
     changeQueue = new ChangeQueue(100, 10000);
     checksumGenerator = new FileChecksumGenerator("SHA1");
     List<String> startPaths = readAllStartPaths(config);
-     
+
     snapshotDir.mkdirs();
     List<String> includePatterns = new ArrayList<String>();
     List<String> excludePatterns = new ArrayList<String>();
 
     CheckpointAndChangeQueue checkpointAndChangeQueue
-        = new CheckpointAndChangeQueue(changeQueue, persistDir);
+        = new CheckpointAndChangeQueue(changeQueue, persistDir,
+            new DeleteDocumentHandleFactory(), clientFactory);
     try {
       checkpointAndChangeQueue.start(null);
     } catch (java.io.IOException e) {
-      throw new IllegalStateException("Failed to create CheckpointAndChangeQueue.", e);
+      throw new IllegalStateException(
+          "Failed to create CheckpointAndChangeQueue.", e);
     }
+    final boolean pushAcls = true;
+    final boolean markAllDocumentsPublic = false;
     FileSystemMonitorManager fileSystemMonitorManager =
-        new FileSystemMonitorManagerImpl(snapshotDir, checksumGenerator, pathParser, 
-            changeQueue, checkpointAndChangeQueue, includePatterns, excludePatterns, 
-            null /* domain */, null /* user */, null /* password */, startPaths);
+        new FileSystemMonitorManagerImpl(snapshotDir, checksumGenerator, pathParser,
+            changeQueue, checkpointAndChangeQueue, includePatterns, excludePatterns,
+            null /* domain */, null /* user */, null /* password */, startPaths,
+            tcm, fileSystemTypeRegistry, pushAcls , markAllDocumentsPublic);
 
-    return new FileConnector(fetcher, authorizationManager, fileSystemMonitorManager);
+    return new FileConnector(authorizationManager, fileSystemMonitorManager,
+        tcm);
   }
 
   private static ArrayList<String> readAllStartPaths(Map<String, String> config) {

@@ -17,9 +17,9 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
+import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,6 +65,12 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   private final ChangeQueue changeQueue;
   private final Credentials credentials;
   private final Collection<String> startPaths;
+  // TODO  remove the following when DocumentSnapshotFactory +
+  //       list of DocumentSnapshotRepository objects are passed in.
+  private final TraversalContextManager traversalContextManager;
+  private final FileSystemTypeRegistry fileSystemTypeRegistry;
+  private final boolean pushAcls;
+  private final boolean markAllDocumentsPublic;
   // TODO: make extend constructor and require user
   //       pass in a DocumentSnapshotFactory.
   private final DocumentSnapshotFactory documentSnapshotFactory =
@@ -74,7 +80,9 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       PathParser pathParser, ChangeQueue changeQueue,
       CheckpointAndChangeQueue checkpointAndChangeQueue, List<String> includePatterns,
       List<String> excludePatterns, String domainName, String userName, String password,
-      List<String> startPaths) {
+      List<String> startPaths, TraversalContextManager traversalContextManager,
+      FileSystemTypeRegistry fileSystemTypeRegistry,
+      boolean pushAcls, boolean markAllDocumentsPublic) {
     this.snapshotDir = snapshotDir;
     this.checksumGenerator = checksumGenerator;
     this.pathParser = pathParser;
@@ -92,6 +100,10 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       }
     }
     this.startPaths = Collections.unmodifiableCollection(startPaths);
+    this.traversalContextManager = traversalContextManager;
+    this.fileSystemTypeRegistry = fileSystemTypeRegistry;
+    this.pushAcls = pushAcls;
+    this.markAllDocumentsPublic = markAllDocumentsPublic;
   }
 
   /* @Override */
@@ -145,7 +157,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   }
 
   /** Go from "cold" to "warm" including CheckpointAndChangeQueue. */
-  public void start(String connectorManagerCheckpoint, TraversalContext traversalContext)
+  public void start(String connectorManagerCheckpoint)
       throws RepositoryException {
 
     try {
@@ -170,7 +182,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       throw new RepositoryException("Snapshot recovery interrupted.", e);
     }
 
-    startMonitorThreads(snapshotStores, traversalContext, monitorPoints);
+    startMonitorThreads(snapshotStores, monitorPoints);
     isRunning = true;
   }
 
@@ -221,7 +233,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    *         or if there is any problem reading or writing snapshots.
    */
   private Thread newMonitorThread(String startPath, SnapshotStore snapshotStore,
-      TraversalContext traversalContext, MonitorCheckpoint startCp)
+      MonitorCheckpoint startCp)
       throws RepositoryDocumentException {
     ReadonlyFile<?> root = pathParser.getFile(startPath, credentials);
     if (root == null) {
@@ -232,12 +244,13 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     // TODO: Change API so caller passes in repository.
     SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
         new FileDocumentSnapshotRepository(root, DOCUMENT_SINK, filePatternMatcher,
-            traversalContext, checksumGenerator, SystemClock.INSTANCE,
-            new MimeTypeFinder());
+            traversalContextManager, checksumGenerator, SystemClock.INSTANCE,
+            new MimeTypeFinder(), credentials, fileSystemTypeRegistry,
+            pushAcls, markAllDocumentsPublic);
     FileSystemMonitor monitor =
         new FileSystemMonitor(monitorName, snapshotRepository, snapshotStore,
             changeQueue.newCallback(), DOCUMENT_SINK, startCp,
-            root.getFileSystemType(), documentSnapshotFactory);
+            documentSnapshotFactory);
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
   }
@@ -249,13 +262,13 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    *         started.
    */
   private void startMonitorThreads(Map<String, SnapshotStore> snapshotStores,
-      TraversalContext traversalContext, Map<String, MonitorCheckpoint> monitorPoints)
+      Map<String, MonitorCheckpoint> monitorPoints)
       throws RepositoryDocumentException {
 
     for (String startPath : startPaths) {
       String monitorName = makeMonitorNameFromStartPath(startPath);
       SnapshotStore snapshotStore = snapshotStores.get(monitorName);
-      Thread monitorThread = newMonitorThread(startPath, snapshotStore, traversalContext,
+      Thread monitorThread = newMonitorThread(startPath, snapshotStore,
           monitorPoints.get(monitorName));
       threads.add(monitorThread);
 

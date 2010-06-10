@@ -16,7 +16,6 @@ package com.google.enterprise.connector.filesystem;
 
 
 import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.util.Map;
 
@@ -29,13 +28,10 @@ public interface FileSystemMonitorManager {
    *
    * @param checkpoint for the last completed document or null if none have
    *        been completed.
-   * @param traversalContext for traversal configuration values.
-   *
    * @throws RepositoryException
    */
 
-  void start(String checkpoint, TraversalContext traversalContext)
-      throws RepositoryException;
+  void start(String checkpoint) throws RepositoryException;
 
   /** Stops all the configured {@link FileSystemMonitor} threads. */
   void stop();
@@ -64,7 +60,7 @@ public interface FileSystemMonitorManager {
 
 
   /**
-   * Receives information specifing what is guaranteed to be delivered to GSA.
+   * Receives information specifying what is guaranteed to be delivered to GSA.
    * Every entry in passed in Map is a monitor name and MonitorCheckpoint.
    * The monitor of that name can expect that all documents before and including
    * document related with MonitorCheckpoint will be delivered to GSA.

@@ -26,16 +26,16 @@ import org.json.JSONObject;
  */
 public class DeleteDocumentHandle implements DocumentHandle {
   static enum Field {
-    PATH
+    DOCUMENT_ID
   }
 
-  private final String path;
+  private final String documentId;
 
-  DeleteDocumentHandle(String path) {
-    if (path == null) {
+  DeleteDocumentHandle(String documentId) {
+    if (documentId == null) {
       throw new IllegalArgumentException();
     }
-    this.path = path;
+    this.documentId = documentId;
   }
 
   /* @Override */
@@ -43,14 +43,14 @@ public class DeleteDocumentHandle implements DocumentHandle {
     GenericDocument result = new GenericDocument();
     result.setProperty(SpiConstants.PROPNAME_ACTION, SpiConstants.ActionType.DELETE.toString());
     result.setProperty(SpiConstants.PROPNAME_DOCID,
-        DocIdUtil.pathToId(path));
+        DocIdUtil.pathToId(documentId));
     return result;
   }
 
   private JSONObject getJson() {
     JSONObject result = new JSONObject();
     try {
-      result.put(Field.PATH.name(), path);
+      result.put(Field.DOCUMENT_ID.name(), documentId);
       return result;
     } catch (JSONException e) {
       // Should ever happen.
@@ -63,7 +63,7 @@ public class DeleteDocumentHandle implements DocumentHandle {
     // TODO: DocIdUtil.pathToId(path))? Needs to be consistent
     //       with traversal order. Could modify readonly file
     //       to sort like this I suppose.
-    return path;
+    return documentId;
   }
 
   @Override

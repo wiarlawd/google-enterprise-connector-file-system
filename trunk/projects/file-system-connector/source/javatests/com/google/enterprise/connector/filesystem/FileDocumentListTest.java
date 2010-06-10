@@ -14,7 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.Change.Action;
+import com.google.enterprise.connector.diffing.DocumentHandle;
+import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.Value;
@@ -24,20 +25,17 @@ import junit.framework.TestCase;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
  */
 public class FileDocumentListTest extends TestCase {
-  private FileFetcher fetcher;
   private MockReadonlyFile root;
   private File persistDir;
 
   private static class MockChangeSource implements ChangeSource {
-    Collection<Change> original;
+    List<Change> original;
     LinkedList<Change> pending;
 
     /* @Override */
@@ -54,12 +52,17 @@ public class FileDocumentListTest extends TestCase {
     private static List<Change> createChanges(MockReadonlyFile root, int count) {
       List<Change> result = new ArrayList<Change>();
       for (int k = 0; k < count; ++k) {
-        MockReadonlyFile file =
-            root.addFile(String.format("file.%d", k), String.format("contents of %s", k));
-        Action action =
-            (file.toString().matches(".*[02468]")) ? Action.ADD_FILE : Action.DELETE_FILE;
+        String id = String.format("file.%d", k);
+
+        DocumentHandle dh = isEven(k)
+            ? new MockDocumentHandle(id, String.format("contents of %s", id))
+            : new DeleteDocumentHandle(id);
+        Change.FactoryType factoryType = isEven(k)
+            ? Change.FactoryType.CLIENT
+            : Change.FactoryType.INTERNAL;
+
         MonitorCheckpoint mcp = new MonitorCheckpoint("foo", k, k + 1, k + 2);
-        Change change = new Change(action, "mock", file.getPath(), mcp);
+        Change change = new Change(factoryType, dh, mcp);
         result.add(change);
       }
       return result;
@@ -72,14 +75,12 @@ public class FileDocumentListTest extends TestCase {
     }
   }
 
+  private static boolean isEven(int ix) {
+    return ix % 2 == 0;
+  }
+
   @Override
   public void setUp() throws IOException {
-    root = MockReadonlyFile.createRoot("/foo/bar");
-    fetcher =
-        new FileFetcher(
-            new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root))),
-            new MimeTypeFinder());
-    fetcher.setTraversalContext(new FakeTraversalContext());
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
     persistDir = testDirectoryManager.makeDirectory("queue");
     assertTrue("Directory " + persistDir + " is not empty",
@@ -89,20 +90,24 @@ public class FileDocumentListTest extends TestCase {
   public void testBasics() throws RepositoryException, IOException {
     MockChangeSource changeSource = new MockChangeSource(root, 100);
     CheckpointAndChangeQueue checkpointAndChangeQueue =
-        new CheckpointAndChangeQueue(changeSource, persistDir);
+        new CheckpointAndChangeQueue(changeSource, persistDir,
+        new DeleteDocumentHandleFactory(), new MockDocumentHandleFactory());
     checkpointAndChangeQueue.setMaximumQueueSize(100);
     checkpointAndChangeQueue.start(null);
     FileDocumentList docs =
-        new FileDocumentList(checkpointAndChangeQueue, null /* checkpoint */, fetcher);
-
-    for (Change change : changeSource.original) {
-      GenericDocument doc = docs.nextDocument();
-      String docId = Value.getSingleValueString(doc, SpiConstants.PROPNAME_DOCID);
-      assertEquals(change.getPath(), DocIdUtil.idToPath(docId));
-      String action =
-          (change.getAction() == Action.ADD_FILE) ? SpiConstants.ActionType.ADD.toString()
-              : SpiConstants.ActionType.DELETE.toString();
-      assertEquals(action, Value.getSingleValueString(doc, SpiConstants.PROPNAME_ACTION));
+      new FileDocumentList(checkpointAndChangeQueue, null /* checkpoint */);
+    for (int ix = 0; ix < changeSource.original.size(); ix++) {
+      Change change = changeSource.original.get(ix);
+      Document doc = docs.nextDocument();
+      String docId =
+        Value.getSingleValueString(doc, SpiConstants.PROPNAME_DOCID);
+      assertEquals(change.getDocumentHandle().getDocumentId(),
+          DocIdUtil.idToPath(docId));
+      String expectAction = isEven(ix)
+          ? SpiConstants.ActionType.ADD.toString()
+          : SpiConstants.ActionType.DELETE.toString();
+       assertEquals(expectAction,
+          Value.getSingleValueString(doc, SpiConstants.PROPNAME_ACTION));
     }
     assertNull(docs.nextDocument());
   }
@@ -110,11 +115,12 @@ public class FileDocumentListTest extends TestCase {
   public void testShortSource() throws RepositoryException, IOException {
     MockChangeSource changeSource = new MockChangeSource(root, 50);
     CheckpointAndChangeQueue checkpointAndChangeQueue =
-        new CheckpointAndChangeQueue(changeSource, persistDir);
+      new CheckpointAndChangeQueue(changeSource, persistDir,
+      new DeleteDocumentHandleFactory(), new MockDocumentHandleFactory());
     checkpointAndChangeQueue.setMaximumQueueSize(50);
     checkpointAndChangeQueue.start(null);
     FileDocumentList docs =
-        new FileDocumentList(checkpointAndChangeQueue, null /* checkpoint */, fetcher);
+        new FileDocumentList(checkpointAndChangeQueue, null /* checkpoint */);
     for (int k = 0; k < 50; ++k) {
       assertNotNull(docs.nextDocument());
     }
@@ -124,11 +130,12 @@ public class FileDocumentListTest extends TestCase {
   public void testEmptySource() throws RepositoryException, IOException {
     MockChangeSource changeSource = new MockChangeSource(root, 0);
     CheckpointAndChangeQueue checkpointAndChangeQueue =
-        new CheckpointAndChangeQueue(changeSource, persistDir);
+      new CheckpointAndChangeQueue(changeSource, persistDir,
+      new DeleteDocumentHandleFactory(), new MockDocumentHandleFactory());
     checkpointAndChangeQueue.setMaximumQueueSize(0);
     checkpointAndChangeQueue.start(null);
     FileDocumentList docs =
-        new FileDocumentList(checkpointAndChangeQueue, null /* checkpoint */, fetcher);
+        new FileDocumentList(checkpointAndChangeQueue, null /* checkpoint */);
     assertNull(docs.nextDocument());
   }
 }

@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,6 +13,9 @@
 // limitations under the License.
 
 package com.google.enterprise.connector.filesystem;
+
+import com.google.enterprise.connector.diffing.DocumentHandle;
+import com.google.enterprise.connector.diffing.DocumentHandleFactory;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -22,38 +25,41 @@ import org.json.JSONObject;
  *
  */
 public class Change {
-  private static final String ACTION_JSON_TAG = "action";
-  private static final String FILE_SYSTEM_TYPE_JSON_TAG = "fstype";
-  private static final String PATH_JSON_TAG = "path";
-  private static final String MONITOR_CHECKPOINT_TAG = "mcp";
-
   /**
-   * Supported change actions.
+   * Indication of the {@link DocumentHandleFactory} needed to
+   * un-serialize a {@link Change} from its JSON representation.
    */
-  public static enum Action {
-    ADD_FILE, ADD_DIR, DELETE_FILE, DELETE_DIR, UPDATE_FILE_CONTENT, UPDATE_FILE_METADATA,
-    UPDATE_DIR_METADATA
+  static enum FactoryType {
+    /**
+     * Indicates the client provided {@link DocumentHandleFactory}
+     */
+    CLIENT,
+    /**
+     * Indicates the internal {@link DocumentHandleFactory}. Currently
+     * this is used for system generated deletes.
+     */
+    INTERNAL
   }
 
-  private final Action action;
-  private final String filesys;
-  private final String path;
+  /**
+   * Enumeration of fields in the JSON representation of a
+   * {@link Change}
+   */
+  static enum Field {
+    FACTORY_TYPE, DOCUMENT_HANDLE, MONITOR_CHECKPOINT
+  }
+
+  private final FactoryType factoryType;
+  private final DocumentHandle documentHandle;
   private final MonitorCheckpoint monitorCheckpoint;
 
-  /**
-   * @param action
-   * @param fileSystem
-   * @param path
-   */
-  public Change(Action action, String fileSystem, String path,
+  Change(FactoryType factoryType, DocumentHandle documentHandle,
       MonitorCheckpoint monitorCheckpoint) {
-    Check.notNull(action);
-    Check.notNull(fileSystem);
-    Check.notNull(path);
+    Check.notNull(factoryType);
+    Check.notNull(documentHandle);
     Check.notNull(monitorCheckpoint);
-    this.action = action;
-    this.filesys = fileSystem;
-    this.path = path;
+    this.factoryType = factoryType;
+    this.documentHandle = documentHandle;
     this.monitorCheckpoint = monitorCheckpoint;
   }
 
@@ -63,39 +69,37 @@ public class Change {
    * @param json
    * @throws JSONException
    */
-  public Change(JSONObject json) throws JSONException {
-    this.action = Action.valueOf(json.getString(ACTION_JSON_TAG));
-    this.filesys = json.getString(FILE_SYSTEM_TYPE_JSON_TAG);
-    this.path = json.getString(PATH_JSON_TAG);
-    this.monitorCheckpoint = new MonitorCheckpoint(json.getJSONObject(MONITOR_CHECKPOINT_TAG));
-  }
-
-  public String getFileSystemType() {
-    return filesys;
-  }
-
-  public Action getAction() {
-    return action;
-  }
-
-  public String getPath() {
-    return path;
+  Change(JSONObject json, DocumentHandleFactory internalFactory,
+      DocumentHandleFactory clientFactory) throws JSONException {
+    this.factoryType = FactoryType.valueOf(json.getString(
+        Field.FACTORY_TYPE.name()));
+    if (factoryType.equals(FactoryType.INTERNAL)) {
+      documentHandle = internalFactory.fromString(
+          json.getString(Field.DOCUMENT_HANDLE.name()));
+    } else {
+      documentHandle = clientFactory.fromString(
+          json.getString(Field.DOCUMENT_HANDLE.name()));
+    }
+    this.monitorCheckpoint = new MonitorCheckpoint(
+        json.getJSONObject(Field.MONITOR_CHECKPOINT.name()));
   }
 
   /**
    * @return the monitor checkpoint associated with this change.
    */
-  public MonitorCheckpoint getMonitorCheckpoint() {
+  MonitorCheckpoint getMonitorCheckpoint() {
     return monitorCheckpoint;
   }
 
-  public JSONObject getJson() {
+  JSONObject getJson() {
     JSONObject result = new JSONObject();
     try {
-      result.put(ACTION_JSON_TAG, action.toString());
-      result.put(FILE_SYSTEM_TYPE_JSON_TAG, filesys);
-      result.put(PATH_JSON_TAG, path);
-      result.put(MONITOR_CHECKPOINT_TAG, monitorCheckpoint.getJson());
+      result.put(Field.FACTORY_TYPE.name(),
+          factoryType.name());
+      result.put(Field.DOCUMENT_HANDLE.name(),
+          documentHandle.toString());
+      result.put(Field.MONITOR_CHECKPOINT.name(),
+          monitorCheckpoint.getJson());
       return result;
     } catch (JSONException e) {
       // Only thrown if a key is null or a value is a non-finite number, neither
@@ -104,50 +108,8 @@ public class Change {
     }
   }
 
-  @Override
-  public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((action == null) ? 0 : action.hashCode());
-    result = prime * result + ((path == null) ? 0 : path.hashCode());
-    result = prime * result + ((filesys == null) ? 0 : filesys.hashCode());
-    return result;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (!(obj instanceof Change)) {
-      return false;
-    }
-    Change other = (Change) obj;
-    if (action == null) {
-      if (other.action != null) {
-        return false;
-      }
-    } else if (!action.equals(other.action)) {
-      return false;
-    }
-    if (path == null) {
-      if (other.path != null) {
-        return false;
-      }
-    } else if (!path.equals(other.path)) {
-      return false;
-    }
-    if (filesys == null) {
-      if (other.filesys != null) {
-        return false;
-      }
-    } else if (!filesys.equals(other.filesys)) {
-      return false;
-    }
-    return true;
+  DocumentHandle getDocumentHandle() {
+    return documentHandle;
   }
 
   /**
@@ -158,4 +120,59 @@ public class Change {
   public String toString() {
     return "" + getJson();
   }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + ((documentHandle == null) ? 0 : documentHandle.hashCode());
+    result = prime * result
+        + ((factoryType == null) ? 0 : factoryType.hashCode());
+    result = prime * result
+        + ((monitorCheckpoint == null) ? 0 : monitorCheckpoint.hashCode());
+    return result;
+  }
+
+  @Override
+  // TODO: Upgrade CheckpointAndChangeQueueTest to not depend on
+  //       Change implementing values equality which is not
+  //       reliable given DocumentHandle may fall back to
+  //       object instance equality.
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    Change other = (Change) obj;
+    if (documentHandle == null) {
+      if (other.documentHandle != null) {
+        return false;
+      }
+    } else if (!documentHandle.equals(other.documentHandle)) {
+      return false;
+    }
+    if (factoryType == null) {
+      if (other.factoryType != null) {
+        return false;
+      }
+    } else if (!factoryType.equals(other.factoryType)) {
+      return false;
+    }
+    if (monitorCheckpoint == null) {
+      if (other.monitorCheckpoint != null) {
+        return false;
+      }
+    } else if (!monitorCheckpoint.equals(other.monitorCheckpoint)) {
+      return false;
+    }
+    return true;
+  }
+
+
 }

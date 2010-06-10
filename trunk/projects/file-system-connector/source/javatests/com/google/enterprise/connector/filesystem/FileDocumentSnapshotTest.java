@@ -13,7 +13,11 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.spi.Document;
+import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.spi.Value;
 
 import junit.framework.TestCase;
 
@@ -32,8 +36,12 @@ public class FileDocumentSnapshotTest extends TestCase {
   private FileChecksumGenerator checksumGenerator;
   private TestDocumentSink documentSink;
   private CountingMimeTypeFinder mimeTypeFinder;
-  private final FakeTraversalContext traversalContext=
-      new FakeTraversalContext();
+  private final TraversalContextManager traversalContextManager =
+      new TraversalContextManager();
+  private final Credentials credentials = null;
+  private FileSystemTypeRegistry fileSystemTypeRegistry;
+  private final boolean pushAcls = true;
+  private final boolean markAllDcoumentsPublic = false;
 
   @Override
   public void setUp() {
@@ -44,7 +52,9 @@ public class FileDocumentSnapshotTest extends TestCase {
     checksumGenerator = new FileChecksumGenerator(SHA1);
     this.documentSink = new TestDocumentSink();
     mimeTypeFinder = new CountingMimeTypeFinder();
-
+    traversalContextManager.setTraversalContext(new FakeTraversalContext());
+    fileSystemTypeRegistry =
+      new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
   }
 
   public void testGetUpdate_nullOnGsa() throws Exception {
@@ -227,6 +237,13 @@ public class FileDocumentSnapshotTest extends TestCase {
     assertEquals(1, mimeTypeFinder.getUseCount());
     String asString = fds.toString();
     assertTrue(asString.contains("\"PATH\":\"" + file.getPath() + "\""));
+    Document document = fdh.getDocument();
+    assertNotNull(document);
+    String docId = Value.getSingleValueString(document,
+        SpiConstants.PROPNAME_DOCID);
+    assertEquals(file.getPath(), DocIdUtil.idToPath(docId));
+
+
   }
 
   public void testGetUpdate_unsupportedMimeTypeNullOnGsa()
@@ -314,7 +331,9 @@ public class FileDocumentSnapshotTest extends TestCase {
 
   private FileDocumentSnapshot newSnapshot(ReadonlyFile<?> file) {
     return new FileDocumentSnapshot(file, useCountGenerator, clock,
-        traversalContext, mimeTypeFinder, documentSink);
+        traversalContextManager, mimeTypeFinder, documentSink,
+        credentials, fileSystemTypeRegistry,
+        pushAcls,markAllDcoumentsPublic);
   }
 
   private static class SettableClock implements Clock {
