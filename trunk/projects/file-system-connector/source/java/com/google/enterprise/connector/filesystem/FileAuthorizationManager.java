@@ -43,7 +43,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
    */
   private boolean canRead(String docId, AuthenticationIdentity identity) {
     Credentials credentials =
-        FileConnector.newCredentials(identity.getDomain(),
+        FileConnectorType.newCredentials(identity.getDomain(),
             identity.getUsername(), identity.getPassword());
     if (credentials == null) {
       // Null credentials mean identity has a null or zero length userName.

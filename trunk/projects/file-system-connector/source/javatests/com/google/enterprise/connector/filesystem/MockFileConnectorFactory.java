@@ -14,9 +14,13 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Connector;
 import com.google.enterprise.connector.spi.ConnectorFactory;
+import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.File;
@@ -40,7 +44,8 @@ public class MockFileConnectorFactory implements ConnectorFactory {
   }
 
   /* @Override */
-  public Connector makeConnector(Map<String, String> config) {
+  public Connector makeConnector(Map<String, String> config)
+      throws RepositoryException{
     FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType()));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
@@ -70,17 +75,24 @@ public class MockFileConnectorFactory implements ConnectorFactory {
     }
     final boolean pushAcls = true;
     final boolean markAllDocumentsPublic = false;
+    List<? extends SnapshotRepository<? extends DocumentSnapshot>>
+        repositories = new FileDocumentSnapshotRepositoryList(checksumGenerator,
+          pathParser, startPaths, includePatterns, excludePatterns,
+          null /* userName */, null /* password */, null /* domain */, tcm,
+          fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
+    DocumentSnapshotFactory documentSnapshotFactory =
+        new FileDocumentSnapshotFactory();
     FileSystemMonitorManager fileSystemMonitorManager =
-        new FileSystemMonitorManagerImpl(snapshotDir, checksumGenerator, pathParser,
-            changeQueue, checkpointAndChangeQueue, includePatterns, excludePatterns,
-            null /* domain */, null /* user */, null /* password */, startPaths,
-            tcm, fileSystemTypeRegistry, pushAcls , markAllDocumentsPublic);
+        new FileSystemMonitorManagerImpl(repositories, documentSnapshotFactory,
+            snapshotDir, checksumGenerator, changeQueue,
+            checkpointAndChangeQueue);
 
     return new FileConnector(authorizationManager, fileSystemMonitorManager,
         tcm);
   }
 
-  private static ArrayList<String> readAllStartPaths(Map<String, String> config) {
+  private static ArrayList<String> readAllStartPaths(Map<String,
+      String> config) {
     ArrayList<String> paths = new ArrayList<String>();
     for (int i = 0; config.containsKey("start_" + i); i++) {
       paths.add(config.get("start_" + i));

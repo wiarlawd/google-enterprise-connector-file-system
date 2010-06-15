@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
@@ -98,11 +101,17 @@ public class FileConnectorTest extends TestCase {
             new DeleteDocumentHandleFactory(), clientFactory);
     final boolean pushAcls = true;
     final boolean markAllDocumentsPublic = false;
-    fileSystemMonitorManager =
-        new FileSystemMonitorManagerImpl(snapshotDir, checksumGenerator,
-            pathParser, changeQueue, checkpointAndChangeQueue, includePatterns,
-            excludePatterns, null, user, password, startPaths, tcm,
-            fileSystemTypeRegistry, pushAcls , markAllDocumentsPublic);
+    List<? extends SnapshotRepository<? extends DocumentSnapshot>>
+    repositories = new FileDocumentSnapshotRepositoryList(checksumGenerator,
+      pathParser, startPaths, includePatterns, excludePatterns,
+      user, password, null /* domain */, tcm,
+      fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
+    DocumentSnapshotFactory documentSnapshotFactory =
+        new FileDocumentSnapshotFactory();
+    fileSystemMonitorManager = new FileSystemMonitorManagerImpl(repositories,
+        documentSnapshotFactory, snapshotDir, checksumGenerator, changeQueue,
+        checkpointAndChangeQueue);
+
     connector =
         new FileConnector(authorizationManager, fileSystemMonitorManager, tcm);
   }

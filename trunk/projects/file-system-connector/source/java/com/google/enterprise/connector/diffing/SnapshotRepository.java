@@ -20,7 +20,13 @@ import java.util.Iterator;
  * objects from a repository. The returned objects are are sorted
  * by {@link DocumentSnapshot#getDocumentId()} values.
  */
-public interface  SnapshotRepository<T extends DocumentSnapshot> extends Iterable<T> {
+public interface  SnapshotRepository<T extends DocumentSnapshot> extends
+    Iterable<T> {
+  /**
+   * Returns the name for this {@link SnapshotRepository}. The returned
+   * name must be unique for the containing Connector.
+   */
+  String getName();
 
   /**
    * Returns an {@link Iterator} to access the

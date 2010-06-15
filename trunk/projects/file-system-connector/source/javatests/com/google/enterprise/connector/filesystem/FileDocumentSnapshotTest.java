@@ -81,7 +81,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     MockReadonlyFile file = root.addFile("f1.txt", "abc");
     FileDocumentSnapshot onGsa = new FileDocumentSnapshot(
         file.getFileSystemType(), file.getPath(), file.getLastModified(),
-        file.getAcl(), checksumGenerator.getChecksum(file),
+        file.getAcl(), getChecksum(file),
         clock.getTimeMillis(), true);
     clock.advance(3);
     FileDocumentSnapshot fds = newSnapshot(file);
@@ -107,7 +107,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), false);
+            getChecksum(file), clock.getTimeMillis(), false);
     clock.advance(3);
     FileDocumentSnapshot fds = newSnapshot(file);
     clock.advance(FileDocumentSnapshot.STABLE_INTERVAL_MS - 4);
@@ -132,7 +132,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), false);
+            getChecksum(file), clock.getTimeMillis(), false);
     clock.advance(3);
     FileDocumentSnapshot fds = newSnapshot(file);
     // Set scan time to onGsa.getScanTime() +
@@ -159,7 +159,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), true);
+            getChecksum(file), clock.getTimeMillis(), true);
     clock.advance(3);
     Acl newAcl = Acl.newAcl(Arrays.asList("bozo", "poco"),
         Arrays.asList("clowns", "celeberties"));
@@ -189,7 +189,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), true);
+            getChecksum(file), clock.getTimeMillis(), true);
     clock.advance(3);
     file.setLastModified(file.getLastModified() + 1);
     FileDocumentSnapshot fds = newSnapshot(file);
@@ -217,7 +217,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), false);
+            getChecksum(file), clock.getTimeMillis(), false);
     clock.advance(3);
     file.setLastModified(file.getLastModified() + 1);
     FileDocumentSnapshot fds = newSnapshot(file);
@@ -278,7 +278,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), true);
+            getChecksum(file), clock.getTimeMillis(), true);
     clock.advance(3);
     file.setLastModified(file.getLastModified() + 1);
     FileDocumentSnapshot fds = newSnapshot(file);
@@ -310,7 +310,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     FileDocumentSnapshot onGsa =
         new FileDocumentSnapshot(file.getFileSystemType(), file.getPath(),
             file.getLastModified(), file.getAcl(),
-            checksumGenerator.getChecksum(file), clock.getTimeMillis(), true);
+            getChecksum(file), clock.getTimeMillis(), true);
     clock.advance(3);
     FileDocumentSnapshot fds = newSnapshot(file);
     clock.advance(FileDocumentSnapshot.STABLE_INTERVAL_MS + 100);
@@ -327,6 +327,15 @@ public class FileDocumentSnapshotTest extends TestCase {
     assertEquals(0, mimeTypeFinder.getUseCount());
     String asString = fds.toString();
     assertTrue(asString.contains("\"PATH\":\"" + file.getPath() + "\""));
+  }
+
+  private String getChecksum(MockReadonlyFile file) throws IOException {
+    InputStream is = file.getInputStream();
+    try {
+      return checksumGenerator.getChecksum(is);
+    } finally {
+      is.close();
+    }
   }
 
   private FileDocumentSnapshot newSnapshot(ReadonlyFile<?> file) {

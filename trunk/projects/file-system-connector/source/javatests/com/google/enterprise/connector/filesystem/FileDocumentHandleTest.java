@@ -196,7 +196,7 @@ public class FileDocumentHandleTest extends TestCase {
       new FileDocumentHandle.DocumentContext(
           new FileSystemTypeRegistry(Arrays.asList(fileFactory)),
           pushAcls, markAllDocumentsPublic,
-          FileConnector.newCredentials(null, null, null),
+          FileConnectorType.newCredentials(null, null, null),
           new MimeTypeFinder(), traversalContextManager);
     return result;
   }

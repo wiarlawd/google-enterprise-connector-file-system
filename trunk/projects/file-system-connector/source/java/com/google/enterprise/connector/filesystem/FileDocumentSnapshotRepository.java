@@ -77,6 +77,11 @@ public class FileDocumentSnapshotRepository
   }
 
   /* @Override */
+  public String getName() {
+    return root.getPath();
+  }
+
+  /* @Override */
   public Iterator<FileDocumentSnapshot> iterator() throws SnapshotRepositoryRuntimeException {
     List<ReadonlyFile<?>> l = new ArrayList<ReadonlyFile<?>>();
     l.add(root);

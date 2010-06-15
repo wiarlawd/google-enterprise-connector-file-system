@@ -90,75 +90,13 @@
         singleton = "false">
     <constructor-arg ref="path-parser"/>
   </bean>
-
-  <bean id = "filesystem-monitor-manager"
-        class = "com.google.enterprise.connector.filesystem.FileSystemMonitorManagerImpl"
-        singleton = "false">
-    <constructor-arg index="0" ref="snapshot-dir"/>
-    <constructor-arg index="1" ref="checksum-generator"/>
-    <constructor-arg index="2" ref="path-parser"/>
-    <constructor-arg index="3" ref="change-queue"/>
-    <constructor-arg index="4" ref="checkpoint-and-change-queue"/>
-    <constructor-arg index="5">
-      <list>
-        <value>${include_0}</value>
-        <value>${include_1}</value>
-        <value>${include_2}</value>
-        <value>${include_3}</value>
-        <value>${include_4}</value>
-        <value>${include_5}</value>
-        <value>${include_6}</value>
-        <value>${include_7}</value>
-        <value>${include_8}</value>
-        <value>${include_9}</value>
-        <value>${include_10}</value>
-        <value>${include_11}</value>
-        <value>${include_12}</value>
-        <value>${include_13}</value>
-        <value>${include_14}</value>
-        <value>${include_15}</value>
-        <value>${include_16}</value>
-        <value>${include_17}</value>
-        <value>${include_18}</value>
-        <value>${include_19}</value>
-        <value>${include_20}</value>
-        <value>${include_21}</value>
-        <value>${include_22}</value>
-        <value>${include_23}</value>
-      </list>
-    </constructor-arg>
-    <constructor-arg index="6">
-      <list>
-        <value>${exclude_0}</value>
-        <value>${exclude_1}</value>
-        <value>${exclude_2}</value>
-        <value>${exclude_3}</value>
-        <value>${exclude_4}</value>
-        <value>${exclude_5}</value>
-        <value>${exclude_6}</value>
-        <value>${exclude_7}</value>
-        <value>${exclude_8}</value>
-        <value>${exclude_9}</value>
-        <value>${exclude_10}</value>
-        <value>${exclude_11}</value>
-        <value>${exclude_12}</value>
-        <value>${exclude_13}</value>
-        <value>${exclude_14}</value>
-        <value>${exclude_15}</value>
-        <value>${exclude_16}</value>
-        <value>${exclude_17}</value>
-        <value>${exclude_18}</value>
-        <value>${exclude_19}</value>
-        <value>${exclude_20}</value>
-        <value>${exclude_21}</value>
-        <value>${exclude_22}</value>
-        <value>${exclude_23}</value>
-      </list>
-    </constructor-arg>
-    <constructor-arg index="7" value="${domain}"/>
-    <constructor-arg index="8" value="${user}"/>
-    <constructor-arg index="9" value="${password}"/>
-    <constructor-arg index="10">
+  
+  <bean id = "file-document-snapshot-repository-list"
+       class = "com.google.enterprise.connector.filesystem.FileDocumentSnapshotRepositoryList"
+       singleton = "true">
+    <constructor-arg ref="checksum-generator"/>
+    <constructor-arg ref="path-parser"/>
+    <constructor-arg>
       <list>
         <value>${start_0}</value>
         <value>${start_1}</value>
@@ -186,11 +124,86 @@
         <value>${start_23}</value>
       </list>
     </constructor-arg>
-    <constructor-arg index="11" ref="traversal-context-manager"/>
-    <constructor-arg index="12" ref="file-system-type-registry"/>
-    <constructor-arg index="13" value="true"/>
-    <constructor-arg index="14" value="false"/>
+    <constructor-arg>
+      <list>
+        <value>${include_0}</value>
+        <value>${include_1}</value>
+        <value>${include_2}</value>
+        <value>${include_3}</value>
+        <value>${include_4}</value>
+        <value>${include_5}</value>
+        <value>${include_6}</value>
+        <value>${include_7}</value>
+        <value>${include_8}</value>
+        <value>${include_9}</value>
+        <value>${include_10}</value>
+        <value>${include_11}</value>
+        <value>${include_12}</value>
+        <value>${include_13}</value>
+        <value>${include_14}</value>
+        <value>${include_15}</value>
+        <value>${include_16}</value>
+        <value>${include_17}</value>
+        <value>${include_18}</value>
+        <value>${include_19}</value>
+        <value>${include_20}</value>
+        <value>${include_21}</value>
+        <value>${include_22}</value>
+        <value>${include_23}</value>
+      </list>
+    </constructor-arg>
+    <constructor-arg>
+      <list>
+        <value>${exclude_0}</value>
+        <value>${exclude_1}</value>
+        <value>${exclude_2}</value>
+        <value>${exclude_3}</value>
+        <value>${exclude_4}</value>
+        <value>${exclude_5}</value>
+        <value>${exclude_6}</value>
+        <value>${exclude_7}</value>
+        <value>${exclude_8}</value>
+        <value>${exclude_9}</value>
+        <value>${exclude_10}</value>
+        <value>${exclude_11}</value>
+        <value>${exclude_12}</value>
+        <value>${exclude_13}</value>
+        <value>${exclude_14}</value>
+        <value>${exclude_15}</value>
+        <value>${exclude_16}</value>
+        <value>${exclude_17}</value>
+        <value>${exclude_18}</value>
+        <value>${exclude_19}</value>
+        <value>${exclude_20}</value>
+        <value>${exclude_21}</value>
+        <value>${exclude_22}</value>
+        <value>${exclude_23}</value>
+      </list>
+    </constructor-arg>
+    <constructor-arg value="${user}"/>
+    <constructor-arg value="${password}"/>
+    <constructor-arg value="${domain}"/>
+    <constructor-arg ref="traversal-context-manager"/>
+    <constructor-arg ref="file-system-type-registry"/>
+    <constructor-arg value="true"/>
+    <constructor-arg value="false"/>       
   </bean>
+  
+  <bean id = "file-document-snapshot-factory"
+        class = "com.google.enterprise.connector.filesystem.FileDocumentSnapshotFactory"
+        singleton = "true">
+  </bean>
+
+  <bean id = "filesystem-monitor-manager"
+        class = "com.google.enterprise.connector.filesystem.FileSystemMonitorManagerImpl"
+        singleton = "true">
+    <constructor-arg ref="file-document-snapshot-repository-list"/>
+    <constructor-arg ref="file-document-snapshot-factory"/>
+    <constructor-arg ref="snapshot-dir"/>
+    <constructor-arg ref="checksum-generator"/>
+    <constructor-arg ref="change-queue"/>
+    <constructor-arg ref="checkpoint-and-change-queue"/>     
+ </bean>
 
   <bean id = "file-connector"
         class = "com.google.enterprise.connector.filesystem.FileConnector"

@@ -41,6 +41,17 @@ import java.util.logging.Logger;
  *
  */
 public class FileConnectorType implements ConnectorType {
+  public static Credentials newCredentials(String domainName, String userName,
+      String password) {
+    Credentials credentials;
+    if (userName == null || (userName.length() == 0)) {
+      credentials = null;
+    } else {
+      credentials = new Credentials(domainName, userName, password);
+    }
+    return credentials;
+  }
+
   private static final Logger LOG = Logger.getLogger(FileConnectorType.class.getName());
   private static final Map<String, String> EMPTY_CONFIG = Collections.emptyMap();
   enum ErrorMessages{CONNECTOR_INSTANTIATION_FAILED,

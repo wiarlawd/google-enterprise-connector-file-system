@@ -50,17 +50,6 @@ public class FileConnector implements Connector, ConnectorShutdownAware, Session
     this.traversalContextmanager = traversalContextManager;
   }
 
-  public static Credentials newCredentials(String domainName, String userName,
-      String password) {
-    Credentials credentials;
-    if (userName == null || (userName.length() == 0)) {
-      credentials = null;
-    } else {
-      credentials = new Credentials(domainName, userName, password);
-    }
-    return credentials;
-  }
-
   /**
    * Shut down this connector: interrupt the background threads and wait for
    * them to terminate.

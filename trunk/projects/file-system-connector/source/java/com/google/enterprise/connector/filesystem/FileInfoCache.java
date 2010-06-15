@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Class to get and cache information about a file.
@@ -51,7 +52,12 @@ class FileInfoCache {
    */
   String getChecksum() throws IOException {
     if (checksum == null) {
-      checksum = checksumGenerator.getChecksum(file);
+      InputStream is = file.getInputStream();
+      try {
+        checksum = checksumGenerator.getChecksum(is);
+      } finally {
+        is.close();
+      }
     }
     return checksum;
   }

@@ -17,14 +17,12 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +43,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
 
   private static final DocumentSink DOCUMENT_SINK = new LoggingDocumentSink();
 
-  private static final Logger LOG = Logger.getLogger(FileSystemMonitorManagerImpl.class.getName());
+  private static final Logger LOG =
+      Logger.getLogger(FileSystemMonitorManagerImpl.class.getName());
 
   private String makeMonitorNameFromStartPath(String startPath) {
     String monitorName = checksumGenerator.getChecksum(startPath);
@@ -57,53 +56,29 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   private final Map<String, FileSystemMonitor> fileSystemMonitorsByName =
       Collections.synchronizedMap(new HashMap<String, FileSystemMonitor>());
   private boolean isRunning = false;  // Monitor threads start in off state.
+  private final List<? extends SnapshotRepository<? extends DocumentSnapshot>>
+      repositories;
+
   private final File snapshotDir;
   private final ChecksumGenerator checksumGenerator;
-  private final PathParser pathParser;
-  private final FilePatternMatcher filePatternMatcher;
   private final CheckpointAndChangeQueue checkpointAndChangeQueue;
   private final ChangeQueue changeQueue;
-  private final Credentials credentials;
-  private final Collection<String> startPaths;
-  // TODO  remove the following when DocumentSnapshotFactory +
-  //       list of DocumentSnapshotRepository objects are passed in.
-  private final TraversalContextManager traversalContextManager;
-  private final FileSystemTypeRegistry fileSystemTypeRegistry;
-  private final boolean pushAcls;
-  private final boolean markAllDocumentsPublic;
-  // TODO: make extend constructor and require user
-  //       pass in a DocumentSnapshotFactory.
-  private final DocumentSnapshotFactory documentSnapshotFactory =
-      new FileDocumentSnapshotFactory();
 
-  FileSystemMonitorManagerImpl(File snapshotDir, ChecksumGenerator checksumGenerator,
-      PathParser pathParser, ChangeQueue changeQueue,
-      CheckpointAndChangeQueue checkpointAndChangeQueue, List<String> includePatterns,
-      List<String> excludePatterns, String domainName, String userName, String password,
-      List<String> startPaths, TraversalContextManager traversalContextManager,
-      FileSystemTypeRegistry fileSystemTypeRegistry,
-      boolean pushAcls, boolean markAllDocumentsPublic) {
+  private final DocumentSnapshotFactory documentSnapshotFactory;
+
+  FileSystemMonitorManagerImpl(
+      List<? extends SnapshotRepository<
+          ? extends DocumentSnapshot>> repositories,
+      DocumentSnapshotFactory documentSnapshotFactory,
+      File snapshotDir, ChecksumGenerator checksumGenerator,
+      ChangeQueue changeQueue,
+      CheckpointAndChangeQueue checkpointAndChangeQueue) {
+    this.repositories = repositories;
+    this.documentSnapshotFactory = documentSnapshotFactory;
     this.snapshotDir = snapshotDir;
     this.checksumGenerator = checksumGenerator;
-    this.pathParser = pathParser;
-    this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
-        includePatterns, excludePatterns);
-    this.checkpointAndChangeQueue = checkpointAndChangeQueue;
     this.changeQueue = changeQueue;
-    this.credentials = FileConnector.newCredentials(domainName, userName, password);
-    startPaths = FileConnectorType.filterUserEnteredList(startPaths);
-    for (int i = 0; i < startPaths.size(); i++) {
-      String path = startPaths.get(i);
-      if (!path.endsWith("/")) {
-        path += "/";
-        startPaths.set(i, path);
-      }
-    }
-    this.startPaths = Collections.unmodifiableCollection(startPaths);
-    this.traversalContextManager = traversalContextManager;
-    this.fileSystemTypeRegistry = fileSystemTypeRegistry;
-    this.pushAcls = pushAcls;
-    this.markAllDocumentsPublic = markAllDocumentsPublic;
+    this.checkpointAndChangeQueue = checkpointAndChangeQueue;
   }
 
   /* @Override */
@@ -130,17 +105,21 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   /* For each start path gets its monitor recovery files in state were monitor
    * can be started. */
   private Map<String, SnapshotStore> recoverSnapshotStores(
-      String connectorManagerCheckpoint, Map<String, MonitorCheckpoint> monitorPoints)
+      String connectorManagerCheckpoint, Map<String,
+      MonitorCheckpoint> monitorPoints)
       throws IOException, SnapshotStoreException, InterruptedException {
-    Map<String, SnapshotStore> snapshotStores = new HashMap<String, SnapshotStore>();
-    for (String startPath : startPaths) {
-      String monitorName = makeMonitorNameFromStartPath(startPath);
+    Map<String, SnapshotStore> snapshotStores =
+        new HashMap<String, SnapshotStore>();
+    for (SnapshotRepository<? extends DocumentSnapshot> repository
+        : repositories) {
+      String monitorName = makeMonitorNameFromStartPath(repository.getName());
       File dir = new File(snapshotDir,  monitorName);
 
       boolean startEmpty = (connectorManagerCheckpoint == null)
           || (!monitorPoints.containsKey(monitorName));
       if (startEmpty) {
-        LOG.info("Deleting " + startPath + " global checkpoint=" + connectorManagerCheckpoint
+        LOG.info("Deleting " + repository.getName()
+            + " global checkpoint=" + connectorManagerCheckpoint
             + " monitor checkpoint=" + monitorPoints.get(monitorName));
         delete(dir);
       } else {
@@ -163,7 +142,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     try {
       checkpointAndChangeQueue.start(connectorManagerCheckpoint);
     } catch (IOException e) {
-      throw new RepositoryException("Failed starting CheckpointAndChangeQueue.", e);
+      throw new RepositoryException("Failed starting CheckpointAndChangeQueue.",
+          e);
     }
 
     Map<String, MonitorCheckpoint> monitorPoints
@@ -190,7 +170,8 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
   public synchronized void clean() {
     LOG.info("Cleaning snapshot directory: " + snapshotDir.getAbsolutePath());
     if (!delete(snapshotDir)) {
-      LOG.warning("failed to delete snapshot directory: " + snapshotDir.getAbsolutePath());
+      LOG.warning("failed to delete snapshot directory: "
+          + snapshotDir.getAbsolutePath());
     }
     checkpointAndChangeQueue.clean();
   }
@@ -232,23 +213,13 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
    * @throws RepositoryDocumentException if {@code startPath} is not readable,
    *         or if there is any problem reading or writing snapshots.
    */
-  private Thread newMonitorThread(String startPath, SnapshotStore snapshotStore,
-      MonitorCheckpoint startCp)
+  private Thread newMonitorThread(
+      SnapshotRepository<? extends DocumentSnapshot> repository,
+      SnapshotStore snapshotStore, MonitorCheckpoint startCp)
       throws RepositoryDocumentException {
-    ReadonlyFile<?> root = pathParser.getFile(startPath, credentials);
-    if (root == null) {
-      throw new RepositoryDocumentException("failed to open start path: " + startPath);
-    }
-
-    String monitorName = makeMonitorNameFromStartPath(startPath);
-    // TODO: Change API so caller passes in repository.
-    SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
-        new FileDocumentSnapshotRepository(root, DOCUMENT_SINK, filePatternMatcher,
-            traversalContextManager, checksumGenerator, SystemClock.INSTANCE,
-            new MimeTypeFinder(), credentials, fileSystemTypeRegistry,
-            pushAcls, markAllDocumentsPublic);
+    String monitorName = makeMonitorNameFromStartPath(repository.getName());
     FileSystemMonitor monitor =
-        new FileSystemMonitor(monitorName, snapshotRepository, snapshotStore,
+        new FileSystemMonitor(monitorName, repository, snapshotStore,
             changeQueue.newCallback(), DOCUMENT_SINK, startCp,
             documentSnapshotFactory);
     fileSystemMonitorsByName.put(monitorName, monitor);
@@ -265,15 +236,16 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
       Map<String, MonitorCheckpoint> monitorPoints)
       throws RepositoryDocumentException {
 
-    for (String startPath : startPaths) {
-      String monitorName = makeMonitorNameFromStartPath(startPath);
+    for (SnapshotRepository<? extends DocumentSnapshot> repository
+            : repositories) {
+      String monitorName = makeMonitorNameFromStartPath(repository.getName());
       SnapshotStore snapshotStore = snapshotStores.get(monitorName);
-      Thread monitorThread = newMonitorThread(startPath, snapshotStore,
+      Thread monitorThread = newMonitorThread(repository, snapshotStore,
           monitorPoints.get(monitorName));
       threads.add(monitorThread);
 
-      LOG.info("starting monitor for <" + startPath + ">");
-      monitorThread.setName(startPath);
+      LOG.info("starting monitor for <" + repository.getName() + ">");
+      monitorThread.setName(repository.getName());
       monitorThread.setDaemon(true);
       monitorThread.start();
     }

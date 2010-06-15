@@ -32,7 +32,7 @@ public class FileDocumentHandleFactory implements DocumentHandleFactory {
       TraversalContextManager traversalContextManager) {
     context = new FileDocumentHandle.DocumentContext(
         fileSystemTypeRegistry, pushAcls, markAllDocumentsPublic,
-        FileConnector.newCredentials(domainName, userName, password),
+        FileConnectorType.newCredentials(domainName, userName, password),
         mimeTypeFinder, traversalContextManager);
   }
 
