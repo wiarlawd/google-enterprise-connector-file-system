@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.ChecksumGenerator;
+
 import java.io.IOException;
 import java.io.InputStream;
 

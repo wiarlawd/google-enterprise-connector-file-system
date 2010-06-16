@@ -13,6 +13,11 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
+import com.google.enterprise.connector.diffing.Clock;
+import com.google.enterprise.connector.diffing.DocIdUtil;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
+import com.google.enterprise.connector.diffing.FilterReason;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.SpiConstants;
@@ -33,7 +38,7 @@ public class FileDocumentSnapshotTest extends TestCase {
   private SettableClock clock;
   private MockReadonlyFile root;
   private UseCountingGenerator useCountGenerator;
-  private FileChecksumGenerator checksumGenerator;
+  private BasicChecksumGenerator checksumGenerator;
   private TestDocumentSink documentSink;
   private CountingMimeTypeFinder mimeTypeFinder;
   private final TraversalContextManager traversalContextManager =
@@ -49,7 +54,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     clock.advance(123);
     root = MockReadonlyFile.createRoot("/aaRoot", clock);
     useCountGenerator = new UseCountingGenerator();
-    checksumGenerator = new FileChecksumGenerator(SHA1);
+    checksumGenerator = new BasicChecksumGenerator(SHA1);
     this.documentSink = new TestDocumentSink();
     mimeTypeFinder = new CountingMimeTypeFinder();
     traversalContextManager.setTraversalContext(new FakeTraversalContext());
@@ -358,7 +363,7 @@ public class FileDocumentSnapshotTest extends TestCase {
     }
   }
 
-  private static class UseCountingGenerator extends FileChecksumGenerator {
+  private static class UseCountingGenerator extends BasicChecksumGenerator {
     int count;
 
     UseCountingGenerator() {

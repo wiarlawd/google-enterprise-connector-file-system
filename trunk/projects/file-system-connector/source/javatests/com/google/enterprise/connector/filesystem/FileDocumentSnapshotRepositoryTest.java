@@ -14,7 +14,12 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.connector.diffing.DocumentSink;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
+import com.google.enterprise.connector.diffing.FilterReason;
+import com.google.enterprise.connector.diffing.SystemClock;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.TraversalContext;
 
@@ -32,8 +37,8 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
   private static final List<String> EXCLUDE_NONE_PATTERNS = ImmutableList.of();
   private static final FilePatternMatcher ALL_MATCHER =
       new FilePatternMatcher(INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS);
-  private static final FileChecksumGenerator CHECKSUM_GENERATOR =
-      new FileChecksumGenerator("SHA1");
+  private static final BasicChecksumGenerator CHECKSUM_GENERATOR =
+      new BasicChecksumGenerator("SHA1");
   private static final TraversalContext TRAVERSAL_CONTEXT =
       new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE);
   private static MimeTypeFinder MIME_TYPE_FINDER = new MimeTypeFinder();

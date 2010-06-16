@@ -15,10 +15,26 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
+import com.google.enterprise.connector.diffing.ChecksumGenerator;
+import com.google.enterprise.connector.diffing.Clock;
 import com.google.enterprise.connector.diffing.DocumentHandle;
+import com.google.enterprise.connector.diffing.DocumentSink;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitor;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
+import com.google.enterprise.connector.diffing.FilterReason;
+import com.google.enterprise.connector.diffing.LoggingDocumentSink;
+import com.google.enterprise.connector.diffing.MonitorCheckpoint;
+import com.google.enterprise.connector.diffing.SnapshotReader;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
+import com.google.enterprise.connector.diffing.SnapshotStore;
+import com.google.enterprise.connector.diffing.SnapshotStoreException;
+import com.google.enterprise.connector.diffing.SnapshotWriter;
+import com.google.enterprise.connector.diffing.SnapshotWriterException;
+import com.google.enterprise.connector.diffing.SystemClock;
+import com.google.enterprise.connector.diffing.TestDirectoryManager;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.TraversalContext;
 
@@ -35,14 +51,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Tests for the {@link FileSystemMonitor}
+ * Tests for the {@link DocumentSnapshotRepositoryMonitor}
  */
 public class  FileSystemMonitorTest extends TestCase {
   private static final Credentials CREDENTIALS = null;
   private static final boolean PUSH_ACLS = true;
   private static final boolean MARK_ALL_DOCUMENTS_PUBLIC = false;
 
-  private FileSystemMonitor monitor;
+  private DocumentSnapshotRepositoryMonitor monitor;
   private CountingVisitor visitor;
   private MockReadonlyFile root;
   private FileSystemTypeRegistry fileSystemTypeRegistry;
@@ -52,9 +68,9 @@ public class  FileSystemMonitorTest extends TestCase {
   private FilePatternMatcher matcher;
   private SnapshotStore store;
   private DocumentSnapshotFactory documentSnapshotFactory;
-  private FileChecksumGenerator checksumGenerator;
+  private BasicChecksumGenerator checksumGenerator;
 
-  private class CountingVisitor implements FileSystemMonitor.Callback {
+  private class CountingVisitor implements DocumentSnapshotRepositoryMonitor.Callback {
 
     private int maxScans = 1;
     private int scanCount = 0;
@@ -65,7 +81,7 @@ public class  FileSystemMonitorTest extends TestCase {
     int changedCount;
     int deletedCount;
 
-    FileSystemMonitor myMonitor = null;
+    DocumentSnapshotRepositoryMonitor myMonitor = null;
 
     MonitorCheckpoint checkpoint = null;
 
@@ -74,7 +90,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
     /* Giving a monitor reference makes this vistior update
        it's monitor with checkpoints at passComplete. */
-    private void registerMonitor(FileSystemMonitor monitor) {
+    private void registerMonitor(DocumentSnapshotRepositoryMonitor monitor) {
       this.myMonitor = monitor;
     }
 
@@ -137,13 +153,13 @@ public class  FileSystemMonitorTest extends TestCase {
   }
 
   /**
-   * A {@link FileSystemMonitor.Callback} for running a scan, making a
+   * A {@link DocumentSnapshotRepositoryMonitor.Callback} for running a scan, making a
    * file system change and running another scan. The caller should override the
    * call back for her change and throw an {@link InterruptedException} for the
    * specific change. On the initial scan passComplete will remain false.
    */
   private abstract static class ChangeOnPassCompleteVisitor implements
-      FileSystemMonitor.Callback {
+      DocumentSnapshotRepositoryMonitor.Callback {
     protected MonitorCheckpoint checkpoint = null;
     protected boolean passComplete = false;
 
@@ -256,9 +272,9 @@ public class  FileSystemMonitorTest extends TestCase {
     }
   }
 
-  private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator,
+  private DocumentSnapshotRepositoryMonitor newFileSystemMonitor(ChecksumGenerator generator,
       FilePatternMatcher myMatcher, TraversalContext traversalContext,
-      DocumentSink fileSink, Clock clock, FileSystemMonitor.Callback customVisitor) {
+      DocumentSink fileSink, Clock clock, DocumentSnapshotRepositoryMonitor.Callback customVisitor) {
     TraversalContextManager tcm = new TraversalContextManager();
     tcm.setTraversalContext(traversalContext);
     SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
@@ -266,34 +282,34 @@ public class  FileSystemMonitorTest extends TestCase {
             root, fileSink, myMatcher, tcm, generator, clock,
             new MimeTypeFinder(), CREDENTIALS, fileSystemTypeRegistry,
             PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
-    return new FileSystemMonitor("name", snapshotRepository, store,
+    return new DocumentSnapshotRepositoryMonitor("name", snapshotRepository, store,
         customVisitor, fileSink, null, documentSnapshotFactory);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
+  private DocumentSnapshotRepositoryMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
     return newFileSystemMonitor(checksumGenerator, myMatcher,
         new FakeTraversalContext(), new LoggingDocumentSink(),
         SystemClock.INSTANCE, visitor);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(ChecksumGenerator generator, Clock clock) {
+  private DocumentSnapshotRepositoryMonitor newFileSystemMonitor(ChecksumGenerator generator, Clock clock) {
     return newFileSystemMonitor(generator, matcher, new FakeTraversalContext(),
         new LoggingDocumentSink(), clock, visitor);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext) {
+  private DocumentSnapshotRepositoryMonitor newFileSystemMonitor(TraversalContext traversalContext) {
     return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
         new LoggingDocumentSink(), SystemClock.INSTANCE, visitor);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(TraversalContext traversalContext,
+  private DocumentSnapshotRepositoryMonitor newFileSystemMonitor(TraversalContext traversalContext,
       DocumentSink fileSink) {
     return newFileSystemMonitor(checksumGenerator, matcher, traversalContext,
         fileSink, SystemClock.INSTANCE, visitor);
   }
 
-  private FileSystemMonitor newFileSystemMonitor(
-      FileSystemMonitor.Callback customVisitor) {
+  private DocumentSnapshotRepositoryMonitor newFileSystemMonitor(
+      DocumentSnapshotRepositoryMonitor.Callback customVisitor) {
     return newFileSystemMonitor(checksumGenerator, matcher,
         new FakeTraversalContext(), new LoggingDocumentSink(),
         SystemClock.INSTANCE, customVisitor);
@@ -316,7 +332,7 @@ public class  FileSystemMonitorTest extends TestCase {
     createTree(root, 3, 2, 10);
 
     visitor = new CountingVisitor();
-    checksumGenerator = new FileChecksumGenerator("SHA1");
+    checksumGenerator = new BasicChecksumGenerator("SHA1");
 
     documentSnapshotFactory = new FileDocumentSnapshotFactory();
 
@@ -714,7 +730,7 @@ public class  FileSystemMonitorTest extends TestCase {
     }
   }
 
-  private static class UseCountingGenerator extends FileChecksumGenerator {
+  private static class UseCountingGenerator extends BasicChecksumGenerator {
     int count;
 
     UseCountingGenerator() {
@@ -1000,6 +1016,7 @@ public class  FileSystemMonitorTest extends TestCase {
     assertTrue("Unexpected duplicates", unique.size() == paths.size());
   }
 
+
   /* Throws in a single failing SnapshotWriterException into otherwise
    * perfectly running SnapshotWriter. */
   private class FailingSnapshotWriter extends SnapshotWriter {
@@ -1009,7 +1026,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
     FailingSnapshotWriter(boolean threw, SnapshotWriter writer,
         boolean interrupt) throws SnapshotWriterException {
-      super(writer.output, writer.fileDescriptor, writer.path);
+      super(writer.getOutput(), writer.getFileDescriptor(), writer.getPath());
       this.threw = threw;
       this.interrupt = interrupt;
     }
@@ -1079,7 +1096,7 @@ public class  FileSystemMonitorTest extends TestCase {
     visitor.setKeepAddingFiles(true);
     monitor.run();
     beforeFailingStarted = readEntireMostRecentSnapshot(store);
-    long saveOldestSnapshotToKeep = store.oldestSnapshotToKeep;
+    long saveOldestSnapshotToKeep = store.getOldestSnapsotToKeep();
     MonitorCheckpoint saveOldestMonitorCp = visitor.checkpoint;
     store = null;
     visitor = null;
@@ -1104,7 +1121,7 @@ public class  FileSystemMonitorTest extends TestCase {
             PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
 
     visitor = new CountingVisitor();
-    monitor = new FileSystemMonitor("name", query, failingStore, visitor,
+    monitor = new DocumentSnapshotRepositoryMonitor("name", query, failingStore, visitor,
         new LoggingDocumentSink(), saveOldestMonitorCp,
         documentSnapshotFactory);
 
@@ -1161,7 +1178,7 @@ public class  FileSystemMonitorTest extends TestCase {
     visitor.setKeepAddingFiles(true);
     monitor.run();
     beforeFailingStarted = readEntireMostRecentSnapshot(store);
-    long saveOldestSnapshotToKeep = store.oldestSnapshotToKeep;
+    long saveOldestSnapshotToKeep = store.getOldestSnapsotToKeep();
     MonitorCheckpoint saveOldestMonitorCp = visitor.checkpoint;
     store = null;
     visitor = null;
@@ -1191,7 +1208,7 @@ public class  FileSystemMonitorTest extends TestCase {
 
     visitor = new CountingVisitor();
 
-    monitor = new FileSystemMonitor("name", snapshotRepository, failingStore,
+    monitor = new DocumentSnapshotRepositoryMonitor("name", snapshotRepository, failingStore,
         visitor,  documentSink, saveOldestMonitorCp,
         documentSnapshotFactory);
 

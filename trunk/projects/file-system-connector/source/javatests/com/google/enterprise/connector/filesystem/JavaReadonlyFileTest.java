@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TestDirectoryManager;
+
 import junit.framework.TestCase;
 
 import java.io.File;

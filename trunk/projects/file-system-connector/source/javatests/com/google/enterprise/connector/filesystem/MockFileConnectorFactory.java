@@ -14,8 +14,16 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.ChangeQueue;
+import com.google.enterprise.connector.diffing.CheckpointAndChangeQueue;
+import com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory;
+import com.google.enterprise.connector.diffing.DiffingConnector;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
+import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManagerImpl;
+import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManager;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Connector;
@@ -33,7 +41,7 @@ import java.util.Map;
  */
 public class MockFileConnectorFactory implements ConnectorFactory {
   private ChangeQueue changeQueue;
-  private FileChecksumGenerator checksumGenerator;
+  private BasicChecksumGenerator checksumGenerator;
   private final File snapshotDir;
   private final File persistDir;
   private FileAuthorizationManager authorizationManager;
@@ -57,7 +65,7 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         fileSystemTypeRegistry, false, true, null, null, null,
         new MimeTypeFinder(), tcm);
     changeQueue = new ChangeQueue(100, 10000);
-    checksumGenerator = new FileChecksumGenerator("SHA1");
+    checksumGenerator = new BasicChecksumGenerator("SHA1");
     List<String> startPaths = readAllStartPaths(config);
 
     snapshotDir.mkdirs();
@@ -82,12 +90,12 @@ public class MockFileConnectorFactory implements ConnectorFactory {
           fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
     DocumentSnapshotFactory documentSnapshotFactory =
         new FileDocumentSnapshotFactory();
-    FileSystemMonitorManager fileSystemMonitorManager =
-        new FileSystemMonitorManagerImpl(repositories, documentSnapshotFactory,
+    DocumentSnapshotRepositoryMonitorManager fileSystemMonitorManager =
+        new DocumentSnapshotRepositoryMonitorManagerImpl(repositories, documentSnapshotFactory,
             snapshotDir, checksumGenerator, changeQueue,
             checkpointAndChangeQueue);
 
-    return new FileConnector(authorizationManager, fileSystemMonitorManager,
+    return new DiffingConnector(authorizationManager, fileSystemMonitorManager,
         tcm);
   }
 

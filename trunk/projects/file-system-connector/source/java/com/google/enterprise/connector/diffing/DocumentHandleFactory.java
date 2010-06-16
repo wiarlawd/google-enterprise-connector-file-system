@@ -14,7 +14,6 @@
 
 package com.google.enterprise.connector.diffing;
 
-
 /**
  * Interface for constructing a {@link DocumentHandle} from its
  * {@link String} representation.

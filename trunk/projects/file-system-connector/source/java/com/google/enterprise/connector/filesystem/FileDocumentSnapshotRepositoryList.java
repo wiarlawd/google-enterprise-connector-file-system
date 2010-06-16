@@ -1,5 +1,9 @@
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.ChecksumGenerator;
+import com.google.enterprise.connector.diffing.DocumentSink;
+import com.google.enterprise.connector.diffing.LoggingDocumentSink;
+import com.google.enterprise.connector.diffing.SystemClock;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 

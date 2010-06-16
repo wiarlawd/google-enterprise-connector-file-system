@@ -14,6 +14,13 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.ChangeQueue;
+import com.google.enterprise.connector.diffing.ChangeSource;
+import com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory;
+import com.google.enterprise.connector.diffing.DiffingConnector;
+import com.google.enterprise.connector.diffing.DiffingConnectorTraversalManager;
+import com.google.enterprise.connector.diffing.FakeDocumentSnapshotRepositoryMonitorManager;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Session;
@@ -29,7 +36,7 @@ public class FileSessionTest extends TestCase {
   private Session session;
   private ChangeSource changes;
   private FileAuthorizationManager authz;
-  private FakeFileSystemMonitorManager fileSystemMonitorManager;
+  private FakeDocumentSnapshotRepositoryMonitorManager monitorManager;
 
   @Override
   public void setUp() throws IOException {
@@ -45,51 +52,51 @@ public class FileSessionTest extends TestCase {
     FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
         fileSystemTypeRegistry, false, true, null, null, null,
         new MimeTypeFinder(), tcm);
-    fileSystemMonitorManager = new FakeFileSystemMonitorManager(changes, this,
-        new DeleteDocumentHandleFactory(), clientFactory);
-    session = new FileConnector(authz, fileSystemMonitorManager, tcm);
+    monitorManager = new FakeDocumentSnapshotRepositoryMonitorManager(changes,
+        this, new DeleteDocumentHandleFactory(), clientFactory);
+    session = new DiffingConnector(authz, monitorManager, tcm);
   }
 
   public void testAuthn() throws RepositoryException {
     assertNull(session.getAuthenticationManager());
-    assertEquals(0, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
+    assertEquals(0, monitorManager.getStartCount());
+    assertEquals(0, monitorManager.getStopCount());
+    assertEquals(0, monitorManager.getCleanCount());
   }
 
   public void testAuthz() throws RepositoryException {
     assertEquals(authz, session.getAuthorizationManager());
-    assertEquals(0, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
-    assertEquals(0, fileSystemMonitorManager.getGuaranteeCount());
+    assertEquals(0, monitorManager.getStartCount());
+    assertEquals(0, monitorManager.getStopCount());
+    assertEquals(0, monitorManager.getCleanCount());
+    assertEquals(0, monitorManager.getGuaranteeCount());
   }
 
   public void testTraversal() throws RepositoryException {
-    FileTraversalManager tm = (FileTraversalManager) session.getTraversalManager();
+    DiffingConnectorTraversalManager tm = (DiffingConnectorTraversalManager) session.getTraversalManager();
     tm.setTraversalContext(new FakeTraversalContext());
     assertNotNull(tm);
-    assertEquals(0, fileSystemMonitorManager.getStartCount());
-    assertEquals(0, fileSystemMonitorManager.getStopCount());
-    assertEquals(0, fileSystemMonitorManager.getCleanCount());
-    assertEquals(0, fileSystemMonitorManager.getGuaranteeCount());
+    assertEquals(0, monitorManager.getStartCount());
+    assertEquals(0, monitorManager.getStopCount());
+    assertEquals(0, monitorManager.getCleanCount());
+    assertEquals(0, monitorManager.getGuaranteeCount());
 
     tm.startTraversal();
-    assertEquals(1, fileSystemMonitorManager.getStartCount());
-    assertEquals(1, fileSystemMonitorManager.getStopCount());
-    assertEquals(1, fileSystemMonitorManager.getCleanCount());
-    assertEquals(1, fileSystemMonitorManager.getGuaranteeCount());
+    assertEquals(1, monitorManager.getStartCount());
+    assertEquals(1, monitorManager.getStopCount());
+    assertEquals(1, monitorManager.getCleanCount());
+    assertEquals(1, monitorManager.getGuaranteeCount());
 
     tm.resumeTraversal(null);
-    assertEquals(1, fileSystemMonitorManager.getStartCount());
-    assertEquals(1, fileSystemMonitorManager.getStopCount());
-    assertEquals(1, fileSystemMonitorManager.getCleanCount());
-    assertEquals(2, fileSystemMonitorManager.getGuaranteeCount());
+    assertEquals(1, monitorManager.getStartCount());
+    assertEquals(1, monitorManager.getStopCount());
+    assertEquals(1, monitorManager.getCleanCount());
+    assertEquals(2, monitorManager.getGuaranteeCount());
 
     tm.startTraversal();
-    assertEquals(2, fileSystemMonitorManager.getStartCount());
-    assertEquals(2, fileSystemMonitorManager.getStopCount());
-    assertEquals(2, fileSystemMonitorManager.getCleanCount());
-    assertEquals(3, fileSystemMonitorManager.getGuaranteeCount());
+    assertEquals(2, monitorManager.getStartCount());
+    assertEquals(2, monitorManager.getStopCount());
+    assertEquals(2, monitorManager.getCleanCount());
+    assertEquals(3, monitorManager.getGuaranteeCount());
   }
 }

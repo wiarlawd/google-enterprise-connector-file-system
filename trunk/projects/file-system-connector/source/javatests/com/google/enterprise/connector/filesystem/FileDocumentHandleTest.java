@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.DocIdUtil;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
+import com.google.enterprise.connector.diffing.MonitorCheckpoint;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.Property;

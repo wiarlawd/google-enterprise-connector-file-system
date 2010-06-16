@@ -14,9 +14,19 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
+import com.google.enterprise.connector.diffing.ChangeQueue;
+import com.google.enterprise.connector.diffing.CheckpointAndChangeQueue;
+import com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory;
+import com.google.enterprise.connector.diffing.DiffingConnector;
+import com.google.enterprise.connector.diffing.DiffingConnectorTraversalManager;
 import com.google.enterprise.connector.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManager;
+import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManagerImpl;
+import com.google.enterprise.connector.diffing.FakeTraversalContext;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
+import com.google.enterprise.connector.diffing.TestDirectoryManager;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
@@ -44,15 +54,15 @@ public class FileConnectorTest extends TestCase {
   private static final int START_PATH_COUNT = 11;
   private static final int TOTAL_DOC_COUNT = START_PATH_COUNT * 3;
 
-  FileConnector connector;
+  DiffingConnector connector;
 
   private ChangeQueue changeQueue;
-  private FileChecksumGenerator checksumGenerator;
+  private BasicChecksumGenerator checksumGenerator;
   private String user;
   private String password;
   private File snapshotDir;
   private File persistDir;
-  private FileSystemMonitorManager fileSystemMonitorManager;
+  private DocumentSnapshotRepositoryMonitorManager fileSystemMonitorManager;
   private FileAuthorizationManager authorizationManager;
   private ArrayList<File> filesMade;
 
@@ -86,7 +96,7 @@ public class FileConnectorTest extends TestCase {
         fileSystemTypeRegistry, false, true, null, null, null,
         new MimeTypeFinder(), tcm);
     changeQueue = new ChangeQueue(100, 10000);
-    checksumGenerator = new FileChecksumGenerator("SHA1");
+    checksumGenerator = new BasicChecksumGenerator("SHA1");
     TestDirectoryManager testDirectoryManager  = new TestDirectoryManager(this);
     List<String> startPaths = createFiles(testDirectoryManager);
     snapshotDir = testDirectoryManager.makeDirectory("snapshots");
@@ -108,22 +118,23 @@ public class FileConnectorTest extends TestCase {
       fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
     DocumentSnapshotFactory documentSnapshotFactory =
         new FileDocumentSnapshotFactory();
-    fileSystemMonitorManager = new FileSystemMonitorManagerImpl(repositories,
-        documentSnapshotFactory, snapshotDir, checksumGenerator, changeQueue,
-        checkpointAndChangeQueue);
+    fileSystemMonitorManager = new DocumentSnapshotRepositoryMonitorManagerImpl(
+        repositories, documentSnapshotFactory, snapshotDir, checksumGenerator,
+        changeQueue, checkpointAndChangeQueue);
 
-    connector =
-        new FileConnector(authorizationManager, fileSystemMonitorManager, tcm);
+    connector = new DiffingConnector(
+        authorizationManager, fileSystemMonitorManager, tcm);
   }
 
   public void testGetSession()  {
     connector.login();
   }
 
-  public void testShutdown() throws RepositoryLoginException, RepositoryException {
+  public void testShutdown()
+      throws RepositoryLoginException, RepositoryException {
     // After getTraversalManager() all background threads should be started.
-    FileTraversalManager traversalManager =
-        (FileTraversalManager) connector.login().getTraversalManager();
+    DiffingConnectorTraversalManager traversalManager =
+        (DiffingConnectorTraversalManager) connector.login().getTraversalManager();
     traversalManager.setTraversalContext(new FakeTraversalContext());
     traversalManager.startTraversal();
     assertEquals(START_PATH_COUNT, fileSystemMonitorManager.getThreadCount());
@@ -133,7 +144,8 @@ public class FileConnectorTest extends TestCase {
     assertEquals(0, fileSystemMonitorManager.getThreadCount());
   }
 
-  public void testDelete() throws RepositoryLoginException, RepositoryException {
+  public void testDelete()
+      throws RepositoryLoginException, RepositoryException {
     connector.login().getTraversalManager();
     connector.shutdown();
     assertTrue(snapshotDir.exists());
@@ -145,7 +157,8 @@ public class FileConnectorTest extends TestCase {
     assertFalse(persistDir.exists());
   }
 
-  public void testRepeatedNullStart() throws RepositoryLoginException, RepositoryException {
+  public void testRepeatedNullStart()
+      throws RepositoryLoginException, RepositoryException {
     TraversalManager mngr = connector.login().getTraversalManager();
     mngr.startTraversal();
     mngr.resumeTraversal(null);
@@ -156,7 +169,8 @@ public class FileConnectorTest extends TestCase {
     assertEquals(0, fileSystemMonitorManager.getThreadCount());
   }
 
-  private static String propertyToString(Property p) throws RepositoryException {
+  private static String propertyToString(Property p)
+      throws RepositoryException {
     StringBuilder buf = new StringBuilder();
     Value v;
     while ((v = p.nextValue()) != null) {
@@ -165,7 +179,8 @@ public class FileConnectorTest extends TestCase {
     return buf.toString();
   }
 
-  private static String documentToDocid(Document document) throws RepositoryException {
+  private static String documentToDocid(Document document)
+      throws RepositoryException {
     String docid = propertyToString(document.findProperty("google:docid"));
     return docid;
   }
@@ -225,7 +240,8 @@ public class FileConnectorTest extends TestCase {
   }
 
   public void testAbandondedTraversalManagerUseTriggersException() {
-    FileTraversalManager mngr = (FileTraversalManager) connector.getTraversalManager();
+    DiffingConnectorTraversalManager mngr =
+        (DiffingConnectorTraversalManager)connector.getTraversalManager();
     mngr.deactivate();
     try {
       mngr.startTraversal();
@@ -242,8 +258,10 @@ public class FileConnectorTest extends TestCase {
   }
 
   public void testGettingNewManagerAbandonsOtherManagers() {
-    FileTraversalManager mngr = (FileTraversalManager) connector.getTraversalManager();
-    FileTraversalManager mngr2 = (FileTraversalManager) connector.getTraversalManager();
+    DiffingConnectorTraversalManager mngr =
+        (DiffingConnectorTraversalManager) connector.getTraversalManager();
+    DiffingConnectorTraversalManager mngr2 =
+        (DiffingConnectorTraversalManager) connector.getTraversalManager();
     assertFalse(mngr.isActive());
     connector.getTraversalManager();
     assertFalse(mngr2.isActive());
@@ -270,8 +288,9 @@ public class FileConnectorTest extends TestCase {
     return docs;
   }
 
-  private static DocumentsAndCheckpoints waitToGet(TraversalManager mngr, boolean useStart,
-      int count, String checkpoint) throws RepositoryException {
+  private static DocumentsAndCheckpoints waitToGet(TraversalManager mngr,
+      boolean useStart, int count, String checkpoint)
+      throws RepositoryException {
     DocumentsAndCheckpoints docs = new DocumentsAndCheckpoints();
     if (useStart) {
       docs = toList(mngr.startTraversal());
@@ -282,6 +301,16 @@ public class FileConnectorTest extends TestCase {
         throw new IllegalStateException("Looks like an inifiniate loop.");
       }
       docs = toList(mngr.resumeTraversal(checkpoint));
+      //
+      // In this test the documents are read from the filesystem.
+      // In environments with slow access to the filesystem (such
+      // as a slow NFS mount) the test can require a bit of extra
+      // time so we sleep here.
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ie) {
+        fail("unexpected interrupt");
+      }
     }
     return docs;
   }
@@ -302,10 +331,12 @@ public class FileConnectorTest extends TestCase {
     assertEquals(TOTAL_DOC_COUNT, accepted.size() + toRedo.size());
 
     mngr = session.getTraversalManager();
-    DocumentsAndCheckpoints redo = waitToGet(mngr, false, secondPartSize, acceptedCheckpoint);
+    DocumentsAndCheckpoints redo = waitToGet(mngr, false,
+        secondPartSize, acceptedCheckpoint);
     assertEquals(toRedo.size(), redo.docs.size());
     for (int i = 0; i < toRedo.size(); i++) {
-      assertEquals(documentToDocid(toRedo.get(i)), documentToDocid(redo.docs.get(i)));
+      assertEquals(documentToDocid(toRedo.get(i)),
+          documentToDocid(redo.docs.get(i)));
     }
   }
 
@@ -324,10 +355,12 @@ public class FileConnectorTest extends TestCase {
     assertNotNull(acceptedCheckpoint);
     assertEquals(TOTAL_DOC_COUNT, accepted.size() + toRedo.size());
 
-    DocumentsAndCheckpoints redo = waitToGet(mngr, false, secondPartSize, acceptedCheckpoint);
+    DocumentsAndCheckpoints redo = waitToGet(mngr, false, secondPartSize,
+        acceptedCheckpoint);
     assertEquals(toRedo.size(), redo.docs.size());
     for (int i = 0; i < toRedo.size(); i++) {
-      assertEquals(documentToDocid(toRedo.get(i)), documentToDocid(redo.docs.get(i)));
+      assertEquals(documentToDocid(toRedo.get(i)),
+          documentToDocid(redo.docs.get(i)));
     }
   }
 

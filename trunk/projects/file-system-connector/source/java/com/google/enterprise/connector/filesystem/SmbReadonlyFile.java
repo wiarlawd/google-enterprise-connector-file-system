@@ -14,10 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.IOExceptionHelper;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
-
-import jcifs.smb.SmbException;
-import jcifs.smb.SmbFile;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -31,6 +29,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
+
+import jcifs.smb.SmbException;
+import jcifs.smb.SmbFile;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code jcifs.smb.SmbFile}.
@@ -124,7 +125,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       try {
         return builder.build();
       } catch (SmbException e) {
-        LOG.finest("Caught exception (attempt " + i + "): " + e.getMessage());  
+        LOG.finest("Caught exception (attempt " + i + "): " + e.getMessage());
         try {
           Thread.sleep(sleepTimeMillis);
         } catch (InterruptedException interruption) {

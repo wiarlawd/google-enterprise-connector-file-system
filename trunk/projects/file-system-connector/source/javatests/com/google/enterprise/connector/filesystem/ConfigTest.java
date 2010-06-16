@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TestDirectoryManager;
+
 import junit.framework.TestCase;
 
 import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;

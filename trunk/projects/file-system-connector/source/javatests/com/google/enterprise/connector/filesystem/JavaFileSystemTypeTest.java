@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.diffing.TestDirectoryManager;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import junit.framework.TestCase;
