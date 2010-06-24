@@ -17,6 +17,7 @@ package com.google.enterprise.connector.diffing;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.CharBuffer;
 
 /**
  * Reader {@link SnapshotStore}.
@@ -27,7 +28,7 @@ public class SnapshotReader {
   private final long snapshotNumber;
   private final DocumentSnapshotFactory documentSnapshotFactory;
 
-  private long lineNumber;
+  private long recordNumber;
   private boolean done;
   /**
    * @param in input for the reader
@@ -40,7 +41,7 @@ public class SnapshotReader {
       throws SnapshotReaderException {
     this.in = in;
     this.inputPath = inputPath;
-    this.lineNumber = 0;
+    this.recordNumber = 0;  //1 based.
     this.snapshotNumber = snapshotNumber;
     this.documentSnapshotFactory = documentSnapshotFactory;
   }
@@ -51,16 +52,8 @@ public class SnapshotReader {
    * @throws SnapshotReaderException
    */
   public DocumentSnapshot read() throws SnapshotReaderException {
-    String stringForm = readStringForm();
-    if (stringForm == null) {
-      return null;
-    }
-    try {
-      return documentSnapshotFactory.fromString(stringForm);
-    } catch (IllegalArgumentException iae) {
-      throw new SnapshotReaderException(String.format("failed to parse JSON (%s, line %d)",
-          inputPath, lineNumber), iae);
-    }
+      String stringForm = readStringForm();
+      return parseDocumentSnapshot(stringForm);
   }
 
   private String readStringForm() throws SnapshotReaderException {
@@ -69,17 +62,92 @@ public class SnapshotReader {
     }
     String stringForm = null;
     try {
-      stringForm = in.readLine();
-    } catch (IOException e) {
-      throw new SnapshotReaderException(String.format(
-          "failed to read snapshot record (%s, line %d)", inputPath, lineNumber), e);
+      int length = readLength();
+      if (length > 0) {
+        stringForm = readString(length);
+        readRecordDeleimiter(stringForm);
+      }
+    } catch (IOException ioe) {
+      throw new SnapshotReaderException(
+          String.format("failed to read snapshot record (%s, line %d)",
+              inputPath, recordNumber + 1), ioe);
     } finally {
-      lineNumber++;
+      recordNumber++;
       if (stringForm == null) {
         done = true;
       }
     }
     return stringForm;
+  }
+
+  int readLength() throws SnapshotReaderException, IOException {
+    StringBuilder sb = new StringBuilder();
+    int c;
+    while ((c=in.read()) > 0 && c != SnapshotWriter.LENGTH_DELIMITER) {
+      sb.append((char)c);
+    }
+    if (sb.length() == 0) {
+      if (c == SnapshotWriter.LENGTH_DELIMITER) {
+        throw new SnapshotReaderException(String.format(
+            "failed to read snapshot record with missing length (%s, line %d)",
+            inputPath, recordNumber));
+      }
+      return -1;
+    } else {
+      try {
+        if (c != SnapshotWriter.LENGTH_DELIMITER) {
+          throw new SnapshotReaderException(String.format(
+              "failed to read snapshot record with missing length delimiter "
+              + "(%s, line %d)", inputPath, recordNumber));
+        }
+        return Integer.parseInt(sb.toString());
+      } catch (NumberFormatException nfe) {
+        throw new SnapshotReaderException(String.format(
+            "failed to read snapshot record with invalid length "
+            + "(%s, line %d, length %s)",
+            inputPath, recordNumber, sb.toString()));
+      }
+    }
+  }
+
+  String readString(int length) throws IOException, SnapshotReaderException{
+    CharBuffer cb = CharBuffer.allocate(length);
+    while (in.read(cb) >= 0 && cb.hasRemaining()) {
+      continue;
+    }
+    if (cb.hasRemaining()) {
+      throw new SnapshotReaderException(String.format(
+          "failed to read snapshot record with incomplete record "
+          + "(%s, line %d, partial record %s)",
+          inputPath, recordNumber, cb.flip().toString()));
+    }
+    return cb.flip().toString();
+  }
+
+  private void readRecordDeleimiter(String stringForm)
+    throws SnapshotReaderException, IOException {
+       int delim = in.read();
+       if (delim != SnapshotWriter.RECORD_DELIMITER) {
+         throw new SnapshotReaderException(String.format(
+             "failed to read snapshot record missing record delmiter "
+             + "(%s, line %d, stringForm %s)",
+             inputPath, recordNumber, stringForm));
+       }
+  }
+
+  private DocumentSnapshot parseDocumentSnapshot(String stringForm)
+      throws SnapshotReaderException {
+    if (stringForm == null) {
+      return null;
+    } else {
+      try {
+        return documentSnapshotFactory.fromString(stringForm);
+      } catch (IllegalArgumentException iae) {
+        throw new SnapshotReaderException(
+            String.format("failed to parse snapshot (%s, line %d)",
+                inputPath, recordNumber), iae);
+      }
+    }
   }
 
   /**
@@ -93,7 +161,7 @@ public class SnapshotReader {
    * @return the number of the most recently returned record.
    */
   public long getRecordNumber() {
-    return lineNumber;
+    return recordNumber;
   }
 
   /**
@@ -113,7 +181,7 @@ public class SnapshotReader {
       if (readStringForm() == null) {
         throw new SnapshotReaderException(String.format(
             "failed to skip %d records; snapshot contains only %d",
-            number, lineNumber));
+            number, recordNumber));
         }
       }
   }

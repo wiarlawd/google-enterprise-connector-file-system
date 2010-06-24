@@ -24,6 +24,8 @@ import java.io.Writer;
  * Write snapshot records in CSV format.
  */
 public class SnapshotWriter {
+  static final char LENGTH_DELIMITER = '#';
+  static final char RECORD_DELIMITER = '\n';
   protected String path;
   protected Writer output;
   protected long count;
@@ -38,8 +40,8 @@ public class SnapshotWriter {
    * @param path name of output, for logging purposes
    * @throws SnapshotWriterException on any error
    */
-  public SnapshotWriter(Writer output, FileDescriptor fileDescriptor, String path)
-      throws SnapshotWriterException {
+  public SnapshotWriter(Writer output, FileDescriptor fileDescriptor,
+      String path) throws SnapshotWriterException {
     this.output = new BufferedWriter(output);
     this.fileDescriptor = fileDescriptor;
     this.path = path;
@@ -56,15 +58,7 @@ public class SnapshotWriter {
   public void write(DocumentSnapshot snapshot) throws SnapshotWriterException,
       IllegalArgumentException {
     try {
-      String stringForm = snapshot.toString();
-      if (stringForm == null) {
-        throw new IllegalArgumentException("DocumentSnapshot.toString returned null.");
-      }
-      //TODO: Write snapshots in a manner that supports \n in
-      //      stringForm
-      output.write(stringForm);
-      output.write("\n");
-      output.flush();
+      write(snapshot, output);
       if (fileDescriptor != null) {
         fileDescriptor.sync();
       }
@@ -72,6 +66,22 @@ public class SnapshotWriter {
     } catch (IOException e) {
       throw new SnapshotWriterException("failed to write snapshot record", e);
     }
+  }
+
+  /** Visible for testing. */
+  static void write(DocumentSnapshot snapshot, Writer writer)
+      throws IOException, IllegalArgumentException {
+    String stringForm = snapshot.toString();
+    if (stringForm == null) {
+      throw new IllegalArgumentException(
+          "DocumentSnapshot.toString returned null.");
+    }
+    String length = Integer.toString(stringForm.length());
+    writer.write(length);
+    writer.write(LENGTH_DELIMITER);
+    writer.write(stringForm);
+    writer.write(RECORD_DELIMITER);
+    writer.flush();
   }
 
   /**
