@@ -14,19 +14,27 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Multimap;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.AuthType;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.Method;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.naming.AuthenticationNotSupportedException;
+import javax.naming.Context;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -35,6 +43,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.Control;
+import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
 import javax.naming.ldap.PagedResultsControl;
 import javax.naming.ldap.PagedResultsResponseControl;
@@ -271,4 +280,241 @@ public class LdapHandler {
     return origDn.replaceAll(" *, *", ",").replaceAll("/", "%2F");
   }
 
+  /**
+   * A connection to an Ldap Server
+   */
+  public static class LdapConnection {
+    public enum LdapConnectionError {
+      AuthenticationNotSupported,
+      NamingException,
+      IOException,
+    }
+
+    private final LdapConnectionSettings settings;
+    private LdapContext ldapContext = null;
+    private final Map<LdapConnectionError,String> errors;
+
+    public static final int PAGESIZE = 1000;
+
+    public LdapConnection(LdapConnectionSettings ldapConnectionSettings) {
+      this.settings = ldapConnectionSettings;
+      this.errors = new HashMap<LdapConnectionError,String>();
+      Hashtable<String, String> env = configureLdapEnvironment();
+      ldapContext = makeContext(env, PAGESIZE);
+    }
+
+    @VisibleForTesting
+    LdapContext getLdapContext() {
+      return ldapContext;
+    }
+
+    public Map<LdapConnectionError, String> getErrors() {
+      return errors;
+    }
+
+    private LdapContext makeContext(Hashtable<String, String> env, int pageSize) {
+      LdapContext ctx = null;
+      try {
+        ctx = new InitialLdapContext(env, null);
+      } catch (AuthenticationNotSupportedException e) {
+        errors.put(LdapConnectionError.AuthenticationNotSupported, e.getMessage());
+      } catch (NamingException e) {
+        errors.put(LdapConnectionError.NamingException, e.getMessage());
+      }
+      if (ctx == null) {
+        return null;
+      }
+      try {
+        ctx.setRequestControls(new Control[] {new PagedResultsControl(pageSize,
+            Control.NONCRITICAL)});
+      } catch (NamingException e) {
+        errors.put(LdapConnectionError.NamingException, e.getMessage());
+      } catch (IOException e) {
+        errors.put(LdapConnectionError.IOException, e.getMessage());
+      }
+      return ctx;
+    }
+
+    private String makeLdapUrl() {
+      String url;
+      Method connectMethod =
+          settings.getConnectMethod();
+      if (connectMethod == Method.SSL) {
+        url = "ldaps://"; //$NON-NLS-1$
+      } else {
+        url = "ldap://"; //$NON-NLS-1$
+      }
+
+      // Construct the full URL
+      url = url + settings.getHostname();
+      if (settings.getPort() > 0) {
+        url = url + ":" + settings.getPort();
+      }
+      url = url + "/";
+
+      if (settings.getBaseDN() != null) {
+        url = url + encodeBaseDN(settings.getBaseDN());
+      }
+      return url;
+    }
+
+    /**
+     * Initialize the Hashtable used to create an initial LDAP Context. Note that
+     * we specifically require a Hashtable rather than a HashMap as the parameter
+     * type in the InitialLDAPContext constructor
+     *
+     * @return initialized Hashtable suitable for constructing an
+     *         InitiaLdaplContext
+     */
+    private Hashtable<String, String> configureLdapEnvironment() {
+      Hashtable<String, String> env = new Hashtable<String, String>();
+
+      // Use the built-in LDAP support.
+      env.put(
+          Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory" //$NON-NLS-1$
+      );
+
+      // property to indicate to the server how to handle referrals
+      env.put(Context.REFERRAL, "follow");
+
+      // force the following attributes to be returned as binary data
+      env.put("java.naming.ldap.attributes.binary", "objectGUID objectSid");
+
+      // Set our authentication settings.
+      AuthType authType = settings.getAuthType();
+      if (authType == AuthType.SIMPLE) {
+        env.put(Context.SECURITY_AUTHENTICATION, authType.toString()
+            .toLowerCase());
+        env.put(Context.SECURITY_PRINCIPAL, settings.getUsername());
+        env.put(Context.SECURITY_CREDENTIALS, settings.getPassword());
+        log.info("Using simple authentication.");
+      } else {
+        if (authType != AuthType.ANONYMOUS) {
+          log.warning("Unknown authType - falling back to anonymous.");
+        } else {
+          log.info("Using anonymous authentication.");
+        }
+        env.put(Context.SECURITY_AUTHENTICATION, "none"); //$NON-NLS-1$
+      }
+      env.put(Context.PROVIDER_URL, makeLdapUrl());
+      return env;
+    }
+
+    /**
+     * We have to do some simple, naive escaping of the base DN. We CANNOT use
+     * normal URL escaping, as '+' is not handled properly by the JNDI backend.
+     */
+    private String encodeBaseDN(String origValue) {
+      origValue = origValue.replace(" ", "%20");
+      return origValue;
+    }
+
+  }
+
+  /**
+   * Configuration for an ldap connection. Immutable, static data class.
+   */
+  public static class LdapConnectionSettings {
+    public enum AuthType {
+      ANONYMOUS, SIMPLE
+    }
+
+    public enum Method {
+      STANDARD, SSL
+    }
+
+    public enum ServerType {
+      ACTIVE_DIRECTORY, DOMINO, OPENLDAP, GENERIC
+    }
+
+    private final String hostname;
+    private final int port;
+    private final LdapConnectionSettings.AuthType authType;
+    private final String username;
+    private final String password;
+    private final LdapConnectionSettings.Method connectMethod;
+    private final String baseDN;
+    private final LdapConnectionSettings.ServerType serverType;
+
+    public LdapConnectionSettings(Method connectMethod, String hostname,
+        int port, String baseDN, AuthType authType, String username, String password) {
+      this.authType = authType;
+      this.baseDN = baseDN;
+      this.connectMethod = connectMethod;
+      this.hostname = hostname;
+      this.password = password;
+      this.port = port;
+      this.serverType = ServerType.GENERIC;
+      this.username = username;
+    }
+
+    public LdapConnectionSettings(Method connectMethod, String hostname,
+        int port, String baseDN) {
+      this.authType = AuthType.ANONYMOUS;
+      this.baseDN = baseDN;
+      this.connectMethod = connectMethod;
+      this.hostname = hostname;
+      this.password = null;
+      this.port = port;
+      this.serverType = ServerType.GENERIC;
+      this.username = null;
+    }
+
+    public LdapConnectionSettings.AuthType getAuthType() {
+      return authType;
+    }
+
+    public String getBaseDN() {
+      return baseDN;
+    }
+
+    public LdapConnectionSettings.Method getConnectMethod() {
+      return connectMethod;
+    }
+
+    public String getHostname() {
+      return hostname;
+    }
+
+    public String getPassword() {
+      return password;
+    }
+
+    public int getPort() {
+      return port;
+    }
+
+    public LdapConnectionSettings.ServerType getServerType() {
+      return serverType;
+    }
+
+    public String getUsername() {
+      return username;
+    }
+  }
+
+  /**
+   * Configuration for an ldap rule (query). Immutable, static data class.
+   */
+  public static class LdapRule {
+    public enum Scope {
+      SUBTREE, ONELEVEL, OBJECT
+    }
+
+    private final Scope scope;
+    private final String filter;
+
+    public LdapRule(Scope scope, String filter) {
+      this.scope = scope;
+      this.filter = filter;
+    }
+
+    public Scope getScope() {
+      return scope;
+    }
+
+    public String getFilter() {
+      return filter;
+    }
+  }
 }
