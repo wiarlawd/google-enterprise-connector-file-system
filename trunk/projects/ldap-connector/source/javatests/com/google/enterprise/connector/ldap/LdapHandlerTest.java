@@ -16,7 +16,9 @@ package com.google.enterprise.connector.ldap;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.enterprise.connector.ldap.LdapRule.Scope;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapRule.Scope;
 
 import junit.framework.TestCase;
 
