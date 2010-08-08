@@ -14,8 +14,10 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Multimap;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SimpleDocument;
@@ -50,8 +52,31 @@ public class JsonDocument extends SimpleDocument {
     try {
       objectId = Value.getSingleValueString(this, SpiConstants.PROPNAME_DOCID);
     } catch (RepositoryException e) {
-      throw new IllegalArgumentException("Internal consistency error: missing docid", e);
+      throw new IllegalStateException("Internal consistency error", e);
     }
+    if (objectId == null) {
+      throw new IllegalArgumentException("Internal consistency error: missing docid");
+    }
+  }
+
+  public static Function<Multimap<String, String>, JsonDocument> buildFromMultimap =
+    new Function<Multimap<String, String>, JsonDocument>() {
+    /* @Override */
+    public JsonDocument apply(Multimap<String, String> person) {
+      return buildJson(person);
+    }
+  };
+
+  private static JsonDocument buildJson(Multimap<String, String> person) {
+    JSONObject jo = new JSONObject();
+    for (String attrname: person.keySet()) {
+      try {
+        jo.put(attrname, person.get(attrname));
+      } catch (JSONException e) {
+        throw new IllegalStateException();
+      }
+    }
+    return new JsonDocument(jo);
   }
 
   public String getDocumentId() {
