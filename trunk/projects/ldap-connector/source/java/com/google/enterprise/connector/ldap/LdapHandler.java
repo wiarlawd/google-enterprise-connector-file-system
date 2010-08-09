@@ -18,13 +18,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.AuthType;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.Method;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +51,8 @@ import javax.naming.ldap.Rdn;
 
 /**
  * This class encapsulates all interaction with jdni (javax.naming). No other
- * ldap connector class should need to import anything from jdni. All javax.naming
+ * ldap connector class should need to import anything from jdni. All
+ * javax.naming
  * exceptions are wrapped in RuntimeException, so callers need to be careful to
  * catch RuntimeException.
  */
@@ -63,7 +64,7 @@ public class LdapHandler {
    */
   public static final String DN_ATTRIBUTE = "dn";
 
-  private static Logger log = Logger.getLogger(LdapHandler.class.getName());
+  private static Logger LOG = Logger.getLogger(LdapHandler.class.getName());
 
   private final LdapConnection connection;
   private final String schemaKey;
@@ -88,19 +89,21 @@ public class LdapHandler {
     if (schema == null) {
       this.schema = null;
     } else {
-      this.schema = new HashSet<String>(Collections2.transform(schema, toLower));
+      this.schema = Sets.newHashSet(Collections2.transform(schema, toLower));
     }
   }
 
   /**
    * Executes a rule. Note: the implementation of this class is based on GADS.
+   * Note: execute should only be called once. To execute again, create a new
+   * LdapHandler and execute that.
    *
-   * @return a SortedMap or results. The map is sorted by the schemaKey specified
-   *         in the constructor. Each result is a Multimap of Strings to
-   *         Strings, keyed by attributes in the schema. Results are Multimaps
-   *         because ldap can store multiple values with an attribute, although
-   *         in practice this is rare (except for a few attributes, like email
-   *         aliases).
+   * @return a SortedMap or results. The map is sorted by the schemaKey
+   *         specified in the constructor. Each result is a Multimap of Strings
+   *         to Strings, keyed by attributes in the schema. Results are
+   *         Multimaps because ldap can store multiple values with an attribute,
+   *         although in practice this is rare (except for a few attributes,
+   *         like email aliases).
    */
   public SortedMap<String, Multimap<String, String>> execute() {
 
@@ -116,6 +119,7 @@ public class LdapHandler {
       do {
         SearchControls controls = makeControls(rule, schema);
 
+        LOG.info("Ldap search begin");
         ldapResults = ctx.search("", // Filter is always relative to our base dn
             rule.getFilter(), controls);
 
@@ -133,8 +137,8 @@ public class LdapHandler {
           String canonicalDn = canonicalDn(searchResult.getNameInNamespace());
           thisResult.put(DN_ATTRIBUTE, canonicalDn);
 
-          if (log.isLoggable(Level.FINE)) {
-            log.fine("ldap search result " + resultCount + " dn " + canonicalDn);
+          if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("ldap search result " + resultCount + " dn " + canonicalDn);
           }
 
           // Add all our attributes to this result object
@@ -142,15 +146,15 @@ public class LdapHandler {
 
           String keyValue = getFirst(schemaKey, thisResult);
           if (keyValue == null) {
-            log.warning("Ldap result" + canonicalDn +
+            LOG.warning("Ldap result" + canonicalDn +
                 " is missing schema key attribute " + schemaKey + ": skipping");
           } else {
             result.put(keyValue, thisResult);
           }
         }
 
-        if (log.isLoggable(Level.FINE)) {
-          log.info("ldap search final result count" + resultCount);
+        if (LOG.isLoggable(Level.INFO)) {
+          LOG.info("ldap search intermediate result count " + resultCount);
         }
 
         // Examine the paged results control response
@@ -172,7 +176,7 @@ public class LdapHandler {
         // TODO: decide whether this is really needed for the ldap connector
         ctx.setRequestControls(new Control[] {new PagedResultsControl(LdapConnection.PAGESIZE,
             cookie, Control.NONCRITICAL)});
-      } while (cookie != null);
+      } while (!shouldStop(cookie));
     } catch (NameNotFoundException e) {
       throw new RuntimeException(e);
     } catch (NamingException e) {
@@ -185,18 +189,29 @@ public class LdapHandler {
         try {
           ldapResults.close();
         } catch (Exception e) {
-          log.log(Level.WARNING, "ldap_connection_cleanup_error_on_results", e);
+          LOG.log(Level.WARNING, "ldap_connection_cleanup_error_on_results", e);
         }
       }
       if (ctx != null) {
         try {
           ctx.close();
         } catch (Exception e) {
-          log.log(Level.WARNING, "ldap_connection_cleanup_error_on_context", e);
+          LOG.log(Level.WARNING, "ldap_connection_cleanup_error_on_context", e);
         }
       }
     }
+    LOG.info("ldap search final result count " + resultCount);
     return result;
+  }
+
+  private static boolean shouldStop(byte[] cookie) {
+    boolean shouldStop = (cookie == null);
+    if (shouldStop) {
+      LOG.fine("No more paged results - stopping.");
+    } else {
+      LOG.fine("Looking for another page");
+    }
+    return shouldStop;
   }
 
   private String getFirst(String key, Multimap<String, String> m) {
@@ -274,7 +289,7 @@ public class LdapHandler {
     try {
       return Rdn.unescapeValue(origDn).toString().replaceAll("/", "%2F");
     } catch (IllegalArgumentException e) {
-      log.log(Level.INFO, "Potentially invalid LDAP DN found: " + origDn, e);
+      LOG.log(Level.INFO, "Potentially invalid LDAP DN found: " + origDn, e);
     }
     // we only do this if the Rdn parsing above threw an exception
     return origDn.replaceAll(" *, *", ",").replaceAll("/", "%2F");
@@ -284,6 +299,10 @@ public class LdapHandler {
    * A connection to an Ldap Server
    */
   public static class LdapConnection {
+
+    private static final String COM_SUN_JNDI_LDAP_LDAP_CTX_FACTORY =
+        "com.sun.jndi.ldap.LdapCtxFactory";
+
     public enum LdapConnectionError {
       AuthenticationNotSupported,
       NamingException,
@@ -292,13 +311,13 @@ public class LdapHandler {
 
     private final LdapConnectionSettings settings;
     private LdapContext ldapContext = null;
-    private final Map<LdapConnectionError,String> errors;
+    private final Map<LdapConnectionError, String> errors;
 
     public static final int PAGESIZE = 1000;
 
     public LdapConnection(LdapConnectionSettings ldapConnectionSettings) {
       this.settings = ldapConnectionSettings;
-      this.errors = new HashMap<LdapConnectionError,String>();
+      this.errors = Maps.newHashMap();
       Hashtable<String, String> env = configureLdapEnvironment();
       ldapContext = makeContext(env, PAGESIZE);
     }
@@ -359,9 +378,9 @@ public class LdapHandler {
     }
 
     /**
-     * Initialize the Hashtable used to create an initial LDAP Context. Note that
-     * we specifically require a Hashtable rather than a HashMap as the parameter
-     * type in the InitialLDAPContext constructor
+     * Initialize the Hashtable used to create an initial LDAP Context. Note
+     * that we specifically require a Hashtable rather than a HashMap as the
+     * parameter type in the InitialLDAPContext constructor
      *
      * @return initialized Hashtable suitable for constructing an
      *         InitiaLdaplContext
@@ -370,9 +389,7 @@ public class LdapHandler {
       Hashtable<String, String> env = new Hashtable<String, String>();
 
       // Use the built-in LDAP support.
-      env.put(
-          Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory" //$NON-NLS-1$
-      );
+      env.put(Context.INITIAL_CONTEXT_FACTORY, COM_SUN_JNDI_LDAP_LDAP_CTX_FACTORY);
 
       // property to indicate to the server how to handle referrals
       env.put(Context.REFERRAL, "follow");
@@ -387,12 +404,12 @@ public class LdapHandler {
             .toLowerCase());
         env.put(Context.SECURITY_PRINCIPAL, settings.getUsername());
         env.put(Context.SECURITY_CREDENTIALS, settings.getPassword());
-        log.info("Using simple authentication.");
+        LOG.info("Using simple authentication.");
       } else {
         if (authType != AuthType.ANONYMOUS) {
-          log.warning("Unknown authType - falling back to anonymous.");
+          LOG.warning("Unknown authType - falling back to anonymous.");
         } else {
-          log.info("Using anonymous authentication.");
+          LOG.info("Using anonymous authentication.");
         }
         env.put(Context.SECURITY_AUTHENTICATION, "none"); //$NON-NLS-1$
       }

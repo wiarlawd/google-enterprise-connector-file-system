@@ -96,6 +96,22 @@ public class LdapHandlerTest extends TestCase {
     dump(ldapHandler.execute());
   }
 
+  public void testExecuteTwice() {
+    Set<String> schema = getSchema();
+    dumpSchema(schema);
+    LdapHandler ldapHandler = makeLdapHandlerForTesting(schema);
+    dump(ldapHandler.execute());
+
+    boolean sawException;
+    try {
+      dump(ldapHandler.execute());
+      sawException = false;
+    } catch (RuntimeException e) {
+      sawException = true;
+    }
+    assertTrue(sawException);
+  }
+
   private void dumpSchema(Set<String> schema) {
     System.out.println("Schema:");
     for (String k: schema) {
