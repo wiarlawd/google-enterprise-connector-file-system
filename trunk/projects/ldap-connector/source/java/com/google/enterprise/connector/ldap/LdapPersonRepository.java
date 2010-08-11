@@ -14,17 +14,23 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
 
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Ldap Repository.
  * Implemented by delegating to an {@link Iterable}<{@link JsonDocument}>
  */
 public class LdapPersonRepository implements SnapshotRepository<LdapPerson> {
+
+  private static final Logger LOG = Logger.getLogger(
+      LdapPersonRepository.class.getName());
 
   private final Iterable<JsonDocument> personFetcher;
 
@@ -34,13 +40,26 @@ public class LdapPersonRepository implements SnapshotRepository<LdapPerson> {
 
   /* @Override */
   public Iterator<LdapPerson> iterator() throws SnapshotRepositoryRuntimeException {
-    return Iterators.transform(personFetcher.iterator(), LdapPerson.factoryFunction);
+    final Function<JsonDocument, LdapPerson> f = new LoggingFunction();
+    return Iterators.transform(personFetcher.iterator(), f);
   }
 
   /* @Override */
   public String getName() {
-    // TODO(max): should this have a better name?
-    return "foo";
+    return LdapPersonRepository.class.getName();
   }
 
+  private static class LoggingFunction implements Function<JsonDocument, LdapPerson> {
+    private int count = 0;
+
+    /* @Override */
+    public LdapPerson apply(JsonDocument jdoc) {
+      LdapPerson p = LdapPerson.factoryFunction.apply(jdoc);
+      if (LOG.isLoggable(Level.FINER)) {
+        LOG.finer("LdapPersonRepository returns person " + p.getDocumentId() + " number " + count);
+      }
+      count++;
+      return p;
+    }
+  }
 }
