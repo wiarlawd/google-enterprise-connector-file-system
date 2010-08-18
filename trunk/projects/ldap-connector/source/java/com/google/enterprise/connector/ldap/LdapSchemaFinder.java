@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
@@ -21,6 +23,7 @@ import com.google.common.collect.Sets;
 import com.google.enterprise.connector.ldap.LdapSchemaFinder.SchemaResult.SchemaResultError;
 
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.Map.Entry;
 
 /**
@@ -33,17 +36,28 @@ import java.util.Map.Entry;
  */
 public class LdapSchemaFinder {
 
-  private final LdapHandler ldapHandler;
+  private final Supplier<SortedMap<String, Multimap<String, String>>> supplier;
 
-  public LdapSchemaFinder(LdapHandler ldapHandler) {
-    this.ldapHandler = ldapHandler;
+  @VisibleForTesting
+  public LdapSchemaFinder(Supplier<SortedMap<String, Multimap<String, String>>> supplier) {
+    this.supplier = supplier;
+  }
+
+  public LdapSchemaFinder(final LdapHandler ldapHandler) {
+    this(
+        new Supplier<SortedMap<String, Multimap<String, String>>>() {
+      /* @Override */
+      public SortedMap<String, Multimap<String, String>> get() {
+        return ldapHandler.execute();
+      }
+    });
   }
 
   public SchemaResult find(int maxResults) {
     Multimap<String, String> tempSchema = ArrayListMultimap.create();
     Set<SchemaResultError> errors = Sets.newHashSet();
     int resultCount = 0;
-    for (Entry<String, Multimap<String, String>> entry : ldapHandler.execute().entrySet()) {
+    for (Entry<String, Multimap<String, String>> entry : supplier.get().entrySet()) {
       String key = entry.getKey();
       Multimap<String, String> person = entry.getValue();
       tempSchema.putAll(person);

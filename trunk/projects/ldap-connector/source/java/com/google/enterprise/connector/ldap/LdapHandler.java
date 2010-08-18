@@ -21,8 +21,10 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.AuthType;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.Method;
+import com.google.enterprise.connector.ldap.LdapConstants.AuthType;
+import com.google.enterprise.connector.ldap.LdapConstants.ErrorMessages;
+import com.google.enterprise.connector.ldap.LdapConstants.Method;
+import com.google.enterprise.connector.ldap.LdapConstants.ServerType;
 
 import java.io.IOException;
 import java.util.Hashtable;
@@ -72,7 +74,7 @@ public class LdapHandler {
   private final LdapRule rule;
 
   private static Function<String, String> toLower = new Function<String, String>() {
-    @Override
+    /* @Override */
     public String apply(String s) {
       return s.toLowerCase();
     }
@@ -111,6 +113,10 @@ public class LdapHandler {
         new TreeMap<String, Multimap<String, String>>();
 
     LdapContext ctx = connection.getLdapContext();
+
+    if (ctx == null) {
+      throw new IllegalStateException(ErrorMessages.UNKNOWN_CONNECTION_ERROR.toString());
+    }
 
     NamingEnumeration<SearchResult> ldapResults = null;
     int resultCount = 0;
@@ -178,11 +184,11 @@ public class LdapHandler {
             cookie, Control.NONCRITICAL)});
       } while (!shouldStop(cookie));
     } catch (NameNotFoundException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     } catch (NamingException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new IllegalStateException(e);
     } finally {
       // Clean up everything.
       if (ldapResults != null) {
@@ -432,26 +438,14 @@ public class LdapHandler {
    * Configuration for an ldap connection. Immutable, static data class.
    */
   public static class LdapConnectionSettings {
-    public enum AuthType {
-      ANONYMOUS, SIMPLE
-    }
-
-    public enum Method {
-      STANDARD, SSL
-    }
-
-    public enum ServerType {
-      ACTIVE_DIRECTORY, DOMINO, OPENLDAP, GENERIC
-    }
-
     private final String hostname;
     private final int port;
-    private final LdapConnectionSettings.AuthType authType;
+    private final AuthType authType;
     private final String username;
     private final String password;
-    private final LdapConnectionSettings.Method connectMethod;
+    private final Method connectMethod;
     private final String baseDN;
-    private final LdapConnectionSettings.ServerType serverType;
+    private final ServerType serverType;
 
     public LdapConnectionSettings(Method connectMethod, String hostname,
         int port, String baseDN, AuthType authType, String username, String password) {
@@ -477,7 +471,7 @@ public class LdapHandler {
       this.username = null;
     }
 
-    public LdapConnectionSettings.AuthType getAuthType() {
+    public AuthType getAuthType() {
       return authType;
     }
 
@@ -485,7 +479,7 @@ public class LdapHandler {
       return baseDN;
     }
 
-    public LdapConnectionSettings.Method getConnectMethod() {
+    public Method getConnectMethod() {
       return connectMethod;
     }
 
@@ -501,7 +495,7 @@ public class LdapHandler {
       return port;
     }
 
-    public LdapConnectionSettings.ServerType getServerType() {
+    public ServerType getServerType() {
       return serverType;
     }
 

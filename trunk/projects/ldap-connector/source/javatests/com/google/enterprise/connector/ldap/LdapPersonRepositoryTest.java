@@ -54,5 +54,5 @@ public class LdapPersonRepositoryTest extends TestCase {
     dumpFetcher(System.out);
   }
 
-  //TODO(Max): think about whether more substantive tests are appropriate and what they mioght be
+  //TODO(Max): think about whether more substantive tests are appropriate and what they might be
 }

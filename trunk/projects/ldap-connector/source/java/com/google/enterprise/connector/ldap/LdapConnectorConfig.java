@@ -15,10 +15,11 @@
 package com.google.enterprise.connector.ldap;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.enterprise.connector.ldap.LdapConstants.AuthType;
+import com.google.enterprise.connector.ldap.LdapConstants.ConfigName;
+import com.google.enterprise.connector.ldap.LdapConstants.Method;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.AuthType;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.Method;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule.Scope;
 
 import java.util.Map;
@@ -37,32 +38,6 @@ import java.util.logging.Logger;
 public class LdapConnectorConfig {
 
   public static final Logger LOG = Logger.getLogger(LdapConnectorConfig.class.getName());
-
-  public enum ConfigName {
-    HOSTNAME("hostname"),
-    PORT("port"),
-    AUTHTYPE("authtype"),
-    USERNAME("username"),
-    PASSWORD("password"),
-    METHOD("method"),
-    BASEDN("basedn"),
-    FILTER("filter"),
-    SCHEMA("schema"),
-    SCHEMA_KEY("schema_key"), ;
-
-    private final String tag;
-
-    private ConfigName(String tag) {
-      this.tag = tag;
-    }
-
-    @Override
-    public String toString() {
-      return tag;
-    }
-  }
-
-  public static final int MAX_SCHEMA_ELEMENTS = 100;
 
   private final String hostname;
   private final int port;
@@ -107,7 +82,7 @@ public class LdapConnectorConfig {
 
     Set<String> tempSchema = new TreeSet<String>();
 
-    for (int i = 0; i < MAX_SCHEMA_ELEMENTS; i++) {
+    for (int i = 0; i < LdapConstants.MAX_SCHEMA_ELEMENTS; i++) {
       String pseudoKey = ConfigName.SCHEMA.toString() + "_" + i;
       String attributeName = getTrimmedValue(config.get(pseudoKey));
       if (attributeName != null) {
@@ -116,7 +91,7 @@ public class LdapConnectorConfig {
     }
 
     if (schemaKey == null || schemaKey.length() < 1) {
-      schemaKey = "dn";
+      schemaKey = LdapHandler.DN_ATTRIBUTE;
     }
 
     /**

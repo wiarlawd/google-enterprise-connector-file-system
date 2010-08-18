@@ -14,10 +14,10 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.enterprise.connector.ldap.LdapConstants.Method;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection.LdapConnectionError;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings.Method;
 
 import junit.framework.TestCase;
 
