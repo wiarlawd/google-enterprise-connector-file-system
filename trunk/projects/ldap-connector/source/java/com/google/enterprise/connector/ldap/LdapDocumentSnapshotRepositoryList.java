@@ -15,11 +15,13 @@
 package com.google.enterprise.connector.ldap;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.Multimap;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,12 +46,7 @@ public class LdapDocumentSnapshotRepositoryList
   }
 
   private JsonDocumentFetcher makeJsonDocumentFetcher(final LdapConnectorConfig ldapConnectorConfig) {
-    Supplier<LdapHandler> ldapHandlerSupplier = new Supplier<LdapHandler>() {
-      @Override
-      public LdapHandler get() {
-        return makeLdapHandler(ldapConnectorConfig);
-      }
-    };
+    Supplier<Map<String, Multimap<String, String>>> ldapHandlerSupplier = makeLdapHandler(ldapConnectorConfig);
     return new LdapJsonDocumentFetcher(ldapHandlerSupplier);
   }
 

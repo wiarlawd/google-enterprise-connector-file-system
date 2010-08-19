@@ -14,20 +14,98 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.enterprise.connector.ldap.LdapSchemaFinder.SchemaResult;
 
 import junit.framework.TestCase;
 
+import java.util.Map;
+import java.util.Set;
+
 public class LdapSchemaFinderTest extends TestCase {
 
-  // TODO: write some more serious tests
-  public void testSimple() {
-    LdapHandler ldapHandler = LdapHandlerTest.makeLdapHandlerForTesting(null);
+  public void testBasic() {
+    MockLdapHandler ldapHandler = getBasicMock();
     LdapSchemaFinder ldapSchemaFinder = new LdapSchemaFinder(ldapHandler);
     SchemaResult result = ldapSchemaFinder.find(100);
-    for (String attrname: result.getSchema().keySet()) {
-      System.out.println(attrname);
+    Set<String> schema = Sets.newHashSet(result.getSchema().keySet());
+    for (String schemaKey: ldapHandler.getSchemaKeys()) {
+      assertTrue("Should find schema key: \"" + schemaKey + "\"",
+          schema.remove(schemaKey));
     }
+    assertEquals(0, schema.size());
+  }
+
+  public void testBigger() {
+    MockLdapHandler ldapHandler = getBigMock();
+    LdapSchemaFinder ldapSchemaFinder = new LdapSchemaFinder(ldapHandler);
+    SchemaResult result = ldapSchemaFinder.find(100);
+    Set<String> schema = Sets.newHashSet(result.getSchema().keySet());
+    for (String schemaKey: ldapHandler.getSchemaKeys()) {
+      assertTrue("Should find schema key: \"" + schemaKey + "\"",
+          schema.remove(schemaKey));
+    }
+    assertEquals("some schema keys not found", 0, schema.size());
+  }
+
+  public static MockLdapHandler getBasicMock() {
+    Map<String, Multimap<String, String>> repo = Maps.newTreeMap();
+    String key;
+    ImmutableMultimap<String, String> person;
+
+    key = "cn=Robert Smith,ou=people,dc=example,dc=com";
+    person = ImmutableMultimap.of(
+        "dn", key,
+        "cn", "Robert Smith",
+        "foo", "bar"
+        );
+    repo.put(key, person);
+
+    key = "cn=Joseph Blow,ou=people,dc=example,dc=com";
+    person = ImmutableMultimap.of(
+        "dn", key,
+        "cn", "Joseph Blow",
+        "argle", "bargle"
+        );
+    repo.put(key, person);
+
+    key = "cn=Jane Doe,ou=people,dc=example,dc=com";
+    person = ImmutableMultimap.of(
+        "dn", key,
+        "cn", "Jane Doe",
+        "foo", "baz"
+        );
+    repo.put(key, person);
+
+    ImmutableSet<String> schemaKeys = ImmutableSet.of("dn", "cn", "foo", "argle");
+
+    return new MockLdapHandler(repo, schemaKeys);
+  }
+
+  public static MockLdapHandler getBigMock() {
+    Map<String, Multimap<String, String>> repo = Maps.newTreeMap();
+    String key;
+    Multimap<String, String> person = ArrayListMultimap.create();
+    Set<String> schemaKeys = Sets.newHashSet("dn", "cn", "employeenumber");
+
+    for (int i=0; i<1000; i++) {
+      String name = "Employee" + i;
+      key = "cn=" + name + ",ou=people,dc=example,dc=com";
+      person.put("dn", key);
+      person.put("cn", name);
+      person.put("employeenumber", Integer.toString(i));
+      String schemaKey = "key" + (i%100);
+      person.put(schemaKey, "cucu");
+      repo.put(key, person);
+      schemaKeys.add(schemaKey);
+    }
+
+    return new MockLdapHandler(repo, schemaKeys);
   }
 
 }

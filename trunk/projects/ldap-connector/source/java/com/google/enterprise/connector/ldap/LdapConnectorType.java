@@ -71,6 +71,11 @@ public class LdapConnectorType implements ConnectorType {
   private static class FormManager {
 
     /**
+     * The maximum results examined to construct a schema
+     */
+    private static final int MAX_SCHEMA_RESULTS = 1000;
+
+    /**
      * This is non-static class, because it wants to look at the state of
      * the containing instance's schemaField
      */
@@ -262,7 +267,8 @@ public class LdapConnectorType implements ConnectorType {
     }
 
     private void getSchema(LdapConnection connection, LdapRule rule) {
-      LdapHandler ldapHandler = new LdapHandler(connection, rule, null, LdapHandler.DN_ATTRIBUTE);
+      LdapHandler ldapHandler =
+          new LdapHandler(connection, rule, null, LdapHandler.DN_ATTRIBUTE, MAX_SCHEMA_RESULTS);
       validateNotNull(ldapHandler, "ldapHandler");
       if (configureResponse != null) {
         return;
@@ -274,7 +280,7 @@ public class LdapConnectorType implements ConnectorType {
         return;
       }
 
-      SchemaResult schemaResult = schemaFinder.find(100);
+      SchemaResult schemaResult = schemaFinder.find(MAX_SCHEMA_RESULTS);
       validateNotNull(schemaResult, "schemaResult");
       if (configureResponse != null) {
         return;

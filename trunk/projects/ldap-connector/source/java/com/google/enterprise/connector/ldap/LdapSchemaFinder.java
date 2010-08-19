@@ -22,8 +22,8 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.enterprise.connector.ldap.LdapSchemaFinder.SchemaResult.SchemaResultError;
 
+import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.Map.Entry;
 
 /**
@@ -36,21 +36,11 @@ import java.util.Map.Entry;
  */
 public class LdapSchemaFinder {
 
-  private final Supplier<SortedMap<String, Multimap<String, String>>> supplier;
+  private final Supplier<Map<String, Multimap<String, String>>> supplier;
 
   @VisibleForTesting
-  public LdapSchemaFinder(Supplier<SortedMap<String, Multimap<String, String>>> supplier) {
+  public LdapSchemaFinder(Supplier<Map<String, Multimap<String, String>>> supplier) {
     this.supplier = supplier;
-  }
-
-  public LdapSchemaFinder(final LdapHandler ldapHandler) {
-    this(
-        new Supplier<SortedMap<String, Multimap<String, String>>>() {
-      /* @Override */
-      public SortedMap<String, Multimap<String, String>> get() {
-        return ldapHandler.execute();
-      }
-    });
   }
 
   public SchemaResult find(int maxResults) {

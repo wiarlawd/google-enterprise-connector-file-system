@@ -17,12 +17,13 @@ package com.google.enterprise.connector.ldap;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import com.google.enterprise.connector.spi.SpiConstants;
 
 import java.util.Iterator;
-import java.util.SortedMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -30,17 +31,17 @@ import java.util.Map.Entry;
  */
 public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
 
-  private final Supplier<LdapHandler> ldapHandlerSupplier;
+  private final Supplier<Map<String, Multimap<String, String>>> mapOfMultimapsSupplier;
 
-  public LdapJsonDocumentFetcher(Supplier<LdapHandler> ldapHandlerSupplier) {
-    this.ldapHandlerSupplier = ldapHandlerSupplier;
+  public LdapJsonDocumentFetcher(Supplier<Map<String, Multimap<String, String>>> mapOfMultimapsSupplier) {
+    this.mapOfMultimapsSupplier = mapOfMultimapsSupplier;
   }
 
   private static Function<Entry<String, Multimap<String, String>>, Multimap<String, String>> addDocid =
       new Function<Entry<String, Multimap<String, String>>, Multimap<String, String>>() {
     /* @Override */
     public Multimap<String, String> apply(Entry<String, Multimap<String, String>> e) {
-      Multimap<String, String> person = e.getValue();
+      Multimap<String, String> person = ArrayListMultimap.create(e.getValue());
       String key = e.getKey();
       person.put(SpiConstants.PROPNAME_DOCID, key);
       return person;
@@ -49,8 +50,7 @@ public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
 
   /* @Override */
   public Iterator<JsonDocument> iterator() {
-    LdapHandler ldapHandler = ldapHandlerSupplier.get();
-    SortedMap<String, Multimap<String, String>> results = ldapHandler.execute();
+    Map<String, Multimap<String, String>> results = mapOfMultimapsSupplier.get();
     return Iterators.transform(results.entrySet().iterator(), Functions.compose(
         JsonDocument.buildFromMultimap, addDocid));
   }

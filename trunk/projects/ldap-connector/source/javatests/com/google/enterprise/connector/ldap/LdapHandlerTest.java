@@ -22,9 +22,9 @@ import com.google.enterprise.connector.ldap.LdapHandler.LdapRule.Scope;
 
 import junit.framework.TestCase;
 
+import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.Map.Entry;
 
 public class LdapHandlerTest extends TestCase {
@@ -68,10 +68,10 @@ public class LdapHandlerTest extends TestCase {
     return TEST_SCHEMA_KEY;
   }
 
-  public static LdapHandler makeLdapHandlerForTesting(Set<String> schema) {
+  private static LdapHandler makeLdapHandlerForTesting(Set<String> schema, int maxResults) {
     LdapRule ldapRule = makeSimpleLdapRule();
     LdapConnection connection = LdapConnectionTest.makeLdapConnectionForTesting();
-    LdapHandler ldapHandler = new LdapHandler(connection, ldapRule, schema, getSchemaKey());
+    LdapHandler ldapHandler = new LdapHandler(connection, ldapRule, schema, getSchemaKey(), maxResults);
     return ldapHandler;
   }
 
@@ -84,32 +84,43 @@ public class LdapHandlerTest extends TestCase {
 
   public void testSimple() {
     // makes sure we can instantiate and execute something
-    LdapHandler ldapHandler = makeLdapHandlerForTesting(null);
-    dump(ldapHandler.execute());
+    LdapHandler ldapHandler = makeLdapHandlerForTesting(null, 0);
+    Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
+    System.out.println(mapOfMultimaps.size());
+    dump(mapOfMultimaps);
   }
 
   public void testSpecifiedSchema() {
     // this time with a schema
     Set<String> schema = getSchema();
     dumpSchema(schema);
-    LdapHandler ldapHandler = makeLdapHandlerForTesting(schema);
-    dump(ldapHandler.execute());
+    LdapHandler ldapHandler = makeLdapHandlerForTesting(schema, 0);
+    Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
+    System.out.println(mapOfMultimaps.size());
+    dump(mapOfMultimaps);
   }
 
   public void testExecuteTwice() {
     Set<String> schema = getSchema();
     dumpSchema(schema);
-    LdapHandler ldapHandler = makeLdapHandlerForTesting(schema);
-    dump(ldapHandler.execute());
+    LdapHandler ldapHandler = makeLdapHandlerForTesting(schema, 0);
+    Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
+    System.out.println(mapOfMultimaps.size());
 
     boolean sawException;
     try {
-      dump(ldapHandler.execute());
+      mapOfMultimaps = ldapHandler.get();
       sawException = false;
     } catch (RuntimeException e) {
       sawException = true;
     }
     assertTrue(sawException);
+  }
+
+  public void testLimit() {
+    LdapHandler ldapHandler = makeLdapHandlerForTesting(null, 1);
+    Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
+    System.out.println(mapOfMultimaps.size());
   }
 
   private void dumpSchema(Set<String> schema) {
@@ -119,8 +130,8 @@ public class LdapHandlerTest extends TestCase {
     }
   }
 
-  private void dump(SortedMap<String, Multimap<String, String>> execute) {
-    for (Entry<String, Multimap<String, String>> entry : execute.entrySet()) {
+  private void dump(Map<String, Multimap<String, String>> mapOfMultimaps) {
+    for (Entry<String, Multimap<String, String>> entry : mapOfMultimaps.entrySet()) {
       String key = entry.getKey();
       Multimap<String, String> person = entry.getValue();
       System.out.println();

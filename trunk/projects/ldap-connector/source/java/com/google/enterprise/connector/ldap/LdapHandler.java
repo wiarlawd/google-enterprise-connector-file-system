@@ -16,6 +16,7 @@ package com.google.enterprise.connector.ldap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
@@ -36,6 +37,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.naming.AuthenticationNotSupportedException;
+import javax.naming.CommunicationException;
 import javax.naming.Context;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
@@ -58,7 +60,7 @@ import javax.naming.ldap.Rdn;
  * exceptions are wrapped in RuntimeException, so callers need to be careful to
  * catch RuntimeException.
  */
-public class LdapHandler {
+public class LdapHandler implements Supplier<Map<String, Multimap<String, String>>> {
   /**
    * Every object in LDAP has a "distinguished name" (DN). jndi does not treat
    * DN as an attribute, but we do. DN will always be present and will always be
@@ -72,6 +74,7 @@ public class LdapHandler {
   private final String schemaKey;
   private final Set<String> schema;
   private final LdapRule rule;
+  private final int maxResults;
 
   private static Function<String, String> toLower = new Function<String, String>() {
     /* @Override */
@@ -84,7 +87,7 @@ public class LdapHandler {
    * Sole constructor
    */
   public LdapHandler(LdapConnection connection, LdapRule rule,
-      Set<String> schema, String schemaKey) {
+      Set<String> schema, String schemaKey, int maxResults) {
     this.rule = rule;
     this.schemaKey = schemaKey;
     this.connection = connection;
@@ -93,6 +96,12 @@ public class LdapHandler {
     } else {
       this.schema = Sets.newHashSet(Collections2.transform(schema, toLower));
     }
+    this.maxResults = maxResults;
+  }
+
+  public LdapHandler(LdapConnection connection, LdapRule rule,
+      Set<String> schema, String schemaKey) {
+    this(connection, rule, schema, schemaKey, 0);
   }
 
   /**
@@ -100,14 +109,14 @@ public class LdapHandler {
    * Note: execute should only be called once. To execute again, create a new
    * LdapHandler and execute that.
    *
-   * @return a SortedMap or results. The map is sorted by the schemaKey
+   * @return a Map of results. The map is sorted by the schemaKey
    *         specified in the constructor. Each result is a Multimap of Strings
    *         to Strings, keyed by attributes in the schema. Results are
    *         Multimaps because ldap can store multiple values with an attribute,
    *         although in practice this is rare (except for a few attributes,
    *         like email aliases).
    */
-  public SortedMap<String, Multimap<String, String>> execute() {
+  public Map<String, Multimap<String, String>> get() {
 
     SortedMap<String, Multimap<String, String>> result =
         new TreeMap<String, Multimap<String, String>>();
@@ -157,6 +166,9 @@ public class LdapHandler {
           } else {
             result.put(keyValue, thisResult);
           }
+          if (maxResults > 0 && resultCount >= maxResults) {
+            break;
+          }
         }
 
         if (LOG.isLoggable(Level.INFO)) {
@@ -183,6 +195,8 @@ public class LdapHandler {
         ctx.setRequestControls(new Control[] {new PagedResultsControl(LdapConnection.PAGESIZE,
             cookie, Control.NONCRITICAL)});
       } while (!shouldStop(cookie));
+    } catch (CommunicationException e) {
+      throw new IllegalStateException(e);
     } catch (NameNotFoundException e) {
       throw new IllegalStateException(e);
     } catch (NamingException e) {
@@ -313,6 +327,7 @@ public class LdapHandler {
       AuthenticationNotSupported,
       NamingException,
       IOException,
+      CommunicationException,
     }
 
     private final LdapConnectionSettings settings;
@@ -341,6 +356,8 @@ public class LdapHandler {
       LdapContext ctx = null;
       try {
         ctx = new InitialLdapContext(env, null);
+      } catch (CommunicationException e) {
+        errors.put(LdapConnectionError.CommunicationException, e.getMessage());
       } catch (AuthenticationNotSupportedException e) {
         errors.put(LdapConnectionError.AuthenticationNotSupported, e.getMessage());
       } catch (NamingException e) {

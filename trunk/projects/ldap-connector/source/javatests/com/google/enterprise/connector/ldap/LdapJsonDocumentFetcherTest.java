@@ -14,17 +14,11 @@
 
 package com.google.enterprise.connector.ldap;
 
-import com.google.common.base.Supplier;
 
 public class LdapJsonDocumentFetcherTest extends JsonDocumentFetcherTestCase {
   @Override
   public JsonDocumentFetcher setJsonDocumentFetcher() {
-     Supplier<LdapHandler> ldapHandlerSupplier = new Supplier<LdapHandler>() {
-      @Override
-      public LdapHandler get() {
-        return LdapHandlerTest.makeLdapHandlerForTesting(null);
-      }
-     };
-    return new LdapJsonDocumentFetcher(ldapHandlerSupplier);
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    return new LdapJsonDocumentFetcher(basicMock);
   }
 }
