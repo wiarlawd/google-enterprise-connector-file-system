@@ -27,11 +27,10 @@ public class LdapConnectorConfigTest extends TestCase {
     ImmutableMap<String, String> configMap =
         ImmutableMap.<String, String> builder().
         put(LdapConstants.ConfigName.AUTHTYPE.toString(), "ANONYMOUS").
-        put(LdapConstants.ConfigName.HOSTNAME.toString(), LdapHandlerTest.getHostname()).
+        put(LdapConstants.ConfigName.HOSTNAME.toString(), "ldap.realistic-looking-domain.com").
         put(LdapConstants.ConfigName.METHOD.toString(), "STANDARD").
-        put(LdapConstants.ConfigName.BASEDN.toString(),
-        LdapHandlerTest.getTestResourceBundle().getString("basedn")).
-        put(LdapConstants.ConfigName.FILTER.toString(), LdapHandlerTest.getTestFilter()).
+        put(LdapConstants.ConfigName.BASEDN.toString(), "ou=people,dc=example,dc=com").
+        put(LdapConstants.ConfigName.FILTER.toString(), "ou=people").
         put(LdapConstants.ConfigName.SCHEMA.toString() + "_0", "foo").
         put(LdapConstants.ConfigName.SCHEMA.toString() + "_1", "bar").
         put(LdapConstants.ConfigName.SCHEMA.toString() + "_7", "baz").
@@ -52,10 +51,10 @@ public class LdapConnectorConfigTest extends TestCase {
     Builder<String, String> builder = ImmutableMap.<String, String> builder();
     builder.
         put("authtype", "ANONYMOUS").
-        put("hostname", LdapHandlerTest.getHostname()).
+        put("hostname", "ldap.realistic-looking-domain.com").
         put("method", "STANDARD").
-        put("basedn", LdapHandlerTest.getTestResourceBundle().getString("basedn")).
-        put("filter", LdapHandlerTest.getTestFilter());
+        put("basedn", "ou=people,dc=example,dc=com").
+        put("filter", "ou=people");
     int extraElements = 10;
     for (int i = 0; i < LdapConstants.MAX_SCHEMA_ELEMENTS + extraElements; i++) {
       String key = LdapConstants.ConfigName.SCHEMA.toString() + "_" + i;

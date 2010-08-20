@@ -16,6 +16,9 @@ package com.google.enterprise.connector.ldap;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.enterprise.connector.ldap.LdapConstants.LdapConnectionError;
+import com.google.enterprise.connector.ldap.LdapConstants.Method;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule.Scope;
 
@@ -25,6 +28,8 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.Map.Entry;
+
+import javax.naming.ldap.LdapContext;
 
 /**
  * Tests querying against LDAP.
@@ -54,30 +59,68 @@ public class LdapHandlerTest extends TestCase {
     TEST_SCHEMA_KEY = TEST_RESOURCE_BUNDLE.getString("schema_key");
   }
 
-  public static ResourceBundle getTestResourceBundle() {
+  private static ResourceBundle getTestResourceBundle() {
     return TEST_RESOURCE_BUNDLE;
   }
 
-  public static String getTestFilter() {
+  private static String getTestFilter() {
     return TEST_FILTER;
   }
 
-  public static String getHostname() {
+  private static String getHostname() {
     return TEST_HOSTNAME;
   }
 
-  public static Set<String> getSchema() {
+  private static Set<String> getSchema() {
     return Sets.newHashSet(TEST_SCHEMA);
   }
 
-  public static String getSchemaKey() {
+  private static String getSchemaKey() {
     return TEST_SCHEMA_KEY;
+  }
+
+  public void testConnectivity() {
+    LdapHandler handler = new LdapHandler();
+    handler.setLdapConnectionSettings(makeLdapConnectionSettings());
+    LdapContext ldapContext = handler.getLdapContext();
+    assertNotNull(ldapContext);
+  }
+
+  private static LdapConnectionSettings makeLdapConnectionSettings() {
+    Method method = Method.STANDARD;
+    String hostname = LdapHandlerTest.getHostname();
+    int port = 389;
+    String baseDN = LdapHandlerTest.getTestResourceBundle().getString("basedn");
+    LdapConnectionSettings settings =
+        new LdapConnectionSettings(method, hostname, port, baseDN);
+    return settings;
+  }
+
+  public void testBadConnectivity() {
+    LdapHandler handler = new LdapHandler();
+    handler.setLdapConnectionSettings(makeInvalidLdapConnectionSettings());
+    LdapContext ldapContext = handler.getLdapContext();
+    assertNull(ldapContext);
+    Map<LdapConnectionError, String> errors = handler.getErrors();
+    for (LdapConnectionError e : errors.keySet()) {
+      System.out.println("Error " + e + " message: " + errors.get(e));
+    }
+  }
+
+  private static LdapConnectionSettings makeInvalidLdapConnectionSettings() {
+    Method method = Method.STANDARD;
+    String hostname = "not-ldap.xyzzy.foo";
+    int port = 389;
+    String baseDN = LdapHandlerTest.getTestResourceBundle().getString("basedn");
+    LdapConnectionSettings settings =
+        new LdapConnectionSettings(method, hostname, port, baseDN);
+    return settings;
   }
 
   private static LdapHandler makeLdapHandlerForTesting(Set<String> schema, int maxResults) {
     LdapRule ldapRule = makeSimpleLdapRule();
     LdapHandler ldapHandler = new LdapHandler();
-    ldapHandler.setLdapConnectionSettings(LdapConnectionTest.makeLdapConnectionSettings());
+    ldapHandler.setLdapConnectionSettings(makeLdapConnectionSettings());
     ldapHandler.setQueryParameters(ldapRule, schema, getSchemaKey(), maxResults);
     return ldapHandler;
   }
@@ -89,7 +132,7 @@ public class LdapHandlerTest extends TestCase {
     return ldapRule;
   }
 
-  public void testSimple() {
+  public void testSimpleQuery() {
     // makes sure we can instantiate and execute something
     LdapHandler ldapHandler = makeLdapHandlerForTesting(null, 0);
     Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
@@ -97,7 +140,7 @@ public class LdapHandlerTest extends TestCase {
     dump(mapOfMultimaps);
   }
 
-  public void testSpecifiedSchema() {
+  public void testSpecifiedSchemaQuery() {
     // this time with a schema
     Set<String> schema = getSchema();
     dumpSchema(schema);
@@ -107,7 +150,7 @@ public class LdapHandlerTest extends TestCase {
     dump(mapOfMultimaps);
   }
 
-  public void testExecuteTwice() {
+  public void testQueryTwice() {
     Set<String> schema = getSchema();
     dumpSchema(schema);
     LdapHandler ldapHandler = makeLdapHandlerForTesting(schema, 0);
@@ -118,7 +161,7 @@ public class LdapHandlerTest extends TestCase {
     System.out.println("second time size: " + mapOfMultimaps.size());
   }
 
-  public void testLimit() {
+  public void testLimitedQuery() {
     LdapHandler ldapHandler = makeLdapHandlerForTesting(null, 1);
     Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
     assertEquals(1,mapOfMultimaps.size());
