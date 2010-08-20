@@ -31,18 +31,10 @@ public class LdapSchemaFinderTest extends TestCase {
 
   public void testBasic() {
     MockLdapHandler ldapHandler = getBasicMock();
-    LdapSchemaFinder ldapSchemaFinder = new LdapSchemaFinder(ldapHandler);
-    SchemaResult result = ldapSchemaFinder.find(100);
-    Set<String> schema = Sets.newHashSet(result.getSchema().keySet());
-    for (String schemaKey: ldapHandler.getSchemaKeys()) {
-      assertTrue("Should find schema key: \"" + schemaKey + "\"",
-          schema.remove(schemaKey));
-    }
-    assertEquals(0, schema.size());
+    doBasicSchemaTest(ldapHandler);
   }
 
-  public void testBigger() {
-    MockLdapHandler ldapHandler = getBigMock();
+  private void doBasicSchemaTest(MockLdapHandler ldapHandler) {
     LdapSchemaFinder ldapSchemaFinder = new LdapSchemaFinder(ldapHandler);
     SchemaResult result = ldapSchemaFinder.find(100);
     Set<String> schema = Sets.newHashSet(result.getSchema().keySet());
@@ -51,6 +43,11 @@ public class LdapSchemaFinderTest extends TestCase {
           schema.remove(schemaKey));
     }
     assertEquals("some schema keys not found", 0, schema.size());
+  }
+
+  public void testBigger() {
+    MockLdapHandler ldapHandler = getBigMock();
+    doBasicSchemaTest(ldapHandler);
   }
 
   public static MockLdapHandler getBasicMock() {
@@ -84,7 +81,9 @@ public class LdapSchemaFinderTest extends TestCase {
 
     ImmutableSet<String> schemaKeys = ImmutableSet.of("dn", "cn", "foo", "argle");
 
-    return new MockLdapHandler(repo, schemaKeys);
+    MockLdapHandler result = new MockLdapHandler(repo, schemaKeys);
+    result.setIsValid(true);
+    return result;
   }
 
   public static MockLdapHandler getBigMock() {
@@ -105,7 +104,9 @@ public class LdapSchemaFinderTest extends TestCase {
       schemaKeys.add(schemaKey);
     }
 
-    return new MockLdapHandler(repo, schemaKeys);
+    MockLdapHandler result = new MockLdapHandler(repo, schemaKeys);
+    result.setIsValid(true);
+    return result;
   }
 
 }

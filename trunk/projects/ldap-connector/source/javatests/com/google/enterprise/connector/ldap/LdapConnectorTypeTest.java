@@ -32,14 +32,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LdapConnectorTypeTest extends TestCase {
+
   public void testInstantiate() {
     // just attempts to instantiate an LCT - can only fail
     // if an exception is thrown
-    LdapConnectorType lct = new LdapConnectorType();
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
   }
 
   public void testGetConfigForm() throws Exception {
-    LdapConnectorType lct = new LdapConnectorType();
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
     ResourceBundle b = lct.getResourceBundle(Locale.US);
     ConfigureResponse cr = lct.getConfigForm(Locale.US);
 
@@ -77,21 +80,22 @@ public class LdapConnectorTypeTest extends TestCase {
    * This test looks at the first case.
    */
   public void testValidateConfigGetSchema() throws Exception {
-    LdapConnectorType lct = new LdapConnectorType();
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
     ResourceBundle b = lct.getResourceBundle(Locale.US);
     ImmutableMap<String, String> originalConfig =
         ImmutableMap.<String, String> builder().
         put("authtype", "ANONYMOUS").
         put("port", "389").
-        put("hostname", LdapHandlerTest.getHostname()).
-        put("basedn", LdapHandlerTest.getTestResourceBundle().getString("basedn")).
-        put("filter", LdapHandlerTest.getTestFilter()).
+        put("hostname", "ldap.realistic-looking-domain.com").
+        put("basedn", "ou=people,dc=example,dc=com").
+        put("filter", "ou=people").
         build();
     ConfigureResponse cr = lct.validateConfig(originalConfig, Locale.US, null);
     String formSnippet = cr.getFormSnippet();
     System.out.println(formSnippet);
     String message = cr.getMessage();
-    assertTrue(message == null || message.length() < 1);
+    assertTrue(message, message == null || message.length() < 1);
     Map<String, String> configData = cr.getConfigData();
     assertTrue(configData == null || configData.isEmpty());
 
@@ -110,12 +114,13 @@ public class LdapConnectorTypeTest extends TestCase {
    * This should be an acceptable config.
    */
   public void testValidateConfigWithSchema() {
-    LdapConnectorType lct = new LdapConnectorType();
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
     ImmutableMap<String, String> originalConfig =
         ImmutableMap.<String, String> builder().
         put("port", "").
         put("authtype", "ANONYMOUS").
-        put("hostname", LdapHandlerTest.getHostname()).
+        put("hostname", "ldap.realistic-looking-domain.com").
         put("googleConnectorName", "x").
         put("googleConnectorWorkDir",
         "/home/ziff/cats/ldap-tom/webapps/connector-manager/WEB-INF/connectors/ldapConnector/x").
@@ -125,9 +130,9 @@ public class LdapConnectorTypeTest extends TestCase {
         put("schema_9", "employeestatus").
         put("schema_8", "employeenumber").
         put("method", "STANDARD").
-        put("basedn", LdapHandlerTest.getTestResourceBundle().getString("basedn")).
+        put("basedn", "ou=people,dc=example,dc=com").
         put("googleWorkDir", "/home/ziff/cats/ldap-tom/webapps/connector-manager/WEB-INF").
-        put("filter", LdapHandlerTest.getTestFilter()).
+        put("filter", "ou=people").
         build();
 
     ImmutableMap<String, String> expectedDefaults =
@@ -141,18 +146,19 @@ public class LdapConnectorTypeTest extends TestCase {
   }
 
   public void testValidateConfigWithSchemaAndDefaults() {
-    LdapConnectorType lct = new LdapConnectorType();
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
     ImmutableMap<String, String> originalConfig =
         ImmutableMap.<String, String> builder().
-        put("hostname", LdapHandlerTest.getHostname()).
+        put("hostname", "ldap.realistic-looking-domain.com").
         put("googleConnectorName", "x").
         put("googleConnectorWorkDir",
         "/home/ziff/cats/ldap-tom/webapps/connector-manager/WEB-INF/connectors/ldapConnector/x").
         put("schema_10", "dn").
         put("username", "admin").
-        put("basedn", LdapHandlerTest.getTestResourceBundle().getString("basedn")).
+        put("basedn", "ou=people,dc=example,dc=com").
         put("googleWorkDir", "/home/ziff/cats/ldap-tom/webapps/connector-manager/WEB-INF").
-        put("filter", LdapHandlerTest.getTestFilter()).
+        put("filter", "ou=people").
         build();
 
     ImmutableMap<String, String> expectedDefaults =
@@ -233,14 +239,15 @@ public class LdapConnectorTypeTest extends TestCase {
   }
 
   public void testGetPopulatedConfigForm() throws Exception {
-    LdapConnectorType lct = new LdapConnectorType();
+    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
     ResourceBundle b = lct.getResourceBundle(Locale.US);
 
     ImmutableMap<String, String> originalConfig =
         ImmutableMap.<String, String> builder().
         put("googlePropertiesVersion", "3").
         put("authtype", "ANONYMOUS").
-        put("hostname", LdapHandlerTest.getHostname()).
+        put("hostname", "ldap.realistic-looking-domain.com").
         put("googleConnectorName", "x").
         put("googleConnectorWorkDir",
         "/home/ziff/cats/ldap-tom/webapps/connector-manager/WEB-INF/connectors/ldapConnector/x").
@@ -250,9 +257,9 @@ public class LdapConnectorTypeTest extends TestCase {
         put("schema_9", "employeestatus").
         put("schema_8", "employeenumber").
         put("method", "STANDARD").
-        put("basedn", LdapHandlerTest.getTestResourceBundle().getString("basedn")).
+        put("basedn", "ou=people,dc=example,dc=com").
         put("googleWorkDir", "/home/ziff/cats/ldap-tom/webapps/connector-manager/WEB-INF").
-        put("filter", LdapHandlerTest.getTestFilter()).
+        put("filter", "ou=people").
         build();
 
     ConfigureResponse cr = lct.getPopulatedConfigForm(originalConfig, Locale.US);

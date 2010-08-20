@@ -14,19 +14,28 @@
 
 package com.google.enterprise.connector.ldap;
 
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.enterprise.connector.ldap.LdapConstants.LdapConnectionError;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 /**
  * Simple mock ldap handler. Returns a constant repository.
  */
-public class MockLdapHandler implements Supplier<Map<String, Multimap<String, String>>> {
+public class MockLdapHandler implements LdapHandlerI {
 
   private final Map<String, Multimap<String, String>> repository;
   private final Set<String> schemaKeys;
+
+  private int maxResults = 0;
+
+  private boolean isValid = false;
 
   public MockLdapHandler(Map<String, Multimap<String, String>> repository, Set<String> schemaKeys) {
     this.repository = repository;
@@ -34,10 +43,51 @@ public class MockLdapHandler implements Supplier<Map<String, Multimap<String, St
   }
 
   public Map<String, Multimap<String, String>> get() {
-    return repository;
+    if (!isValid) {
+      throw new IllegalStateException("no valid config");
+    }
+    if (maxResults < 1) {
+      return repository;
+    }
+    if (maxResults > repository.size()) {
+      return repository;
+    }
+    Map<String, Multimap<String, String>> results = Maps.newHashMap();
+    for (Entry<String, Multimap<String, String>> e : repository.entrySet()) {
+      results.put(e.getKey(), e.getValue());
+    }
+    return results;
   }
 
   public Set<String> getSchemaKeys() {
     return schemaKeys;
+  }
+
+  /* @Override */
+  public void setLdapConnectionSettings(LdapConnectionSettings ldapConnectionSettings) {
+    String hostname = ldapConnectionSettings.getHostname();
+    if (hostname == null || hostname.trim().length() == 0) {
+      isValid = false;
+    } else {
+      isValid = true;
+    }
+  }
+
+  /* @Override */
+  public Map<LdapConnectionError, String> getErrors() {
+    if (!isValid) {
+      return ImmutableMap.of(LdapConnectionError.NamingException, "from mock handler");
+    }
+    return ImmutableMap.of();
+  }
+
+  /* @Override */
+  public void setQueryParameters(LdapRule rule, Set<String> schema, String schemaKey, int maxResults) {
+    // accepts any query settings
+    this.maxResults = maxResults;
+  }
+
+  public void setIsValid(boolean b) {
+    isValid = b;
   }
 }

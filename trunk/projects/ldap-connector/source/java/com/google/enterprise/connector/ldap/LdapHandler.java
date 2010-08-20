@@ -16,7 +16,6 @@ package com.google.enterprise.connector.ldap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
@@ -24,6 +23,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.enterprise.connector.ldap.LdapConstants.AuthType;
 import com.google.enterprise.connector.ldap.LdapConstants.ErrorMessages;
+import com.google.enterprise.connector.ldap.LdapConstants.LdapConnectionError;
 import com.google.enterprise.connector.ldap.LdapConstants.Method;
 import com.google.enterprise.connector.ldap.LdapConstants.ServerType;
 
@@ -60,7 +60,7 @@ import javax.naming.ldap.Rdn;
  * exceptions are wrapped in RuntimeException, so callers need to be careful to
  * catch RuntimeException.
  */
-public class LdapHandler implements Supplier<Map<String, Multimap<String, String>>> {
+public class LdapHandler implements LdapHandlerI {
   /**
    * Every object in LDAP has a "distinguished name" (DN). jndi does not treat
    * DN as an attribute, but we do. DN will always be present and will always be
@@ -70,11 +70,13 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
 
   private static Logger LOG = Logger.getLogger(LdapHandler.class.getName());
 
-  private final LdapConnection connection;
-  private final String schemaKey;
-  private final Set<String> schema;
-  private final LdapRule rule;
-  private final int maxResults;
+  private LdapConnectionSettings ldapConnectionSettings = null;
+  private String schemaKey = null;
+  private Set<String> schema = null;
+  private LdapRule rule = null;
+  private int maxResults = 0;
+
+  private LdapConnection connection = null;
 
   private static Function<String, String> toLower = new Function<String, String>() {
     /* @Override */
@@ -83,14 +85,12 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
     }
   };
 
-  /**
-   * Sole constructor
-   */
-  public LdapHandler(LdapConnection connection, LdapRule rule,
-      Set<String> schema, String schemaKey, int maxResults) {
+  public LdapHandler() {
+  }
+
+  public void setQueryParameters(LdapRule rule, Set<String> schema, String schemaKey, int maxResults) {
     this.rule = rule;
     this.schemaKey = schemaKey;
-    this.connection = connection;
     if (schema == null) {
       this.schema = null;
     } else {
@@ -99,9 +99,23 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
     this.maxResults = maxResults;
   }
 
-  public LdapHandler(LdapConnection connection, LdapRule rule,
-      Set<String> schema, String schemaKey) {
-    this(connection, rule, schema, schemaKey, 0);
+  /* @Override */
+  public void setLdapConnectionSettings(LdapConnectionSettings ldapConnectionSettings) {
+    this.ldapConnectionSettings = ldapConnectionSettings;
+    connection = new LdapConnection(ldapConnectionSettings);
+  }
+
+  /* @Override */
+  public Map<LdapConnectionError, String> getErrors() {
+    if (connection != null) {
+      return connection.getErrors();
+    }
+    throw new IllegalStateException("Must successfully set connection config before getting error state");
+  }
+
+  @VisibleForTesting
+  LdapContext getLdapContext() {
+    return connection.getLdapContext();
   }
 
   /**
@@ -117,6 +131,12 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
    *         like email aliases).
    */
   public Map<String, Multimap<String, String>> get() {
+
+    if (ldapConnectionSettings == null) {
+      throw new IllegalStateException("Must successfully set LdapConnectionSettings before get");
+    }
+
+    connection = new LdapConnection(ldapConnectionSettings);
 
     SortedMap<String, Multimap<String, String>> result =
         new TreeMap<String, Multimap<String, String>>();
@@ -219,6 +239,7 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
           LOG.log(Level.WARNING, "ldap_connection_cleanup_error_on_context", e);
         }
       }
+      connection = null;
     }
     LOG.info("ldap search final result count " + resultCount);
     return result;
@@ -318,17 +339,10 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
   /**
    * A connection to an Ldap Server
    */
-  public static class LdapConnection {
+  private static class LdapConnection {
 
     private static final String COM_SUN_JNDI_LDAP_LDAP_CTX_FACTORY =
         "com.sun.jndi.ldap.LdapCtxFactory";
-
-    public enum LdapConnectionError {
-      AuthenticationNotSupported,
-      NamingException,
-      IOException,
-      CommunicationException,
-    }
 
     private final LdapConnectionSettings settings;
     private LdapContext ldapContext = null;
@@ -343,8 +357,7 @@ public class LdapHandler implements Supplier<Map<String, Multimap<String, String
       ldapContext = makeContext(env, PAGESIZE);
     }
 
-    @VisibleForTesting
-    LdapContext getLdapContext() {
+    public LdapContext getLdapContext() {
       return ldapContext;
     }
 

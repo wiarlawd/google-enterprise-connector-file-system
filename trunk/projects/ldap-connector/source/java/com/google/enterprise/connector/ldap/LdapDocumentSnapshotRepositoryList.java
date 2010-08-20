@@ -14,15 +14,7 @@
 
 package com.google.enterprise.connector.ldap;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Multimap;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
-
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Building-block required by the diffing framework.
@@ -35,33 +27,11 @@ public class LdapDocumentSnapshotRepositoryList
    * In deployment, this constructor is expected to be called by Spring, via the
    * connectorInstance.xml. Note that, although the diffing framework permits
    * multiple repositories, this implementation uses only one.
-   *
-   * @param ldapConnectorConfig
    */
-  public LdapDocumentSnapshotRepositoryList(LdapConnectorConfig ldapConnectorConfig) {
-    JsonDocumentFetcher f = makeJsonDocumentFetcher(ldapConnectorConfig);
+  public LdapDocumentSnapshotRepositoryList(LdapHandlerI ldapHandler) {
+    JsonDocumentFetcher f = new LdapJsonDocumentFetcher(ldapHandler);
     LdapPersonRepository repository =
         new LdapPersonRepository(f);
     add(repository);
-  }
-
-  private JsonDocumentFetcher makeJsonDocumentFetcher(final LdapConnectorConfig ldapConnectorConfig) {
-    Supplier<Map<String, Multimap<String, String>>> ldapHandlerSupplier = makeLdapHandler(ldapConnectorConfig);
-    return new LdapJsonDocumentFetcher(ldapHandlerSupplier);
-  }
-
-  private static LdapHandler makeLdapHandler(LdapConnectorConfig ldapConnectorConfig) {
-    Set<String> schema = ldapConnectorConfig.getSchema();
-    LdapRule ldapRule = ldapConnectorConfig.getRule();
-    LdapConnection connection = makeLdapConnection(ldapConnectorConfig);
-    LdapHandler ldapHandler =
-        new LdapHandler(connection, ldapRule, schema, ldapConnectorConfig.getSchemaKey());
-    return ldapHandler;
-  }
-
-  private static LdapConnection makeLdapConnection(LdapConnectorConfig ldapConnectorConfig) {
-    LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
-    LdapConnection connection = new LdapConnection(settings);
-    return connection;
   }
 }

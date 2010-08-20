@@ -33,7 +33,19 @@ public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
 
   private final Supplier<Map<String, Multimap<String, String>>> mapOfMultimapsSupplier;
 
-  public LdapJsonDocumentFetcher(Supplier<Map<String, Multimap<String, String>>> mapOfMultimapsSupplier) {
+  /**
+   * Creates a JsonDocument fetcher from something that provides a sorted map of
+   * Multimaps
+   *
+   * @param mapOfMultimapsSupplier An object that can supply a sorted Map of
+   *        Multimaps. This supplier must permit multiple calls to get() on the
+   *        same instance. Calls may return different results. The map must be
+   *        in natural key order, that is, the order of the entrySet() must be
+   *        ascending by key. The values (the individual multimaps) represent a
+   *        document as a bag of (metadata-name,value) pairs.
+   */
+  public LdapJsonDocumentFetcher(
+      Supplier<Map<String, Multimap<String, String>>> mapOfMultimapsSupplier) {
     this.mapOfMultimapsSupplier = mapOfMultimapsSupplier;
   }
 

@@ -14,10 +14,9 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.enterprise.connector.ldap.LdapConstants.LdapConnectionError;
 import com.google.enterprise.connector.ldap.LdapConstants.Method;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection.LdapConnectionError;
 
 import junit.framework.TestCase;
 
@@ -25,32 +24,34 @@ import java.util.Map;
 
 import javax.naming.ldap.LdapContext;
 
+/**
+ * Tests establishing an LDAP connection.
+ * Note: this test requires a live ldap connection (established through the
+ * properties in LdapTesting.properties). Any test file that does not have this
+ * comment at the top should run fine without a live ldap connection (with a
+ * MockLdapHandler)
+ */
 public class LdapConnectionTest extends TestCase {
 
   public void testConnectivity() {
-    LdapConnection c = makeLdapConnectionForTesting();
-    LdapContext ldapContext = c.getLdapContext();
+    LdapHandler handler = new LdapHandler();
+    handler.setLdapConnectionSettings(makeLdapConnectionSettings());
+    LdapContext ldapContext = handler.getLdapContext();
     assertNotNull(ldapContext);
   }
 
   public void testBadConnectivity() {
-    LdapConnectionSettings settings = makeInvalidLdapConnectionSettings();
-    LdapConnection c = new LdapConnection(settings);
-    LdapContext ldapContext = c.getLdapContext();
+    LdapHandler handler = new LdapHandler();
+    handler.setLdapConnectionSettings(makeInvalidLdapConnectionSettings());
+    LdapContext ldapContext = handler.getLdapContext();
     assertNull(ldapContext);
-    Map<LdapConnectionError, String> errors = c.getErrors();
-    for (LdapConnectionError e: errors.keySet()) {
+    Map<LdapConnectionError, String> errors = handler.getErrors();
+    for (LdapConnectionError e : errors.keySet()) {
       System.out.println("Error " + e + " message: " + errors.get(e));
     }
   }
 
-  public static LdapConnection makeLdapConnectionForTesting() {
-    LdapConnectionSettings settings = makeLdapConnectionSettings();
-    LdapConnection connection = new LdapConnection(settings);
-    return connection;
-  }
-
-  private static LdapConnectionSettings makeLdapConnectionSettings() {
+  public static LdapConnectionSettings makeLdapConnectionSettings() {
     Method method = Method.STANDARD;
     String hostname = LdapHandlerTest.getHostname();
     int port = 389;

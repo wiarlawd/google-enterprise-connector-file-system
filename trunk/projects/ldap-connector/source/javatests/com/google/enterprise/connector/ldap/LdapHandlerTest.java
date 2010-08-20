@@ -16,7 +16,6 @@ package com.google.enterprise.connector.ldap;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule.Scope;
 
@@ -27,6 +26,13 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.Map.Entry;
 
+/**
+ * Tests querying against LDAP.
+ * Note: this test requires a live ldap connection (established through the
+ * properties in LdapTesting.properties). Any test file that does not have this
+ * comment at the top should run fine without a live ldap connection (with a
+ * MockLdapHandler)
+ */
 public class LdapHandlerTest extends TestCase {
 
   private static final String RESOURCE_BUNDLE_NAME =
@@ -70,8 +76,9 @@ public class LdapHandlerTest extends TestCase {
 
   private static LdapHandler makeLdapHandlerForTesting(Set<String> schema, int maxResults) {
     LdapRule ldapRule = makeSimpleLdapRule();
-    LdapConnection connection = LdapConnectionTest.makeLdapConnectionForTesting();
-    LdapHandler ldapHandler = new LdapHandler(connection, ldapRule, schema, getSchemaKey(), maxResults);
+    LdapHandler ldapHandler = new LdapHandler();
+    ldapHandler.setLdapConnectionSettings(LdapConnectionTest.makeLdapConnectionSettings());
+    ldapHandler.setQueryParameters(ldapRule, schema, getSchemaKey(), maxResults);
     return ldapHandler;
   }
 
@@ -105,22 +112,16 @@ public class LdapHandlerTest extends TestCase {
     dumpSchema(schema);
     LdapHandler ldapHandler = makeLdapHandlerForTesting(schema, 0);
     Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
-    System.out.println(mapOfMultimaps.size());
+    System.out.println("first time size: " + mapOfMultimaps.size());
 
-    boolean sawException;
-    try {
-      mapOfMultimaps = ldapHandler.get();
-      sawException = false;
-    } catch (RuntimeException e) {
-      sawException = true;
-    }
-    assertTrue(sawException);
+    mapOfMultimaps = ldapHandler.get();
+    System.out.println("second time size: " + mapOfMultimaps.size());
   }
 
   public void testLimit() {
     LdapHandler ldapHandler = makeLdapHandlerForTesting(null, 1);
     Map<String, Multimap<String, String>> mapOfMultimaps = ldapHandler.get();
-    System.out.println(mapOfMultimaps.size());
+    assertEquals(1,mapOfMultimaps.size());
   }
 
   private void dumpSchema(Set<String> schema) {

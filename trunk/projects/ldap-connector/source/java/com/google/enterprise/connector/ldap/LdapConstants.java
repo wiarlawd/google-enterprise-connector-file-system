@@ -86,6 +86,16 @@ public class LdapConstants {
     }
   }
 
+  public enum LdapConnectionError {
+    AuthenticationNotSupported,
+    NamingException,
+    IOException,
+    CommunicationException;
+    public static ErrorMessages safeValueOf(String v) {
+      return LdapConstants.safeValueOf(ErrorMessages.class, v);
+    }
+  }
+
   public static final int DEFAULT_PORT = 389;
 
   public static final int MAX_SCHEMA_ELEMENTS = 100;
@@ -112,3 +122,4 @@ public class LdapConstants {
     return instance;
   }
 }
+

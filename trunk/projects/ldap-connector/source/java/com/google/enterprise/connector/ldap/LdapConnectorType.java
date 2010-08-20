@@ -25,11 +25,10 @@ import com.google.enterprise.connector.ldap.ConnectorFields.SingleLineField;
 import com.google.enterprise.connector.ldap.LdapConstants.AuthType;
 import com.google.enterprise.connector.ldap.LdapConstants.ConfigName;
 import com.google.enterprise.connector.ldap.LdapConstants.ErrorMessages;
+import com.google.enterprise.connector.ldap.LdapConstants.LdapConnectionError;
 import com.google.enterprise.connector.ldap.LdapConstants.Method;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
-import com.google.enterprise.connector.ldap.LdapHandler.LdapConnection.LdapConnectionError;
 import com.google.enterprise.connector.ldap.LdapSchemaFinder.SchemaResult;
 import com.google.enterprise.connector.spi.ConfigureResponse;
 import com.google.enterprise.connector.spi.ConnectorFactory;
@@ -57,7 +56,10 @@ public class LdapConnectorType implements ConnectorType {
 
   private static final Logger LOG = Logger.getLogger(LdapConnectorType.class.getName());
 
-  public LdapConnectorType() {
+  private final LdapHandlerI ldapHandler;
+
+  public LdapConnectorType(LdapHandlerI ldapHandler) {
+    this.ldapHandler = ldapHandler;
   }
 
   public static final String RESOURCE_BUNDLE_NAME =
@@ -68,7 +70,7 @@ public class LdapConnectorType implements ConnectorType {
    * Holder object for managing the private state for a single configuration
    * request.
    */
-  private static class FormManager {
+  private class FormManager {
 
     /**
      * The maximum results examined to construct a schema
@@ -198,14 +200,14 @@ public class LdapConnectorType implements ConnectorType {
       schemaField.setSelectedKeys(selectedAttributes);
 
       LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
-      LdapConnection connection = new LdapConnection(settings);
+      ldapHandler.setLdapConnectionSettings(settings);
 
       // Note: we ignore connection errors here, because we just want to
       // set up the state in the way it was when it was saved
       LdapRule rule = ldapConnectorConfig.getRule();
-      if (connection != null && rule != null) {
+      if (rule != null) {
         try {
-          getSchema(connection, rule);
+          getSchema(rule);
         } catch (IllegalStateException e) {
           reportError(e);
         }
@@ -239,7 +241,8 @@ public class LdapConnectorType implements ConnectorType {
         }
       }
       // fallback
-      LOG.log(Level.WARNING, "Unexpected Exception thrown getting schema for existing connector:", e);
+      LOG.log(Level.WARNING, "Unexpected Exception thrown getting schema for existing connector:",
+          e);
     }
 
     String getFormRows(Collection<String> errorKeys) {
@@ -266,13 +269,8 @@ public class LdapConnectorType implements ConnectorType {
           getFormRows(null));
     }
 
-    private void getSchema(LdapConnection connection, LdapRule rule) {
-      LdapHandler ldapHandler =
-          new LdapHandler(connection, rule, null, LdapHandler.DN_ATTRIBUTE, MAX_SCHEMA_RESULTS);
-      validateNotNull(ldapHandler, "ldapHandler");
-      if (configureResponse != null) {
-        return;
-      }
+    private void getSchema(LdapRule rule) {
+      ldapHandler.setQueryParameters(rule, null, LdapHandler.DN_ATTRIBUTE, MAX_SCHEMA_RESULTS);
 
       LdapSchemaFinder schemaFinder = new LdapSchemaFinder(ldapHandler);
       validateNotNull(schemaFinder, "schemaFinder");
@@ -305,10 +303,11 @@ public class LdapConnectorType implements ConnectorType {
       }
 
       LdapConnectorConfig ldapConnectorConfig = new LdapConnectorConfig(config);
-      LdapConnection connection = new LdapConnection(ldapConnectorConfig.getSettings());
+      LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
+      ldapHandler.setLdapConnectionSettings(settings);
 
       // report any connection errors
-      Map<LdapConnectionError, String> errors = connection.getErrors();
+      Map<LdapConnectionError, String> errors = ldapHandler.getErrors();
       if (errors.size() > 0) {
         String errorMessage = "";
         for (LdapConnectionError e : errors.keySet()) {
@@ -322,7 +321,7 @@ public class LdapConnectorType implements ConnectorType {
       // TODO: check for empty schema found
       LdapRule rule = ldapConnectorConfig.getRule();
 
-      getSchema(connection, rule);
+      getSchema(rule);
       // the above call sets the configureResponse non-null if there was an error
       // and sets puts the schema found in the schemaField
       if (configureResponse != null) {
