@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ldap-connector" default="build" basedir=".">
+
+  <!-- ========================= PROPERTIES ============================= -->
+  <property file="${user.home}/google-enterprise-connector-ldap.properties" />
+  <property file="version.properties" />
+
+  <property name="COMPILE_DEBUG_FLAG" value="true" />
+  <property name="COMPILE_DEBUG_LEVEL" value="source,lines,vars" />
+
+  <property name="build.dir" value="build" />
+  <property name="build-prod.dir" value="${build.dir}/prod" />
+  <property name="build-prod-config.dir" value="${build-prod.dir}/config" />
+  <property name="build-tests.dir" value="${build.dir}/tests" />
+
+  <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
+
+  <property name="filesystem-project.dir" value="../file-system-connector" />
+
+  <property name="thirdparty-prod-jar.dir" value="${filesystem-project.dir}/third_party/prod" />
+  <property name="thirdparty-test-jar.dir" value="${filesystem-project.dir}/third_party/test" />
+
+  <property name="connector-manager.dir"
+            location="${connector-manager-projects.dir}/connector-manager" />
+  <property name="spi.jar.dir" value="${connector-manager.dir}/dist/jarfile" />
+
+  <property name="file-system-connector.dir"
+            location="${file-system-connector-projects.dir}/file-system-connector" />
+  <property name="fc.jar.dir" value="${file-system-connector.dir}/build/prod/jar" />
+  <property name="fc-test.classes.dir" value="${file-system-connector.dir}/build/tests/classes" />
+
+  <property name="config.dir" value="config" />
+
+  <property name="src-prod.dir" value="source/java" />
+  <property name="src-test.dir" value="source/javatests" />
+
+  <property name="diffing-src-prod.dir" value="../file-system-connector/source/java" />
+
+  <property name="jar-prod.dir" value="${build-prod.dir}/jar" />
+  <property name="jar-prod.file" value="${jar-prod.dir}/connector-ldap.jar" />
+
+
+  <property name="zip.dir" value  = "${build.dir}/file" />
+  <property name="config-zip.dir" value  = "${zip.dir}/Config" />
+  <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
+
+  <target name="build" depends="init,compile_prod,jar_prod" />
+
+  <target name="init">
+    <tstamp />
+    <mkdir dir="${build.dir}" />
+    <mkdir dir="${build-prod.dir}" />
+    <mkdir dir="${build-prod-config.dir}" />
+    <mkdir dir="${jar-prod.dir}" />
+
+    <mkdir dir="${classes-prod.dir}" />
+  </target>
+
+  <target name="compile_prod" depends="init">
+    <!-- compile java source files -->
+    <javac srcdir="${src-prod.dir}" destdir="${classes-prod.dir}"
+           debug="${COMPILE_DEBUG_FLAG}"
+           debuglevel="${COMPILE_DEBUG_LEVEL}"
+           target="1.5" source="1.5">
+      <classpath>
+        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+        <fileset dir="${fc.jar.dir}" includes="**/*.jar" />
+        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+      </classpath>
+    </javac>
+    <javac srcdir="${diffing-src-prod.dir}" destdir="${classes-prod.dir}"
+           debug="${COMPILE_DEBUG_FLAG}"
+           debuglevel="${COMPILE_DEBUG_LEVEL}"
+           target="1.5" source="1.5"
+	   excludes="**/filesystem/*">
+      <classpath>
+        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+        <fileset dir="${fc.jar.dir}" includes="**/*.jar" />
+        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="jar_prod" description="Build ${jar-prod.file}" 
+          depends="compile_prod">
+
+    <jar jarfile="${jar-prod.file}">
+      <fileset dir="source/java" includes="**/*.properties"/>
+      <fileset dir="${classes-prod.dir}"/>
+      <fileset dir="${config.dir}/.." includes="config/*.xml"/>
+      <fileset dir="${build-prod.dir}" includes="*.properties"/>
+      <manifest>
+        <attribute name="Implementation-Title" value="LDAP Connector"/>
+        <attribute name="Implementation-Version" value="${version} (${TODAY}"/>
+        <attribute name="Implementation-Vendor" value="Google Inc."/>
+        <attribute name="Specification-Title" value="Connector Manager SPI"/>
+        <attribute name="Specification-Version" value="${version.spi}"/>
+        <attribute name="Specification-Vendor" value="Google Inc."/>
+        <attribute name="Main-Class"
+                   value="com.google.enterprise.connector.ldap.ConnectorMain" />
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="clean" description="Deletes all build files.">
+    <delete dir="${build.dir}" />
+  </target>
+</project>

@@ -14,7 +14,12 @@
 
 package com.google.enterprise.connector.ldap;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
+import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
+
 import java.util.ArrayList;
+import java.util.Set;
 
 /**
  * Building-block required by the diffing framework.
@@ -28,6 +33,21 @@ public class LdapDocumentSnapshotRepositoryList
    * connectorInstance.xml. Note that, although the diffing framework permits
    * multiple repositories, this implementation uses only one.
    */
+  public LdapDocumentSnapshotRepositoryList(LdapConnectorConfig ldapConnectorConfig) {
+    LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
+    LdapHandlerI ldapHandler = new LdapHandler();
+    ldapHandler.setLdapConnectionSettings(settings);
+    LdapRule rule = ldapConnectorConfig.getRule();
+    Set<String> schema = ldapConnectorConfig.getSchema();
+    String schemaKey = ldapConnectorConfig.getSchemaKey();
+    ldapHandler.setQueryParameters(rule, schema, schemaKey, 0);
+    JsonDocumentFetcher f = new LdapJsonDocumentFetcher(ldapHandler);
+    LdapPersonRepository repository =
+        new LdapPersonRepository(f);
+    add(repository);
+  }
+
+  @VisibleForTesting
   public LdapDocumentSnapshotRepositoryList(LdapHandlerI ldapHandler) {
     JsonDocumentFetcher f = new LdapJsonDocumentFetcher(ldapHandler);
     LdapPersonRepository repository =
