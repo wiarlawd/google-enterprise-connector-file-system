@@ -102,6 +102,7 @@ public class LdapHandler implements LdapHandlerI {
   /* @Override */
   public void setLdapConnectionSettings(LdapConnectionSettings ldapConnectionSettings) {
     this.ldapConnectionSettings = ldapConnectionSettings;
+    LOG.fine("settings " + this.ldapConnectionSettings);
     connection = new LdapConnection(ldapConnectionSettings);
   }
 
@@ -111,6 +112,24 @@ public class LdapHandler implements LdapHandlerI {
       return connection.getErrors();
     }
     throw new IllegalStateException("Must successfully set connection config before getting error state");
+  }
+
+  /**
+   * Convenience routine for setting up an LdapHandler from an LdapConnectorConfig.
+   * This is expected to be called by Spring, for a production instance.
+   */
+  public static LdapHandlerI makeLdapHandlerFromConfig(LdapConnectorConfig ldapConnectorConfig) {
+    LOG.fine("ldapConnectorConfig: " + ldapConnectorConfig);
+    LdapHandlerI ldapHandler = new LdapHandler();
+    LOG.fine("ldapHandler: " + ldapHandler);
+    LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
+    LOG.fine("settings: " + settings);
+    ldapHandler.setLdapConnectionSettings(settings);
+    LdapRule rule = ldapConnectorConfig.getRule();
+    Set<String> schema = ldapConnectorConfig.getSchema();
+    String schemaKey = ldapConnectorConfig.getSchemaKey();
+    ldapHandler.setQueryParameters(rule, schema, schemaKey, 0);
+    return ldapHandler;
   }
 
   @VisibleForTesting
@@ -132,16 +151,22 @@ public class LdapHandler implements LdapHandlerI {
    */
   public Map<String, Multimap<String, String>> get() {
 
+    LOG.fine("entering get " + ldapConnectionSettings);
+
     if (ldapConnectionSettings == null) {
       throw new IllegalStateException("Must successfully set LdapConnectionSettings before get");
     }
 
     connection = new LdapConnection(ldapConnectionSettings);
 
+    LOG.fine("connection:" + connection);
+
     SortedMap<String, Multimap<String, String>> result =
         new TreeMap<String, Multimap<String, String>>();
 
     LdapContext ctx = connection.getLdapContext();
+
+    LOG.fine("ctx:" + ctx);
 
     if (ctx == null) {
       throw new IllegalStateException(ErrorMessages.UNKNOWN_CONNECTION_ERROR.toString());
@@ -351,6 +376,8 @@ public class LdapHandler implements LdapHandlerI {
     public static final int PAGESIZE = 1000;
 
     public LdapConnection(LdapConnectionSettings ldapConnectionSettings) {
+      LOG.fine("Configuring LdapConnection with settings: " +
+          this.settings);
       this.settings = ldapConnectionSettings;
       this.errors = Maps.newHashMap();
       Hashtable<String, String> env = configureLdapEnvironment();
@@ -468,6 +495,7 @@ public class LdapHandler implements LdapHandlerI {
    * Configuration for an ldap connection. Immutable, static data class.
    */
   public static class LdapConnectionSettings {
+
     private final String hostname;
     private final int port;
     private final AuthType authType;
@@ -499,6 +527,22 @@ public class LdapHandler implements LdapHandlerI {
       this.port = port;
       this.serverType = ServerType.GENERIC;
       this.username = null;
+    }
+
+    @Override
+    public String toString() {
+      String displayPassword;
+      if (password == null) {
+        displayPassword = "null";
+      } else if (password.length() < 1) {
+        displayPassword = "<empty>";
+      } else {
+        displayPassword = "####";
+      }
+      return "LdapConnectionSettings [authType=" + authType + ", baseDN=" + baseDN
+          + ", connectMethod=" + connectMethod + ", hostname=" + hostname + ", password="
+          + password + ", port=" + port + ", serverType=" + serverType + ", username=" + username
+          + "]";
     }
 
     public AuthType getAuthType() {

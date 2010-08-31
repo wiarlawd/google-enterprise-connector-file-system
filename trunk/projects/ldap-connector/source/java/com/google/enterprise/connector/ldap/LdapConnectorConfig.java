@@ -112,6 +112,7 @@ public class LdapConnectorConfig {
     try {
       p = Integer.valueOf(portString);
     } catch (NumberFormatException e) {
+      LOG.warning("Found illegal port value: " + portString + " defaulting to 389");
       p = 389;
     }
     this.port = p;
@@ -149,7 +150,10 @@ public class LdapConnectorConfig {
     this.settings =
         new LdapConnectionSettings(this.method, this.hostname, this.port, this.basedn,
         this.authtype, this.username, this.password);
-    this.rule = new LdapRule(Scope.SUBTREE, this.filter);
+    LOG.fine("this.settings: " + this.settings);
+
+    // only create an LdapRule is one was supplied
+    this.rule = (this.filter == null) ? null : new LdapRule(Scope.SUBTREE, this.filter);
   }
 
   private String getTrimmedValueFromConfig(Map<String, String> config, ConfigName name) {
