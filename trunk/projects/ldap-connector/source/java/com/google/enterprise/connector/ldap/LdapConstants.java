@@ -100,6 +100,12 @@ public class LdapConstants {
 
   public static final int MAX_SCHEMA_ELEMENTS = 100;
 
+  public static final String LDAP_CONNECTOR_CONFIG = "ldap_connector_config";
+
+  public static final String PREVIEW_HTML = "preview_html";
+
+  public static final String PREVIEW_TAG = "preview_tag";
+
   /**
    * Wraps Enum.valueOf so it returns null if the string is not recognized
    */

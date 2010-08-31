@@ -35,6 +35,7 @@ import com.google.enterprise.connector.spi.ConnectorFactory;
 import com.google.enterprise.connector.spi.ConnectorType;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -150,6 +151,10 @@ public class LdapConnectorType implements ConnectorType {
           schemaField,
           schemaKeyField);
 
+      for (AbstractField field: fields) {
+        field.boldLabel = false;
+      }
+
       this.bundle = bundle;
 
       LdapConnectorConfig ldapConnectorConfig = new LdapConnectorConfig(config);
@@ -247,6 +252,14 @@ public class LdapConnectorType implements ConnectorType {
 
     String getFormRows(Collection<String> errorKeys) {
       StringBuilder buf = new StringBuilder();
+      // Insert the "preview" label
+      buf.append("<tr><td><br/><b>");
+      buf.append(bundle.getString(LdapConstants.LDAP_CONNECTOR_CONFIG));
+      String format = bundle.getString(LdapConstants.PREVIEW_HTML);
+      Object[] arguments = new Object[] {bundle.getString(LdapConstants.PREVIEW_TAG)};
+      String message = MessageFormat.format(format, arguments);
+      buf.append(message);
+      buf.append("</b></td></tr>\n");
       // Note: Immutable lists are guaranteed to return the fields in the order
       // they were specified, so this order is deterministic
       for (AbstractField field : fields) {

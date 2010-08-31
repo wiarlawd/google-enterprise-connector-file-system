@@ -22,14 +22,19 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import com.google.enterprise.connector.spi.SpiConstants;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Uses an an LdapHandler to implement JsonDocumentFetcher.
  */
 public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
+
+  private static Logger LOG = Logger.getLogger(LdapJsonDocumentFetcher.class.getName());
 
   private final Supplier<Map<String, Multimap<String, String>>> mapOfMultimapsSupplier;
 
@@ -55,6 +60,7 @@ public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
     public Multimap<String, String> apply(Entry<String, Multimap<String, String>> e) {
       Multimap<String, String> person = ArrayListMultimap.create(e.getValue());
       String key = e.getKey();
+      key = cleanLdapKey(key);
       person.put(SpiConstants.PROPNAME_DOCID, key);
       return person;
     }
@@ -65,5 +71,40 @@ public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
     Map<String, Multimap<String, String>> results = mapOfMultimapsSupplier.get();
     return Iterators.transform(results.entrySet().iterator(), Functions.compose(
         JsonDocument.buildFromMultimap, addDocid));
+  }
+
+  /**
+   * Cleans the key before using it as the docid (which becomes part of the
+   * url), while preserving collation sequence.
+   *
+   * Due to some inconsistency of responsibility in url-encoding the key value,
+   * the diffing infrastructure is current encoding url-unsafe keys for delete
+   * in a different way from how it does it when they're new. TODO(Max): chase
+   * this phenomenon down and regularize it - a portion of the problem is in the
+   * CM and there are possibly some upgrade issues. In the meantime, since this
+   * connector is new, it's safest to handle it locally. This routine creates a
+   * url-safe encoding of the key that preserves collation sequence. Since the
+   * keys are already in sorted order, we need to encode them in a way that
+   * preserves order.
+   *
+   * We do this by encoding to UTF-8, then as hex of the byte sequence. The
+   * reasons why this preserves order are complicated. See
+   * http://unicode.org/reports/tr26/ for more, and note that this is tested by
+   * I18NLdapJsonDocumentFetcherTest and other tests that extend
+   * JsonDocumentFetcherTestCase.
+   **/
+  public static String cleanLdapKey(String key) {
+    StringBuffer sb = new StringBuffer();
+    byte[] charArray;
+    try {
+      charArray = key.getBytes("UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      LOG.log(Level.SEVERE, "Impossible: UTF-8 not supported", e);
+      return key;
+    }
+    for (byte b : charArray) {
+      sb.append(String.format("%02x", b));
+    }
+    return sb.toString();
   }
 }

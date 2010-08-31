@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.enterprise.connector.ldap.ConnectorFields.AbstractField;
+import com.google.enterprise.connector.ldap.MockLdapHandlers.SimpleMockLdapHandler;
 import com.google.enterprise.connector.spi.ConfigureResponse;
 
 import junit.framework.TestCase;
@@ -36,12 +37,12 @@ public class LdapConnectorTypeTest extends TestCase {
   public void testInstantiate() {
     // just attempts to instantiate an LCT - can only fail
     // if an exception is thrown
-    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
     LdapConnectorType lct = new LdapConnectorType(basicMock);
   }
 
   public void testGetConfigForm() throws Exception {
-    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
     LdapConnectorType lct = new LdapConnectorType(basicMock);
     ResourceBundle b = lct.getResourceBundle(Locale.US);
     ConfigureResponse cr = lct.getConfigForm(Locale.US);
@@ -80,7 +81,7 @@ public class LdapConnectorTypeTest extends TestCase {
    * This test looks at the first case.
    */
   public void testValidateConfigGetSchema() throws Exception {
-    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
     LdapConnectorType lct = new LdapConnectorType(basicMock);
     ResourceBundle b = lct.getResourceBundle(Locale.US);
     ImmutableMap<String, String> originalConfig =
@@ -114,7 +115,7 @@ public class LdapConnectorTypeTest extends TestCase {
    * This should be an acceptable config.
    */
   public void testValidateConfigWithSchema() {
-    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
     LdapConnectorType lct = new LdapConnectorType(basicMock);
     ImmutableMap<String, String> originalConfig =
         ImmutableMap.<String, String> builder().
@@ -146,7 +147,7 @@ public class LdapConnectorTypeTest extends TestCase {
   }
 
   public void testValidateConfigWithSchemaAndDefaults() {
-    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
     LdapConnectorType lct = new LdapConnectorType(basicMock);
     ImmutableMap<String, String> originalConfig =
         ImmutableMap.<String, String> builder().
@@ -239,7 +240,7 @@ public class LdapConnectorTypeTest extends TestCase {
   }
 
   public void testGetPopulatedConfigForm() throws Exception {
-    MockLdapHandler basicMock = LdapSchemaFinderTest.getBasicMock();
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
     LdapConnectorType lct = new LdapConnectorType(basicMock);
     ResourceBundle b = lct.getResourceBundle(Locale.US);
 
