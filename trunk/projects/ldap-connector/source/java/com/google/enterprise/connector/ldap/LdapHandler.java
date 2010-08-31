@@ -541,7 +541,7 @@ public class LdapHandler implements LdapHandlerI {
       }
       return "LdapConnectionSettings [authType=" + authType + ", baseDN=" + baseDN
           + ", connectMethod=" + connectMethod + ", hostname=" + hostname + ", password="
-          + password + ", port=" + port + ", serverType=" + serverType + ", username=" + username
+          + displayPassword + ", port=" + port + ", serverType=" + serverType + ", username=" + username
           + "]";
     }
 

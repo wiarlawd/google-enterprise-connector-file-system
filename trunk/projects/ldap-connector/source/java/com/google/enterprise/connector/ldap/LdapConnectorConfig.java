@@ -152,7 +152,7 @@ public class LdapConnectorConfig {
         this.authtype, this.username, this.password);
     LOG.fine("this.settings: " + this.settings);
 
-    // only create an LdapRule is one was supplied
+    // only create an LdapRule if one was supplied
     this.rule = (this.filter == null) ? null : new LdapRule(Scope.SUBTREE, this.filter);
   }
 
