@@ -302,6 +302,12 @@ public class ConnectorFields {
 
     @Override
     public String getSnippet(ResourceBundle bundle, boolean highlightError) {
+      E selectedValue;
+      if (value != null) {
+        selectedValue = value;
+      } else {
+        selectedValue = defaultValue;
+      }
       StringBuffer sb = new StringBuffer();
       sb.append("<tr>");
       sb.append(getLabelHtml(bundle, highlightError));
@@ -314,7 +320,7 @@ public class ConnectorFields {
         sb.append("\n<option value=\"");
         sb.append(e.toString());
         sb.append("\"");
-        if (e == defaultValue) {
+        if (e == selectedValue) {
           sb.append(" selected=\"selected\"");
         }
         sb.append(">");

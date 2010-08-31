@@ -67,6 +67,18 @@ public class LdapConnectorType implements ConnectorType {
       "com/google/enterprise/connector/ldap/config/" +
       "LdapConnectorResources";
 
+  public static String makeDisplayPassword(String password) {
+    String displayPassword;
+    if (password == null) {
+      displayPassword = "null";
+    } else if (password.length() < 1) {
+      displayPassword = "<empty>";
+    } else {
+      displayPassword = "####";
+    }
+    return displayPassword;
+  }
+
   /**
    * Holder object for managing the private state for a single configuration
    * request.
@@ -176,7 +188,8 @@ public class LdapConnectorType implements ConnectorType {
       userField.setValueFromString(username);
 
       String password = ldapConnectorConfig.getPassword();
-      LOG.fine("password " + password);
+      String displayPassword = makeDisplayPassword(password);
+      LOG.fine("password " + displayPassword);
       passwordField.setValueFromString(password);
 
       Method method = ldapConnectorConfig.getMethod();
@@ -456,7 +469,11 @@ public class LdapConnectorType implements ConnectorType {
       sb.append("Key ");
       sb.append(key);
       sb.append(" Value \"");
-      sb.append(config.get(key));
+      String value = config.get(key);
+      if ("password".equals(key)) {
+        value = makeDisplayPassword(value);
+      }
+      sb.append(value);
       sb.append("\"");
     }
     String string = sb.toString();

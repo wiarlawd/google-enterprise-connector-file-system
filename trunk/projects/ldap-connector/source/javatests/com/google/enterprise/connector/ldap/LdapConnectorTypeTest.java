@@ -110,6 +110,43 @@ public class LdapConnectorTypeTest extends TestCase {
     assertTrue(line.contains("type=\"text\""));
   }
 
+  public void testValidateConfigGetSchemaSimpleAuth() throws Exception {
+    SimpleMockLdapHandler basicMock = MockLdapHandlers.getBasicMock();
+    LdapConnectorType lct = new LdapConnectorType(basicMock);
+    ResourceBundle b = lct.getResourceBundle(Locale.US);
+    ImmutableMap<String, String> originalConfig =
+        ImmutableMap.<String, String> builder().
+        put("authtype", "SIMPLE").
+        put("username", "foo").
+        put("password", "bar").
+        put("port", "1389").
+        put("hostname", "ldap.realistic-looking-domain.com").
+        put("basedn", "ou=people,dc=example,dc=com").
+        put("filter", "ou=people").
+        build();
+    ConfigureResponse cr = lct.validateConfig(originalConfig, Locale.US, null);
+    String formSnippet = cr.getFormSnippet();
+    System.out.println(formSnippet);
+    String message = cr.getMessage();
+    assertTrue(message, message == null || message.length() < 1);
+    Map<String, String> configData = cr.getConfigData();
+    assertTrue(configData == null || configData.isEmpty());
+
+    assertBasicConfigElements(b, formSnippet);
+
+    String line = findMatchingLine(formSnippet, "SIMPLE");
+    assertTrue("SIMPLE should be selected", line.contains("selected"));
+
+
+    ConnectorFieldsTest.validateXhtml(formSnippet);
+    List<String> lines = findMatchingLines(formSnippet, "schema");
+    assertTrue(0 < lines.size());
+    String p = b.getString("schema_key");
+    line = findMatchingLine(formSnippet, p);
+    System.out.println(line);
+    assertTrue(line.contains("type=\"text\""));
+  }
+
   /*
    * This test looks for the second scenario (second press of "save" button).
    * This should be an acceptable config.
