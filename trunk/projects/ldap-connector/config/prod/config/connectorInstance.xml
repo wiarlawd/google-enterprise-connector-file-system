@@ -3,11 +3,11 @@
 
 <beans>
   <bean id="ldap-connector-config" class="com.google.enterprise.connector.ldap.LdapConnectorConfig"
-    singleton="true">
+    singleton="false">
     <constructor-arg>
       <map>
         <entry key="hostname" value="${hostname}" />
-        <entry key="port" value="${hostname}" />
+        <entry key="port" value="${port}" />
         <entry key="authtype" value="${authtype}" />
         <entry key="username" value="${username}" />
         <entry key="password" value="${password}" />
@@ -119,10 +119,16 @@
     </constructor-arg>
   </bean>
 
+  <bean id="ldap-handler"
+    class="com.google.enterprise.connector.ldap.LdapHandler"
+    factory-method="makeLdapHandlerFromConfig">
+    <constructor-arg ref="ldap-connector-config" />
+  </bean>
+
   <bean id="ldap-document-snapshot-repository-list"
     class="com.google.enterprise.connector.ldap.LdapDocumentSnapshotRepositoryList"
     singleton="true">
-    <constructor-arg ref="ldap-connector-config" />
+    <constructor-arg ref="ldap-handler" />
   </bean>
 
   <bean id="change-queue" class="com.google.enterprise.connector.diffing.ChangeQueue">

@@ -4,7 +4,7 @@
   <bean id="LdapHandler"
         class="com.google.enterprise.connector.ldap.LdapHandler">
   </bean>
-  <bean id="LdapConnectorType"
+  <bean id="LDAPConnectorType"
         class="com.google.enterprise.connector.ldap.LdapConnectorType">
     <constructor-arg ref="LdapHandler"/>
   </bean>
