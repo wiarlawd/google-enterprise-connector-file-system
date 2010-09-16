@@ -62,6 +62,7 @@ public class LdapJsonDocumentFetcher implements JsonDocumentFetcher {
       String key = e.getKey();
       key = cleanLdapKey(key);
       person.put(SpiConstants.PROPNAME_DOCID, key);
+      person.put(SpiConstants.PROPNAME_LOCK, "true");
       return person;
     }
   };
