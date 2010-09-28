@@ -90,24 +90,6 @@ public class LdapConnectorType implements ConnectorType {
      */
     private static final int MAX_SCHEMA_RESULTS = 1000;
 
-    /**
-     * This is non-static class, because it wants to look at the state of
-     * the containing instance's schemaField
-     */
-    private class SchemaKeyField extends SingleLineField {
-      public SchemaKeyField(String name) {
-        super(name, false /* required */, false /* is password */);
-      }
-
-      @Override
-      public String getSnippet(ResourceBundle bundle, boolean highlightError) {
-        if (FormManager.this.schemaField.isEmpty()) {
-          return "";
-        }
-        return super.getSnippet(bundle, highlightError);
-      }
-    }
-
     private final ImmutableList<AbstractField> fields;
 
     private final SingleLineField hostField, userField, passwordField, baseDnField,
@@ -116,7 +98,6 @@ public class LdapConnectorType implements ConnectorType {
     private final EnumField<AuthType> authTypeField;
     private final EnumField<Method> methodField;
     private final MultiCheckboxField schemaField;
-    private final SchemaKeyField schemaKeyField;
 
     private final ResourceBundle bundle;
     private final Map<String, String> config;
@@ -149,7 +130,6 @@ public class LdapConnectorType implements ConnectorType {
       schemaField =
           new MultiCheckboxField(ConfigName.SCHEMA.toString(), false, null,
           SCHEMA_INSTRUCTIONS);
-      schemaKeyField = new SchemaKeyField(ConfigName.SCHEMA_KEY.toString());
 
       fields = ImmutableList.<AbstractField> of(
           hostField,
@@ -160,8 +140,10 @@ public class LdapConnectorType implements ConnectorType {
           methodField,
           baseDnField,
           filterField,
-          schemaField,
-          schemaKeyField);
+          schemaField);
+      // TODO(Max): remove traces of the schemaKey field that used to exist
+      // delaying this for now because it's close to release and I don't want
+      // to destabilize the code-base
 
       for (AbstractField field: fields) {
         field.boldLabel = false;
@@ -203,10 +185,6 @@ public class LdapConnectorType implements ConnectorType {
       String filter = ldapConnectorConfig.getFilter();
       LOG.fine("filter " + filter);
       filterField.setValueFromString(filter);
-
-      String key = ldapConnectorConfig.getSchemaKey();
-      LOG.fine("key " + key);
-      schemaKeyField.setValueFromString(key);
 
       Set<String> selectedAttributes = ldapConnectorConfig.getSchema();
 
