@@ -22,7 +22,8 @@ public class LdapConstants {
   public enum ErrorMessages {
     CONNECTOR_INSTANTIATION_FAILED,
     MISSING_FIELDS,
-    UNKNOWN_CONNECTION_ERROR, ;
+    UNKNOWN_CONNECTION_ERROR, 
+    NO_RESULTS_FOR_GIVEN_SEARCH_STRING, ;
     public static ErrorMessages safeValueOf(String v) {
       return LdapConstants.safeValueOf(ErrorMessages.class, v);
     }

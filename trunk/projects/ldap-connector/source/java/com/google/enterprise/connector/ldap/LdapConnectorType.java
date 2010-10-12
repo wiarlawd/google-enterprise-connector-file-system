@@ -35,6 +35,8 @@ import com.google.enterprise.connector.spi.ConnectorFactory;
 import com.google.enterprise.connector.spi.ConnectorType;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -196,10 +198,20 @@ public class LdapConnectorType implements ConnectorType {
       schemaField.setSelectedKeys(selectedAttributes);
 
       LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
-      ldapHandler.setLdapConnectionSettings(settings);
 
       // Note: we ignore connection errors here, because we just want to
       // set up the state in the way it was when it was saved
+      try {
+        ldapHandler.setLdapConnectionSettings(settings);
+      } catch (Throwable t) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        t.printStackTrace(pw);
+        LOG
+            .info("Error while trying set the connection in FormManager constructor using settings :"
+                + settings + sw.toString());
+      }
+
       LdapRule rule = ldapConnectorConfig.getRule();
       if (rule != null) {
         try {
@@ -284,6 +296,13 @@ public class LdapConnectorType implements ConnectorType {
 
       SchemaResult schemaResult = schemaFinder.find(MAX_SCHEMA_RESULTS);
       validateNotNull(schemaResult, "schemaResult");
+      //check if schema result fields are returned, display error of there are none
+      if (schemaResult.getResultCount() <= 0) {
+        configureResponse =
+            new ConfigureResponse(bundle.getString(ErrorMessages.NO_RESULTS_FOR_GIVEN_SEARCH_STRING
+                .name()), getFormRows(null));
+      }
+      
       if (configureResponse != null) {
         return;
       }
@@ -305,7 +324,35 @@ public class LdapConnectorType implements ConnectorType {
         return new ConfigureResponse(bundle.getString(ErrorMessages.MISSING_FIELDS.name()),
             getFormRows(errorKeys));
       }
+      LOG.fine("Required fields validated");
 
+      // special validation for authentication type "simple"
+      LOG.fine("Validating fields for Simple Authentication");
+      String authtypeString = config.get(ConfigName.AUTHTYPE.toString()).trim();
+      if (authtypeString.equals(AuthType.SIMPLE.toString())) {
+        String username = config.get(ConfigName.USERNAME.toString()).trim();
+        String password = config.get(ConfigName.PASSWORD.toString()).trim();
+        Collection<String> simpleAuthnFieldNameErrorKeys = new ArrayList<String>();
+        LOG.fine("Validating Simple Authentication username ["+username+"] and password");
+        // validate each field - username and password are required
+        if (username.isEmpty()) {
+          simpleAuthnFieldNameErrorKeys.add(ConfigName.USERNAME.toString());
+          LOG.info("Username is empty");
+        }
+        if (password.isEmpty()) {
+          simpleAuthnFieldNameErrorKeys.add(ConfigName.PASSWORD.toString());
+          LOG.info("Password is empty");
+        }
+
+        // return errors
+        if (simpleAuthnFieldNameErrorKeys.size() != 0) {
+          LOG.info("Simple Authentication validation failed");
+          return new ConfigureResponse(bundle.getString(ErrorMessages.MISSING_FIELDS.name()),
+              getFormRows(simpleAuthnFieldNameErrorKeys));
+        }
+      }
+      LOG.fine("Simple Authentication validation successful!");
+      
       LdapConnectorConfig ldapConnectorConfig = new LdapConnectorConfig(config);
       LdapConnectionSettings settings = ldapConnectorConfig.getSettings();
       ldapHandler.setLdapConnectionSettings(settings);
@@ -417,8 +464,29 @@ public class LdapConnectorType implements ConnectorType {
       String string = dumpConfigToString(config);
       LOG.fine("validateConfig config:" + string);
     }
-    FormManager formManager = new FormManager(config, getResourceBundle(locale));
-    ConfigureResponse res = formManager.validateConfig(factory);
+    
+    LOG.fine("Creating FormManager for validating LDAP connector config");
+    FormManager formManager = null;
+    try {
+      formManager = new FormManager(config, getResourceBundle(locale));
+    } catch (Throwable t) {
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      t.printStackTrace(pw);
+      LOG.severe("Error in FormManager Constructor " + t.toString() + sw.toString());
+    }
+    LOG.fine("Calling validate for FormManager");
+    ConfigureResponse res = null;
+    try {
+      res = formManager.validateConfig(factory);
+    } catch (Throwable t) {
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      t.printStackTrace(pw);
+      LOG.severe("Error in Validate config " + t.toString() + sw.toString());
+    }
+    LOG.fine("FormManager validate successful");
+    
     if (res == null) {
       LOG.info("validateConfig form: success - returning null");
     } else if (res.getMessage() == null && res.getFormSnippet() == null) {

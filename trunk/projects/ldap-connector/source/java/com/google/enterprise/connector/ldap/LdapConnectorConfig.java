@@ -74,7 +74,13 @@ public class LdapConnectorConfig {
     String portString = getTrimmedValueFromConfig(config, ConfigName.PORT);
     String authtypeString = getTrimmedValueFromConfig(config, ConfigName.AUTHTYPE);
     String username = getTrimmedValueFromConfig(config, ConfigName.USERNAME);
+    if(username == null) {
+      username = "";
+    }
     String password = getTrimmedValueFromConfig(config, ConfigName.PASSWORD);
+    if(password == null) {
+      password = "";
+    }    
     String methodString = getTrimmedValueFromConfig(config, ConfigName.METHOD);
     String basedn = getTrimmedValueFromConfig(config, ConfigName.BASEDN);
     String filter = getTrimmedValueFromConfig(config, ConfigName.FILTER);

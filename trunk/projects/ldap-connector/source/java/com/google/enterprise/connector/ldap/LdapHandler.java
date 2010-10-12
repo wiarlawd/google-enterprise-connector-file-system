@@ -376,8 +376,7 @@ public class LdapHandler implements LdapHandlerI {
     public static final int PAGESIZE = 1000;
 
     public LdapConnection(LdapConnectionSettings ldapConnectionSettings) {
-      LOG.fine("Configuring LdapConnection with settings: " +
-          this.settings);
+      LOG.fine("Configuring LdapConnection with settings: " + ldapConnectionSettings);
       this.settings = ldapConnectionSettings;
       this.errors = Maps.newHashMap();
       Hashtable<String, String> env = configureLdapEnvironment();
