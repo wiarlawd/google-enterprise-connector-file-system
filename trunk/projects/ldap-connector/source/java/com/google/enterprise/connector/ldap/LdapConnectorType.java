@@ -204,6 +204,11 @@ public class LdapConnectorType implements ConnectorType {
       try {
         ldapHandler.setLdapConnectionSettings(settings);
       } catch (Throwable t) {
+        // FIXME These errors are getting lost if not caught here. They need to
+        // be logged for debugging purposes and also need to allow the
+        // configuration to proceed even if there is any sort of connection
+        // error. May be revisited/removed once the internal logic is fool
+        // proof.
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         t.printStackTrace(pw);
@@ -470,6 +475,11 @@ public class LdapConnectorType implements ConnectorType {
     try {
       formManager = new FormManager(config, getResourceBundle(locale));
     } catch (Throwable t) {
+      // FIXME These errors are getting lost if not caught here. They need to
+      // be logged for debugging purposes and also need to allow the
+      // configuration to proceed even if there is any sort of connection
+      // error. May be revisited/removed once the internal logic is fool
+      // proof.
       StringWriter sw = new StringWriter();
       PrintWriter pw = new PrintWriter(sw);
       t.printStackTrace(pw);
@@ -480,6 +490,11 @@ public class LdapConnectorType implements ConnectorType {
     try {
       res = formManager.validateConfig(factory);
     } catch (Throwable t) {
+      // FIXME These errors are getting lost if not caught here. They need to
+      // be logged for debugging purposes and also need to allow the
+      // configuration to proceed even if there is any sort of connection
+      // error. May be revisited/removed once the internal logic is fool
+      // proof.
       StringWriter sw = new StringWriter();
       PrintWriter pw = new PrintWriter(sw);
       t.printStackTrace(pw);
