@@ -14,12 +14,17 @@
         class = "com.google.enterprise.connector.filesystem.JavaFileSystemType">
   </bean>
 
+  <bean id = "nfs-file-system-type"
+        class = "com.google.enterprise.connector.filesystem.NfsFileSystemType">
+  </bean>
+
   <bean id="file-system-type-registry"
     class="com.google.enterprise.connector.filesystem.FileSystemTypeRegistry">
     <constructor-arg>
       <list>
         <ref bean="smb-file-system-type" />
         <ref bean="java-file-system-type" />
+        <ref bean="nfs-file-system-type" />
       </list>
     </constructor-arg>
   </bean>
