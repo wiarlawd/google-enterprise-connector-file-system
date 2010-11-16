@@ -71,7 +71,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>> extends FileInfo {
   public long length() throws IOException;
 
   /**
-   * Returns true if this {@Link ReadonlyFile} supports authorization
+   * Returns true if this {@Link ReadonlyFile} supports authn
    * based on a specific associated {@link Credentials}.
    */
   public boolean supportsAuthn();

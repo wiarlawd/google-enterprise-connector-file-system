@@ -19,19 +19,17 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
  * An implementation of FileSystemType for NFS file system.
  */
 public class NfsFileSystemType implements FileSystemType {
+
+  static final String NFS_PATH_PREFIX = "nfs://";
+
   /* @Override */
   public NfsReadonlyFile getFile(String path, Credentials credentials) {
     return new NfsReadonlyFile(path);
   }
 
   /* @Override */
-  public String getName() {
-    return NfsReadonlyFile.FILE_SYSTEM_TYPE;
-  }
-
-  /* @Override */
   public boolean isPath(String path) {
-    return path.toLowerCase().startsWith("nfs://");
+    return path.toLowerCase().startsWith(NFS_PATH_PREFIX);
   }
 
   /* @Override */
@@ -45,5 +43,10 @@ public class NfsFileSystemType implements FileSystemType {
       throw new RepositoryDocumentException("failed to open file: " + path);
     }
     return result;
+  }
+
+  /* @Override */
+  public String getName() {
+    return NfsReadonlyFile.FILE_SYSTEM_TYPE;
   }
 }

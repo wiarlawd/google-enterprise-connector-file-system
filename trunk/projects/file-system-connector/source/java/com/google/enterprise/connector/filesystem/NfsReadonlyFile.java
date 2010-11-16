@@ -42,59 +42,43 @@ public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
     this.delegate = new XFile(path);
   }
 
+  /* @Override */
   public String getFileSystemType() {
     return FILE_SYSTEM_TYPE;
   }
 
-  /**
-   * @return file system path to this file.
-   */
+  /* @Override */
   public String getPath() {
     return delegate.getAbsolutePath();
   }
 
-  /**
-   * @return true if this is a directory.
-   */
+  /* @Override */
   public boolean isDirectory() {
     return delegate.isDirectory();
   }
 
-  /**
-   * @return true if this is a regular file
-   */
+  /* @Override */
   public boolean isRegularFile() {
     return delegate.isFile();
   }
 
-  /**
-   * @return the time this file was last modified
-   * @throws IOException if the modification time cannot be obtained
-   */
+  /* @Override */
   public long getLastModified() throws IOException {
     return delegate.lastModified();
   }
 
-  /**
-   * Returns a {@link Acl} for this file or directory.
-   * @throws IOException
-   */
+  /* @Override */
   public Acl getAcl() throws IOException {
     // TODO: Figure out NFS ACL story.
     return Acl.newPublicAcl();
   }
 
+  /* @Override */
   public boolean canRead() {
     return delegate.canRead();
   }
 
-  /**
-   * Return the contents of this directory, sorted in an order consistent with
-   * an in-order, depth-first recursive directory scan.
-   *
-   * @return files and directories within this directory in sorted order.
-   * @throws IOException if this is not a directory, or if it can't be read
-   */
+  /* @Override */
   public List<NfsReadonlyFile> listFiles() throws IOException {
     String fileNames[] = delegate.list();
     List<NfsReadonlyFile> result = new ArrayList<NfsReadonlyFile>(fileNames.length);
@@ -114,48 +98,31 @@ public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
     return result;
   }
 
-  /**
-   * @return an input stream that reads this file.
-   * @throws IOException if this is a directory, or if there is a problem
-   *         opening the file
-   */
+  /* @Override */
   public InputStream getInputStream() throws IOException {
     return new XFileInputStream(delegate);
   }
 
-  /**
-   * Returns the display url for this file.
-   */
+  /* @Override */
   public String getDisplayUrl() {
     return delegate.getAbsolutePath();
   }
 
-  /**
-   * Returns true if this {@link ReadonlyFile} matches the supplied
-   * pattern for the purposes of resolving include and exclude
-   * patterns.
-   * <p>
-   * The rules for determining what exactly to compare to the file
-   * pattern depends on the semantics of the {@link ReadonlyFile}.
-   * Please refer to concrete implementations for specific behaviors.
-   */
+  /* @Override */
   public boolean acceptedBy(FilePatternMatcher matcher) {
     return matcher.acceptName(delegate.getAbsolutePath());
   }
 
-  /**
-   * If {@link #isRegularFile()} returns true this returns the length of the
-   * file in bytes. Otherwise this returns 0L.
-   * @throws IOException
-   */
+  /* @Override */
   public long length() throws IOException {
-    return delegate.length();
+    if (isRegularFile()) {
+      return delegate.length();
+    } else {
+      return 0;
+    }
   }
 
-  /**
-   * Returns true if this {@Link ReadonlyFile} supports authorization
-   * based on a specific associated {@link Credentials}.
-   */
+  /* @Override */
   public boolean supportsAuthn() {
     return false;
   }
