@@ -83,7 +83,8 @@ public class WindowsFileTimeUtil {
 	 * @param lastAccessTime
 	 * @return
 	 */
-	static boolean GetFileTime(String sFileName, Date lastAccessTime) {
+	static synchronized boolean GetFileTime(String sFileName,
+			Date lastAccessTime) {
 		if (win32 == null) {
 			return false;
 		}
@@ -112,7 +113,8 @@ public class WindowsFileTimeUtil {
 	 * @param lastAccessTime
 	 * @return
 	 */
-	static boolean SetFileTime(String sFileName, final Timestamp lastAccessTime) {
+	static synchronized boolean SetFileTime(String sFileName,
+			final Timestamp lastAccessTime) {
 		if (win32 == null) {
 			return false;
 		}
