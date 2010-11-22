@@ -2,6 +2,13 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
+  
+  <bean id = "java-file-system-type"
+        class = "com.google.enterprise.connector.filesystem.JavaFileSystemType">
+  </bean>
+    <bean id = "windows-file-system-type"
+        class = "com.google.enterprise.connector.filesystem.WindowsFileSystemType">
+  </bean>
   <bean id = "smb-file-system-type"
         class = "com.google.enterprise.connector.filesystem.SmbFileSystemType">
     <!-- 
@@ -9,11 +16,7 @@
     -->
     <constructor-arg value="true"/>
   </bean>
-
-  <bean id = "java-file-system-type"
-        class = "com.google.enterprise.connector.filesystem.JavaFileSystemType">
-  </bean>
-
+  
   <bean id = "nfs-file-system-type"
         class = "com.google.enterprise.connector.filesystem.NfsFileSystemType">
   </bean>
@@ -22,8 +25,9 @@
     class="com.google.enterprise.connector.filesystem.FileSystemTypeRegistry">
     <constructor-arg>
       <list>
+      <ref bean="java-file-system-type" />
+        <ref bean="windows-file-system-type" />
         <ref bean="smb-file-system-type" />
-        <ref bean="java-file-system-type" />
         <ref bean="nfs-file-system-type" />
       </list>
     </constructor-arg>
