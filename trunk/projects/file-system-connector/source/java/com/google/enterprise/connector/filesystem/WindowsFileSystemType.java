@@ -16,6 +16,9 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * FileSystemType implementation for Windows file system. A separate
  * implementation for Windows is created to reset the last access time for
@@ -23,45 +26,61 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
  * specific implementation is provided to solve this problem.
  */
 public class WindowsFileSystemType implements FileSystemType {
-	private static final String COLON = ":";
+  private static final String COLON = ":";
 
-	/* @Override */
-	public WindowsReadonlyFile getFile(String path, Credentials credentials) {
-		return new WindowsReadonlyFile(path);
-	}
+  /* @Override */
+  public WindowsReadonlyFile getFile(String path, Credentials credentials) {
+    return new WindowsReadonlyFile(path);
+  }
 
-	/* @Override */
-	public String getName() {
-		return WindowsReadonlyFile.FILE_SYSTEM_TYPE;
-	}
+  /* @Override */
+  public String getName() {
+    return WindowsReadonlyFile.FILE_SYSTEM_TYPE;
+  }
 
-	/**
-	 * This method is used to check whether the given path is valid for given
-	 * file system type. for windows file system type, this method splits the
-	 * file path using ":" to get the drive letter. If it is more than one
-	 * letter, it rejects saying that it isn't a windows file path name
-	 */
-	public boolean isPath(String path) {
-		String[] arr = path.split(COLON);
-		String driveLetter = arr[0];
-		if (driveLetter == null || driveLetter.trim().length() == 0
-				|| driveLetter.trim().length() > 1) {
-			return false;
-		}
-		return true;
-	}
+  /**
+   * This method is used to check whether the given path is valid for given file
+   * system type. for windows file system type, this method splits the file path
+   * using ":" to get the drive letter. If it is more than one letter, it
+   * rejects saying that it isn't a windows file path name
+   */
+  public boolean isPath(String path) {
+    if (path == null || path.trim().length() < 1) {
+      return false;
+    }
+    String[] arr = path.split(COLON);
+    String driveLetter = arr[0];
+    if (driveLetter == null || driveLetter.trim().length() == 0
+            || driveLetter.trim().length() > 1) {
+      return false;
+    } else if (!isAllowedDriveLetter(arr[0])) {
+      return false;
+    }
+    return true;
+  }
 
-	/* @Override */
-	public WindowsReadonlyFile getReadableFile(String path,
-			Credentials credentials) throws RepositoryDocumentException {
-		if (!isPath(path)) {
-			throw new IllegalArgumentException("Invalid path " + path);
-		}
-		WindowsReadonlyFile result = getFile(path, credentials);
-		if (!result.canRead()) {
-			throw new RepositoryDocumentException("failed to open file: "
-					+ path);
-		}
-		return result;
-	}
+  /**
+   * Method to check whether the character is a valid drive letter or not.
+   * 
+   * @param driveLetter
+   * @return
+   */
+  private boolean isAllowedDriveLetter(String driveLetter) {
+    Pattern p = Pattern.compile("[a-zA-Z]");
+    Matcher m = p.matcher(driveLetter);
+    return m.find();
+  }
+
+  /* @Override */
+  public WindowsReadonlyFile getReadableFile(String path,
+          Credentials credentials) throws RepositoryDocumentException {
+    if (!isPath(path)) {
+      throw new IllegalArgumentException("Invalid path : " + path);
+    }
+    WindowsReadonlyFile result = getFile(path, credentials);
+    if (!result.canRead()) {
+      throw new RepositoryDocumentException("Failed to open file : " + path);
+    }
+    return result;
+  }
 }

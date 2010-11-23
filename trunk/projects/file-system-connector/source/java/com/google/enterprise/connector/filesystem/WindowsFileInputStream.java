@@ -28,40 +28,64 @@ import java.util.logging.Logger;
  */
 class WindowsFileInputStream extends FileInputStream {
 
-	private final Timestamp lastAccessTimeOfFile;
-	private String fileName;
-	private static final Logger LOG = Logger.getLogger(WindowsFileInputStream.class.getName());
+  /**
+   * Last access time of the file.
+   */
+  private final Timestamp lastAccessTimeOfFile;
+  /**
+   * Name of the file that this stream is for.
+   */
+  private String fileName;
+  /**
+   * Logger
+   */
+  private static final Logger LOG = Logger.getLogger(WindowsFileInputStream.class.getName());
+  /**
+   * Flag to see if the last access time was set properly during close
+   */
+  private boolean lastAccessTimeSet = false;
 
-	WindowsFileInputStream(File file, Timestamp timestamp)
-			throws FileNotFoundException {
-		super(file);
-		this.fileName = file.getPath();
-		lastAccessTimeOfFile = timestamp;
-	}
+  /**
+   * This constructor initializes the file name and the last access time for the
+   * file
+   * 
+   * @param file File to be streamed
+   * @param lastAccessTimeOfFile Time this file was last accessed
+   * @throws FileNotFoundException
+   */
+  WindowsFileInputStream(File file, Timestamp lastAccessTimeOfFile)
+          throws FileNotFoundException {
+    super(file);
+    this.fileName = file.getAbsolutePath();
+    this.lastAccessTimeOfFile = lastAccessTimeOfFile;
+  }
 
-	@Override
-	public void close() throws IOException {
-		super.close();
-		setLastAccessTime(lastAccessTimeOfFile);
-	}
+  @Override
+  public void close() throws IOException {
+    super.close();
+    setLastAccessTime();
+  }
 
-	/**
-	 * This method sets the last access time back to the file
-	 * 
-	 * @param lastAccessTime
-	 * @return true if it can set the value, false otherwise
-	 */
-	private boolean setLastAccessTime(Timestamp lastAccessTime) {
-		LOG.finest("Setting last access time for : " + this.fileName + " as : "
-				+ lastAccessTime);
-		return WindowsFileTimeUtil.setFileAccessTime(this.fileName, lastAccessTime);
-	}
+  /**
+   * This method sets the last access time back to the file
+   * 
+   * @param lastAccessTime
+   * @return true if it can set the value, false otherwise
+   */
+  private void setLastAccessTime() {
+    LOG.finest("Setting last access time for : " + this.fileName + " as : "
+            + this.lastAccessTimeOfFile);
+    this.lastAccessTimeSet = WindowsFileTimeUtil.setFileAccessTime(this.fileName, lastAccessTimeOfFile);
+  }
 
-	@Override
-	protected void finalize() throws IOException {
-		super.finalize();
-		// TODO : Add a code to check whether close was called and if not then
-		// set the time to the file.
-	}
-
+  @Override
+  protected void finalize() throws IOException {
+    super.finalize();
+    if (!lastAccessTimeSet
+            && !WindowsFileTimeUtil.setFileAccessTime(this.fileName, this.lastAccessTimeOfFile)) {
+      // TODO Figure out alternatives
+      LOG.finest("Error setting the last access time for file : "
+              + this.fileName);
+    }
+  }
 }

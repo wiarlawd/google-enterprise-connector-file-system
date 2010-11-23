@@ -31,154 +31,164 @@ import java.util.logging.Logger;
  * file.
  */
 public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
-	public static final String FILE_SYSTEM_TYPE = "windows";
-	private Timestamp lastAccessTimeOfFile;
-	private final File delegate;
-	private static final Logger LOG = Logger.getLogger(WindowsReadonlyFile.class.getName());
+  /**
+   * Constant for this file system type
+   */
+  public static final String FILE_SYSTEM_TYPE = "windows";
+  /**
+   * Timestamp for the last accessed time of the file
+   */
+  private Timestamp lastAccessTimeOfFile;
+  /**
+   * Underlying java.io.File delegate
+   */
+  private final File delegate;
+  private static final Logger LOG = Logger.getLogger(WindowsReadonlyFile.class.getName());
 
-	public WindowsReadonlyFile(File file) {
-		this.delegate = file;
-		if (delegate.isFile() && lastAccessTimeOfFile == null) {
-			lastAccessTimeOfFile = this.getLastAccessTime(file.getPath());
-			LOG.finest(("Getting the last access time for " + file.getPath()
-					+ " as : " + lastAccessTimeOfFile));
-		}
-	}
+  public WindowsReadonlyFile(File file) {
+    this(file.getAbsolutePath());
+  }
 
-	public WindowsReadonlyFile(String absolutePath) {
-		this.delegate = new File(absolutePath);
-		if (delegate.isFile() && lastAccessTimeOfFile == null) {
-			lastAccessTimeOfFile = this.getLastAccessTime(absolutePath);
-			LOG.finest("Getting the last access time for " + absolutePath
-					+ " as : " + lastAccessTimeOfFile);
-		}
-	}
+  public WindowsReadonlyFile(String absolutePath) {
+    this.delegate = new File(absolutePath);
+    if (delegate.isFile() && lastAccessTimeOfFile == null) {
+      lastAccessTimeOfFile = this.getLastAccessTime(absolutePath);
+      LOG.finest("Getting the last access time for " + absolutePath + " as : "
+              + lastAccessTimeOfFile);
+    }
+  }
 
-	/* @Override */
-	public String getFileSystemType() {
-		return FILE_SYSTEM_TYPE;
-	}
+  /* @Override */
+  public String getFileSystemType() {
+    return FILE_SYSTEM_TYPE;
+  }
 
-	/* @Override */
-	public boolean canRead() {
-		return delegate.canRead();
-	}
+  /* @Override */
+  public boolean canRead() {
+    return delegate.canRead();
+  }
 
-	/* @Override */
-	public Acl getAcl() {
-		// TODO: figure out what the ACLs really are.
-		return Acl.newPublicAcl();
-	}
+  /* @Override */
+  public Acl getAcl() {
+    // TODO: figure out what the ACLs really are.
+    return Acl.newPublicAcl();
+  }
 
-	/* @Override */
-	public InputStream getInputStream() throws IOException {
-		return new WindowsFileInputStream(delegate, lastAccessTimeOfFile);
-	}
+  /* @Override */
+  public InputStream getInputStream() throws IOException {
+    return new WindowsFileInputStream(delegate, lastAccessTimeOfFile);
+  }
 
-	/* @Override */
-	public String getPath() {
-		if (delegate.isDirectory()) {
-			return delegate.getPath() + File.separatorChar;
-		}
-		return delegate.getPath();
-	}
+  /* @Override */
+  public String getPath() {
+    if (delegate.isDirectory()) {
+      return delegate.getAbsolutePath() + File.separatorChar;
+    }
+    return delegate.getAbsolutePath();
+  }
 
-	/* @Override */
-	public String getDisplayUrl() {
-		return getPath();
-	}
+  /* @Override */
+  public String getDisplayUrl() {
+    return getPath();
+  }
 
-	/* @Override */
-	public boolean isDirectory() {
-		return delegate.isDirectory();
-	}
+  /* @Override */
+  public boolean isDirectory() {
+    return delegate.isDirectory();
+  }
 
-	/* @Override */
-	public boolean isRegularFile() {
-		return delegate.isFile();
-	}
+  /* @Override */
+  public boolean isRegularFile() {
+    return delegate.isFile();
+  }
 
-	/* @Override */
-	public long length() {
-		return delegate.isFile() ? delegate.length() : 0L;
-	}
+  /* @Override */
+  public long length() {
+    return delegate.isFile() ? delegate.length() : 0L;
+  }
 
-	/* @Override */
-	public List<WindowsReadonlyFile> listFiles() throws IOException {
-		File[] files = delegate.listFiles();
-		if (files == null) {
-			throw new IOException("failed to list files in " + getPath());
-		}
-		List<WindowsReadonlyFile> result = new ArrayList<WindowsReadonlyFile>(
-				files.length);
-		for (int k = 0; k < files.length; ++k) {
-			result.add(new WindowsReadonlyFile(files[k]));
-		}
-		Collections.sort(result, new Comparator<WindowsReadonlyFile>() {
-			/* @Override */
-			public int compare(WindowsReadonlyFile o1, WindowsReadonlyFile o2) {
-				return o1.getPath().compareTo(o2.getPath());
-			}
+  /* @Override */
+  public List<WindowsReadonlyFile> listFiles() throws IOException {
+    File[] files = delegate.listFiles();
+    if (files == null) {
+      throw new IOException("failed to list files in " + getPath());
+    }
+    List<WindowsReadonlyFile> result = new ArrayList<WindowsReadonlyFile>(
+            files.length);
+    for (int k = 0; k < files.length; ++k) {
+      result.add(new WindowsReadonlyFile(files[k]));
+    }
+    Collections.sort(result, new Comparator<WindowsReadonlyFile>() {
+      /* @Override */
+      public int compare(WindowsReadonlyFile o1, WindowsReadonlyFile o2) {
+        return o1.getPath().compareTo(o2.getPath());
+      }
 
-		});
-		return result;
-	}
+    });
+    return result;
+  }
 
-	/* @Override */
-	public long getLastModified() throws IOException {
-		long lastModified = delegate.lastModified();
-		if (lastModified == 0) {
-			throw new IOException("failed to get last-modified time for "
-					+ getPath());
-		}
-		return lastModified;
-	}
+  /* @Override */
+  public long getLastModified() throws IOException {
+    long lastModified = delegate.lastModified();
+    if (lastModified == 0) {
+      throw new IOException("failed to get last-modified time for " + getPath());
+    }
+    return lastModified;
+  }
 
-	/* @Override */
-	public boolean supportsAuthn() {
-		return false;
-	}
+  /* @Override */
+  public boolean supportsAuthn() {
+    return false;
+  }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((delegate == null) ? 0 : delegate.hashCode());
-		return result;
-	}
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
+    return result;
+  }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (obj == null) {
-			return false;
-		}
-		if (!(obj instanceof WindowsReadonlyFile)) {
-			return false;
-		}
-		WindowsReadonlyFile other = (WindowsReadonlyFile) obj;
-		if (delegate == null) {
-			if (other.delegate != null) {
-				return false;
-			}
-		} else if (!delegate.equals(other.delegate)) {
-			return false;
-		}
-		return true;
-	}
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof WindowsReadonlyFile)) {
+      return false;
+    }
+    WindowsReadonlyFile other = (WindowsReadonlyFile) obj;
+    if (delegate == null) {
+      if (other.delegate != null) {
+        return false;
+      }
+    } else if (!delegate.equals(other.delegate)) {
+      return false;
+    }
+    return true;
+  }
 
-	public boolean acceptedBy(FilePatternMatcher matcher) {
-		return matcher.acceptName(getPath());
-	}
+  public boolean acceptedBy(FilePatternMatcher matcher) {
+    return matcher.acceptName(getPath());
+  }
 
-	private Timestamp getLastAccessTime(String absolutePath) {
-		Timestamp ts = new Timestamp(0);
-		if (!WindowsFileTimeUtil.getFileAccessTime(absolutePath, ts)) {
-			ts = null;
-		}
-		return ts;
-	}
+  /**
+   * Method to get the last access time of the file. If for some reason, the
+   * last access time is not fetched, null is returned and in that case, the
+   * access time is not set to the file.
+   * 
+   * @param absolutePath File name
+   * @return Last access time if it is successfully fetched, null otherwise.
+   */
+  private Timestamp getLastAccessTime(String absolutePath) {
+    Timestamp ts = new Timestamp(0);
+    if (!WindowsFileTimeUtil.getFileAccessTime(absolutePath, ts)) {
+      ts = null;
+    }
+    return ts;
+  }
 }
