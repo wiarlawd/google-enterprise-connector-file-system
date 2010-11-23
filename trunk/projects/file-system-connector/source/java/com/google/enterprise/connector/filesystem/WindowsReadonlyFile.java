@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2010 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,31 +29,28 @@ import java.util.logging.Logger;
  * java.io.File object. This implementation is Windows specific since it tries
  * to call windows specific JNA calls to get / set the last access time of the
  * file.
- * 
  */
 public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
 	public static final String FILE_SYSTEM_TYPE = "windows";
-
-	private transient Timestamp lts;
+	private Timestamp lastAccessTimeOfFile;
 	private final File delegate;
-	private static final Logger LOG = Logger
-			.getLogger(WindowsReadonlyFile.class.getName());
+	private static final Logger LOG = Logger.getLogger(WindowsReadonlyFile.class.getName());
 
 	public WindowsReadonlyFile(File file) {
 		this.delegate = file;
-		if (delegate.isFile() && lts == null) {
-			lts = this.getLastAccessTime(file.getPath());
-			LOG.finest(("getting the last access for " + file.getPath()
-					+ " as : " + lts));
+		if (delegate.isFile() && lastAccessTimeOfFile == null) {
+			lastAccessTimeOfFile = this.getLastAccessTime(file.getPath());
+			LOG.finest(("Getting the last access time for " + file.getPath()
+					+ " as : " + lastAccessTimeOfFile));
 		}
 	}
 
 	public WindowsReadonlyFile(String absolutePath) {
 		this.delegate = new File(absolutePath);
-		if (delegate.isFile() && lts == null) {
-			lts = this.getLastAccessTime(absolutePath);
-			LOG.finest("getting the last access for " + absolutePath + " as : "
-					+ lts);
+		if (delegate.isFile() && lastAccessTimeOfFile == null) {
+			lastAccessTimeOfFile = this.getLastAccessTime(absolutePath);
+			LOG.finest("Getting the last access time for " + absolutePath
+					+ " as : " + lastAccessTimeOfFile);
 		}
 	}
 
@@ -74,16 +71,16 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
 	}
 
 	/* @Override */
-	public synchronized InputStream getInputStream() throws IOException {
-		return new WindowsFileInputStream(delegate, lts);
+	public InputStream getInputStream() throws IOException {
+		return new WindowsFileInputStream(delegate, lastAccessTimeOfFile);
 	}
 
 	/* @Override */
 	public String getPath() {
 		if (delegate.isDirectory()) {
-			return delegate.getAbsolutePath() + File.separatorChar;
+			return delegate.getPath() + File.separatorChar;
 		}
-		return delegate.getAbsolutePath();
+		return delegate.getPath();
 	}
 
 	/* @Override */
@@ -177,11 +174,9 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
 		return matcher.acceptName(getPath());
 	}
 
-	private synchronized Timestamp getLastAccessTime(String absolutePath) {
+	private Timestamp getLastAccessTime(String absolutePath) {
 		Timestamp ts = new Timestamp(0);
-		if (!WindowsFileTimeUtil.GetFileTime(absolutePath, ts)) {
-			LOG
-					.finest("-----------------Error----------- Couldn't get the last access time");
+		if (!WindowsFileTimeUtil.getFileAccessTime(absolutePath, ts)) {
 			ts = null;
 		}
 		return ts;

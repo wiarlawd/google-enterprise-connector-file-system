@@ -1,4 +1,4 @@
-//Copyright 2009 Google Inc.
+//Copyright 2010 Google Inc.
 //
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
@@ -23,43 +23,45 @@ import java.util.logging.Logger;
 
 /**
  * This is a Windows specific implementation of an input Stream since it tries
- * to set a last access time of the file after the {@code close} method is
- * called.
- * 
- * @author vishvesh
- * 
+ * to set a last access time of the windows file after the {@code close} method
+ * is called. The method to set the access time to a file is windows specific.
  */
-public class WindowsFileInputStream extends FileInputStream {
+class WindowsFileInputStream extends FileInputStream {
 
-	private final Timestamp ts;
+	private final Timestamp lastAccessTimeOfFile;
 	private String fileName;
-	private static final Logger LOG = Logger
-			.getLogger(WindowsFileInputStream.class.getName());
+	private static final Logger LOG = Logger.getLogger(WindowsFileInputStream.class.getName());
 
-	public WindowsFileInputStream(File file, Timestamp timestamp)
+	WindowsFileInputStream(File file, Timestamp timestamp)
 			throws FileNotFoundException {
 		super(file);
 		this.fileName = file.getPath();
-		ts = timestamp;
+		lastAccessTimeOfFile = timestamp;
 	}
 
 	@Override
 	public void close() throws IOException {
 		super.close();
-		setLastAccessTime(ts);
+		setLastAccessTime(lastAccessTimeOfFile);
 	}
 
 	/**
-	 * This method tries to set the last access time back to the file
+	 * This method sets the last access time back to the file
 	 * 
 	 * @param lastAccessTime
-	 * @return
+	 * @return true if it can set the value, false otherwise
 	 */
-	private synchronized boolean setLastAccessTime(Timestamp lastAccessTime) {
+	private boolean setLastAccessTime(Timestamp lastAccessTime) {
 		LOG.finest("Setting last access time for : " + this.fileName + " as : "
 				+ lastAccessTime);
-		return WindowsFileTimeUtil.SetFileTime(this.fileName, lastAccessTime);
+		return WindowsFileTimeUtil.setFileAccessTime(this.fileName, lastAccessTime);
+	}
 
+	@Override
+	protected void finalize() throws IOException {
+		super.finalize();
+		// TODO : Add a code to check whether close was called and if not then
+		// set the time to the file.
 	}
 
 }

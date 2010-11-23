@@ -14,7 +14,7 @@
         class = "com.google.enterprise.connector.filesystem.JavaFileSystemType">
   </bean>
   
-    <bean id = "windows-file-system-type"
+  <bean id = "windows-file-system-type"
         class = "com.google.enterprise.connector.filesystem.WindowsFileSystemType">
   </bean>
 
