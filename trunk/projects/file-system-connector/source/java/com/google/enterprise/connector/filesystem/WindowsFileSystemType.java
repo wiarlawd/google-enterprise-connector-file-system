@@ -45,7 +45,8 @@ public class WindowsFileSystemType implements FileSystemType {
    * rejects saying that it isn't a windows file path name
    */
   public boolean isPath(String path) {
-    if (path == null || path.trim().length() < 1) {
+    if (path == null || path.trim().length() < 1
+            || path.trim().indexOf(COLON) == -1) {
       return false;
     }
     String[] arr = path.split(COLON);

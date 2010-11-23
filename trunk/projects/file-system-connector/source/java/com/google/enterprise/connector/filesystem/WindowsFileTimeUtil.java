@@ -25,9 +25,10 @@ import java.util.logging.Logger;
 
 /**
  * This Utility is used for Windows specific methods such as getting and setting
- * the last access time of a file.
- * For more details of the code
- * http://maclife.net/wiki/index.php?title=Java_get_and_set_windows_system_file_creation_time_via_JNA_(Java_Native_Access)
+ * the last access time of a file. For more details of the code
+ * http://maclife.net/wiki/index.php?title=
+ * Java_get_and_set_windows_system_file_creation_time_via_JNA_
+ * (Java_Native_Access)
  */
 class WindowsFileTimeUtil {
   /**
@@ -113,11 +114,8 @@ class WindowsFileTimeUtil {
     WinNT.HANDLE file = openFile(fileName, WinNT.FILE_ATTRIBUTE_TEMPORARY);
     if (file == WinBase.INVALID_HANDLE_VALUE)
       return false;
-    WinBase.FILETIME windowsLastAccessTime = new WinBase.FILETIME();
-    ConvertDateToFILETIME(lastAccessTime, windowsLastAccessTime);
-
-    boolean success = win32.SetFileTime(file, null, lastAccessTime == null ? null
-            : windowsLastAccessTime, null);
+    WinBase.FILETIME windowsLastAccessTime = ConvertDateToFILETIME(lastAccessTime);
+    boolean success = win32.SetFileTime(file, null, windowsLastAccessTime, null);
     if (!success) {
       int errorCode = win32.GetLastError();
       LOG.finest("Error while setting the last access time for file : "
@@ -134,16 +132,16 @@ class WindowsFileTimeUtil {
    * @param date
    * @param ft
    */
-  private static void ConvertDateToFILETIME(Date date, WinBase.FILETIME ft) {
-    long iFileTime = 0;
+  private static WinBase.FILETIME ConvertDateToFILETIME(Date date) {
+    WinBase.FILETIME windowsLastAccessTime = null;
     if (date != null) {
+      long iFileTime = 0;
+      windowsLastAccessTime = new WinBase.FILETIME();
       iFileTime = WinBase.FILETIME.dateToFileTime(date);
-      ft.dwHighDateTime = (int) ((iFileTime >> 32) & 0xFFFFFFFFL);
-      ft.dwLowDateTime = (int) (iFileTime & 0xFFFFFFFFL);
-    } else {
-      ft.dwHighDateTime = 0;
-      ft.dwLowDateTime = 0;
+      windowsLastAccessTime.dwHighDateTime = (int) ((iFileTime >> 32) & 0xFFFFFFFFL);
+      windowsLastAccessTime.dwLowDateTime = (int) (iFileTime & 0xFFFFFFFFL);
     }
+    return windowsLastAccessTime;
   }
 
   /**

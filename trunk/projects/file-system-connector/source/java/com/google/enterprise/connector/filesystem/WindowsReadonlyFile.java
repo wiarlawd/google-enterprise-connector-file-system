@@ -46,16 +46,16 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
   private static final Logger LOG = Logger.getLogger(WindowsReadonlyFile.class.getName());
 
   public WindowsReadonlyFile(File file) {
-    this(file.getAbsolutePath());
+    this.delegate = file;
+    if (delegate.isFile() && lastAccessTimeOfFile == null) {
+      lastAccessTimeOfFile = this.getLastAccessTime(file.getAbsolutePath());
+      LOG.finest("Getting the last access time for " + file.getAbsolutePath()
+              + " as : " + lastAccessTimeOfFile);
+    }
   }
 
   public WindowsReadonlyFile(String absolutePath) {
-    this.delegate = new File(absolutePath);
-    if (delegate.isFile() && lastAccessTimeOfFile == null) {
-      lastAccessTimeOfFile = this.getLastAccessTime(absolutePath);
-      LOG.finest("Getting the last access time for " + absolutePath + " as : "
-              + lastAccessTimeOfFile);
-    }
+    this(new File(absolutePath));
   }
 
   /* @Override */
