@@ -12,7 +12,7 @@ Google recommends that you use the installer for installing the connector. You m
 
 =Pre-requisites=
   * Apache Tomcat 6. You can download it from it from http://tomcat.apache.org/download-60.cgi
-  * JRE1.6 or above. Refer to http://java.sun.com/javase/downloads/index.jsp for downloads
+  * JRE1.5 or above. Refer to http://java.sun.com/javase/downloads/index.jsp for downloads
 
 =Manual installation steps=
   # Shut down Tomcat if it is running.
