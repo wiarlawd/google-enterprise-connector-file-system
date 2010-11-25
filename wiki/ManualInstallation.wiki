@@ -72,6 +72,6 @@ Google recommends that you use the installer for installing the connector. You m
   # To confirm whether the Tomcat server has started correctly and the connector is installed, navigate to the $CATALINA_HOME/webapps/connector-manager/WEB-INF/connectors directory, and verify that the $CATALINA_HOME/webapps/connector-manager/WEB-INF/connectors/FileConnectorType directory exists.
   # 15.Check and confirm if the connector type has been detected by the Connector Manager using the following URL:
 
-    http://<host>:<port>/connector-manager/getConnectorList 
+    http://localhost:8080/connector-manager/getConnectorList 
 
     
