@@ -70,5 +70,8 @@ Google recommends that you use the installer for installing the connector. You m
   # Copy the file logging.properties file from the Config directory in the root distribution directory to the new $CATALINA_HOME/webapps/connector-manager/WEB-INF/classes directory.
   # Start the Tomcat server.
   # To confirm whether the Tomcat server has started correctly and the connector is installed, navigate to the $CATALINA_HOME/webapps/connector-manager/WEB-INF/connectors directory, and verify that the $CATALINA_HOME/webapps/connector-manager/WEB-INF/connectors/FileConnectorType directory exists.
+  # 15.Check and confirm if the connector type has been detected by the Connector Manager using the following URL:
+
+    http://<host>:<port>/connector-manager/getConnectorList 
 
     
