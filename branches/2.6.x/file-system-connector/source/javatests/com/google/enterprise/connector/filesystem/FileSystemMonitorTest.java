@@ -319,7 +319,7 @@ public class FileSystemMonitorTest extends TestCase {
       FilePatternMatcher myMatcher, TraversalContext traversalContext,
       FileSink fileSink) {
     return new FileSystemMonitor("name", root, store, visitor, generator,
-        myMatcher, traversalContext, fileSink, null);
+        myMatcher, traversalContext, fileSink, null, null);
   }
 
   private FileSystemMonitor newFileSystemMonitor(FilePatternMatcher myMatcher) {
@@ -344,7 +344,7 @@ public class FileSystemMonitorTest extends TestCase {
 
   private FileSystemMonitor newFileSystemMonitor(FileSystemMonitor.Callback customVisitor) {
     return new FileSystemMonitor("name", root, store, customVisitor, checksumGenerator,
-        matcher, new FakeTraversalContext(), new LoggingFileSink(), null);
+        matcher, new FakeTraversalContext(), new LoggingFileSink(), null, null);
   }
 
   @Override
@@ -1152,7 +1152,7 @@ public class FileSystemMonitorTest extends TestCase {
     visitor = new CountingVisitor();
     monitor = new FileSystemMonitor("name", root, failingStore,
         visitor, checksumGenerator, matcher, new FakeTraversalContext(),
-        new LoggingFileSink(), saveOldestMonitorCp);
+        new LoggingFileSink(), saveOldestMonitorCp, null);
 
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(1);
@@ -1228,7 +1228,7 @@ public class FileSystemMonitorTest extends TestCase {
     visitor = new CountingVisitor();
     monitor = new FileSystemMonitor("name", root, failingStore,
         visitor, checksumGenerator, matcher, new FakeTraversalContext(),
-        new LoggingFileSink(), saveOldestMonitorCp);
+        new LoggingFileSink(), saveOldestMonitorCp, null);
 
     visitor.registerMonitor(monitor);
     visitor.setMaxScans(1);

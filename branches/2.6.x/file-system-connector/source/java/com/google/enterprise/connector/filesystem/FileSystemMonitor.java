@@ -14,11 +14,13 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.TraversalContext;
-
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.google.enterprise.connector.spi.TraversalContext;
 
 /**
  * A service that monitors a file system and makes callbacks when changes occur.
@@ -178,6 +180,8 @@ public class FileSystemMonitor implements Runnable {
    */
   private static final long STABLE_INTERVAL_MS = 5000L;
 
+  private List<String> excludeDirectoriesListFromScan = new ArrayList<String>();
+
   /**
    * Creates a FileSystemMonitor that monitors the file system rooted at {@code
    * root}.
@@ -194,7 +198,7 @@ public class FileSystemMonitor implements Runnable {
    */
   public FileSystemMonitor(String name, ReadonlyFile<?> root, SnapshotStore snapshotStore,
       Callback callback, ChecksumGenerator checksumGenerator, FilePatternMatcher matcher,
-      TraversalContext traversalContext, FileSink fileSink, MonitorCheckpoint initialCp) {
+      TraversalContext traversalContext, FileSink fileSink, MonitorCheckpoint initialCp, List<String> excludedList) {
     this.name = name;
     this.root = root;
     this.snapshotStore = snapshotStore;
@@ -214,6 +218,7 @@ public class FileSystemMonitor implements Runnable {
     this.mimeTypeFinder = new MimeTypeFinder();
     this.fileSink = fileSink;
     guaranteeCheckpoint = initialCp;
+    this.excludeDirectoriesListFromScan = excludedList;
   }
 
   /**
@@ -527,7 +532,7 @@ public class FileSystemMonitor implements Runnable {
       SnapshotReaderException, SnapshotWriterException {
 
     processDeletes(dir);
-    
+
     if (current != null && (pathCompare(current, dir) == 0)) {
       if (current.getFileType() == SnapshotRecord.Type.FILE) {
         // This directory used to be a file.
@@ -540,32 +545,41 @@ public class FileSystemMonitor implements Runnable {
         callback.newDirectory(dir, getCheckpoint());
       } else {
         try {
-          writeDirectorySnapshot(dir);
+        	if(!excludeDirectoriesListFromScan.contains(dir.getPath())){
+        		writeDirectorySnapshot(dir);
+        	}
         } catch (IOException e) {
           LOG.log(Level.INFO, "Failed getting info off directory.", e);
+          excludeDirectoriesListFromScan.add(dir.getPath());
         }
       }
       current = snapshotReader.read();
     } else {
       // Assume current.getPath() >= dir.getpath().
       try {
-        writeDirectorySnapshot(dir);
+    	  if(!excludeDirectoriesListFromScan.contains(dir.getPath())){
+    		  writeDirectorySnapshot(dir);
+    	  }
       } catch (IOException e) {
         LOG.log(Level.INFO, "Failed getting info off directory.", e);
+        excludeDirectoriesListFromScan.add(dir.getPath());
       }
       callback.newDirectory(dir, getCheckpoint(-1));
     }
 
     java.util.List<? extends ReadonlyFile<?>> filesListing = null;
     try {
-      filesListing = dir.listFiles();
+      if(!excludeDirectoriesListFromScan.contains(dir.getPath())){
+    	filesListing = dir.listFiles();
+    	for (ReadonlyFile<?> f: filesListing) {
+    	      processFileOrDir(f);
+    	    }
+      }
     } catch (IOException e) {
       LOG.log(Level.SEVERE, "Failed listing " + dir.getPath() + ".", e);
-      throw new DirListingFailedException();
+      excludeDirectoriesListFromScan.add(dir.getPath());
     }
-    for (ReadonlyFile<?> f: filesListing) {
-      processFileOrDir(f);
-    }
+
   }
 
   void acceptGuarantee(MonitorCheckpoint cp) {

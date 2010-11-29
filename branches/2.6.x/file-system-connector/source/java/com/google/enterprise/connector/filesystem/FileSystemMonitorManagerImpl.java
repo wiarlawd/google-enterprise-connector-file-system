@@ -14,10 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.TraversalContext;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,6 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.TraversalContext;
 
 /**
  * {@link FileSystemMonitorManager} implementation.  There is one instance of this
@@ -222,7 +222,7 @@ public class FileSystemMonitorManagerImpl implements FileSystemMonitorManager {
     String monitorName = makeMonitorNameFromStartPath(startPath);
     FileSystemMonitor monitor =
         new FileSystemMonitor(monitorName, root, snapshotStore, changeQueue.newCallback(),
-            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK, startCp);
+            checksumGenerator, filePatternMatcher, traversalContext, FILE_SINK, startCp, new ArrayList<String>());
     fileSystemMonitorsByName.put(monitorName, monitor);
     return new Thread(monitor);
   }
