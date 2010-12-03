@@ -25,7 +25,7 @@ public interface FileInfo {
   /**
    * @return the kind of file system this file belongs to. E.g., SMB, JAVA, etc.
    */
-  String getFileSystemType();
+  public String getFileSystemType();
 
   /**
    * <p>Lexicographic ordering of the paths within a directory tree must be
@@ -45,12 +45,12 @@ public interface FileInfo {
   /**
    * @return true if this is a directory.
    */
-  boolean isDirectory();
+  public boolean isDirectory();
 
   /**
    * @return true if this is a regular file
    */
-  boolean isRegularFile();
+  public boolean isRegularFile();
 
   // TODO: Remove this. Users currently must have a ReadOnlyFile to
   //     access the stream anyway.
@@ -60,13 +60,13 @@ public interface FileInfo {
    * @throws UnsupportedOperationException if this is a directory, or if it
    *         represents a defunct file.
    */
-  InputStream getInputStream() throws IOException;
+  public InputStream getInputStream() throws IOException;
 
   /**
    * @return the time this file was last modified
    * @throws IOException if the modification time cannot be obtained
    */
-  long getLastModified() throws IOException;
+  public long getLastModified() throws IOException;
 
   /**
    * Returns a {@link Acl} for this file or directory.
