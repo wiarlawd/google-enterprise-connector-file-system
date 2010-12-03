@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jcifs.smb.SmbException;
@@ -167,23 +168,29 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
 
   /* @Override */
   public List<SmbReadonlyFile> listFiles() throws IOException {
-    SmbFile[] files;
+    SmbFile[] files = null;
     try {
       files = delegate.listFiles();
     } catch (SmbException e) {
-      throw IOExceptionHelper.newIOException(
-          "failed to list files in " + getPath(), e);
+    	if(e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED){
+    		LOG.log(Level.SEVERE, "Directory listing is failed : " + getPath(), e);
+    	}else{
+    		throw IOExceptionHelper.newIOException("IO exception while processing directory " + getPath(), e);
+    	}
     }
-    List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
-    for (int k = 0; k < files.length; ++k) {
-      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces));
+    List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>();
+    if(null != files){
+	    result = new ArrayList<SmbReadonlyFile>(files.length);
+	    for (int k = 0; files !=null && k < files.length; ++k) {
+	      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces));
+	    }
+	    Collections.sort(result, new Comparator<SmbReadonlyFile>() {
+	      /* @Override */
+	      public int compare(SmbReadonlyFile o1, SmbReadonlyFile o2) {
+	        return o1.getPath().compareTo(o2.getPath());
+	      }
+	    });
     }
-    Collections.sort(result, new Comparator<SmbReadonlyFile>() {
-      /* @Override */
-      public int compare(SmbReadonlyFile o1, SmbReadonlyFile o2) {
-        return o1.getPath().compareTo(o2.getPath());
-      }
-    });
     return result;
   }
 
