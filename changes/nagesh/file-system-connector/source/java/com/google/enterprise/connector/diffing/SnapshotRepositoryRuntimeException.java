@@ -25,4 +25,8 @@ public class SnapshotRepositoryRuntimeException extends RuntimeException{
   public SnapshotRepositoryRuntimeException(String message, Throwable cause) {
     super(message, cause);
   }
+
+  public SnapshotRepositoryRuntimeException(String message) {
+	super(message);
+  }
 }
