@@ -14,9 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.IOExceptionHelper;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,11 +25,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
+
+import com.google.enterprise.connector.diffing.IOExceptionHelper;
+import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code jcifs.smb.SmbFile}.
@@ -173,7 +173,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       files = delegate.listFiles();
     } catch (SmbException e) {
     	if(e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED){
-    		LOG.log(Level.SEVERE, "Directory listing is failed : " + getPath(), e);
+    		throw new SnapshotRepositoryRuntimeException("Failed to list files in " + getPath(), e);
     	}else{
     		throw IOExceptionHelper.newIOException("IO exception while processing directory " + getPath(), e);
     	}

@@ -13,9 +13,6 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.sun.xfile.XFile;
-import com.sun.xfile.XFileInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -23,6 +20,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
+
+import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
+import com.sun.xfile.XFile;
+import com.sun.xfile.XFileInputStream;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code com.sun.xfile.XFile}.
@@ -81,6 +82,9 @@ public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
   /* @Override */
   public List<NfsReadonlyFile> listFiles() throws IOException {
     String fileNames[] = delegate.list();
+    if(fileNames ==null){
+    	throw new SnapshotRepositoryRuntimeException("Failed to list files in " + getPath());
+    }
     List<NfsReadonlyFile> result = new ArrayList<NfsReadonlyFile>(fileNames.length);
     String delegateName = delegate.getAbsolutePath();
     if (!delegateName.endsWith("/")) {

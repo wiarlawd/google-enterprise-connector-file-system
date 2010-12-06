@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
+
 /**
  * An implementation of ReadonlyFile that delegates to an underlying
  * java.io.File.
@@ -98,7 +100,7 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
   public List<JavaReadonlyFile> listFiles() throws IOException {
     File[] files = delegate.listFiles();
     if (files == null) {
-      throw new IOException("failed to list files in " + getPath());
+      throw new SnapshotRepositoryRuntimeException("Failed to list files in " + getPath());
     }
     List<JavaReadonlyFile> result = new ArrayList<JavaReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {
