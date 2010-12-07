@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * {@link SnapshotRepository} for returning {@link ReadonlyFile} objects
@@ -57,6 +59,7 @@ public class FileDocumentSnapshotRepository
   private final FileSystemTypeRegistry fileSystemTypeRegistry;
   private final boolean pushAcls;
   private final boolean markAllDcoumentsPublic;
+  private static final Logger LOG = Logger.getLogger(FileDocumentSnapshotRepository.class.getName());
 
 
 
@@ -97,9 +100,11 @@ public class FileDocumentSnapshotRepository
     try {
       List<? extends ReadonlyFile<?>> result = dir.listFiles();
       return result;
+    } catch (DirectoryListingException e) {
+        LOG.log(Level.WARNING, "failed to list files in " + dir.getPath(), e);
+        return new ArrayList<ReadonlyFile<?>>();
     } catch (IOException ioe) {
-      throw new SnapshotRepositoryRuntimeException(
-          "Directory Listing failed", ioe);
+    	throw new SnapshotRepositoryRuntimeException("IOException while processing the directory " + dir.getPath(), ioe);
     }
   }
 
