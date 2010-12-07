@@ -13,14 +13,6 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.google.enterprise.connector.diffing.ChecksumGenerator;
 import com.google.enterprise.connector.diffing.Clock;
 import com.google.enterprise.connector.diffing.DocumentSink;
@@ -30,6 +22,12 @@ import com.google.enterprise.connector.diffing.SnapshotRepository;
 import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.TraversalContext;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * {@link SnapshotRepository} for returning {@link ReadonlyFile} objects
@@ -59,7 +57,7 @@ public class FileDocumentSnapshotRepository
   private final FileSystemTypeRegistry fileSystemTypeRegistry;
   private final boolean pushAcls;
   private final boolean markAllDcoumentsPublic;
-  private static final Logger LOG = Logger.getLogger(FileDocumentSnapshotRepository.class.getName());
+
 
 
   FileDocumentSnapshotRepository(ReadonlyFile<?> root, DocumentSink fileSink,
@@ -99,11 +97,9 @@ public class FileDocumentSnapshotRepository
     try {
       List<? extends ReadonlyFile<?>> result = dir.listFiles();
       return result;
-    }catch(SnapshotRepositoryRuntimeException e) {
-    	LOG.log(Level.WARNING, "Failed to list files in " , e);
-    	return new ArrayList<ReadonlyFile<?>>();
-    }catch (IOException ioe) {
-        throw new SnapshotRepositoryRuntimeException("IOException while processing directory", ioe);
+    } catch (IOException ioe) {
+      throw new SnapshotRepositoryRuntimeException(
+          "Directory Listing failed", ioe);
     }
   }
 
