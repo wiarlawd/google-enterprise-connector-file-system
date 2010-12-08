@@ -82,7 +82,7 @@ public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
   public List<NfsReadonlyFile> listFiles() throws IOException, DirectoryListingException {
     String fileNames[] = delegate.list();
     if (fileNames == null) {
-        throw new DirectoryListingException("failed to list files in "+ getPath());
+      throw new DirectoryListingException("failed to list files in "+ getPath());
     }
     List<NfsReadonlyFile> result = new ArrayList<NfsReadonlyFile>(fileNames.length);
     String delegateName = delegate.getAbsolutePath();

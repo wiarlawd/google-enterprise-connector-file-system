@@ -101,10 +101,10 @@ public class FileDocumentSnapshotRepository
       List<? extends ReadonlyFile<?>> result = dir.listFiles();
       return result;
     } catch (DirectoryListingException e) {
-        LOG.log(Level.WARNING, "failed to list files in " + dir.getPath(), e);
-        return new ArrayList<ReadonlyFile<?>>();
+      LOG.log(Level.WARNING, "failed to list files in " + dir.getPath(), e);
+      return new ArrayList<ReadonlyFile<?>>();
     } catch (IOException ioe) {
-    	throw new SnapshotRepositoryRuntimeException("IOException while processing the directory " + dir.getPath(), ioe);
+      throw new SnapshotRepositoryRuntimeException("IOException while processing the directory " + dir.getPath(), ioe);
     }
   }
 
