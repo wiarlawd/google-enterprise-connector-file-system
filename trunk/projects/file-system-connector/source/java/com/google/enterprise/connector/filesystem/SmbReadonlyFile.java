@@ -166,13 +166,17 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
-  public List<SmbReadonlyFile> listFiles() throws IOException {
+  public List<SmbReadonlyFile> listFiles() throws IOException, DirectoryListingException {
     SmbFile[] files;
     try {
       files = delegate.listFiles();
     } catch (SmbException e) {
-      throw IOExceptionHelper.newIOException(
-          "failed to list files in " + getPath(), e);
+        if (e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
+          throw new DirectoryListingException("failed to list files in " + getPath(), e);
+        } else {
+          throw IOExceptionHelper.newIOException(
+              "IOException while processing the directory " + getPath(), e);
+        }
     }
     List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {

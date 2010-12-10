@@ -118,7 +118,7 @@ public class JavaReadonlyFileTest extends TestCase {
     assertEquals(FILE_ONE_CONTENTS, contents(in));
   }
 
-  public void testListFiles() throws IOException {
+  public void testListFiles() throws IOException, DirectoryListingException {
     List<JavaReadonlyFile> x = readonlyRoot.listFiles();
     assertEquals(4, x.size());
     assertEquals(fileA.getAbsolutePath(), x.get(0).getPath());

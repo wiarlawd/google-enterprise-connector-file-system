@@ -560,6 +560,12 @@ public class FileConnectorType implements ConnectorType {
               bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
               path));
           buf.append("\n");
+        } catch (DirectoryListingException e) {
+          LOG.info("failed to list start path: " + path + "; " + e);
+          buf.append(String.format(bundle.getLocale(),
+                bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
+                path));
+          buf.append("\n");
         }
       }
       return XML.escape(buf.toString());

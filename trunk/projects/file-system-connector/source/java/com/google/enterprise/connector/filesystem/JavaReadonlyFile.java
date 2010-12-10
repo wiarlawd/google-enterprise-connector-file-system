@@ -95,10 +95,10 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
   }
 
   /* @Override */
-  public List<JavaReadonlyFile> listFiles() throws IOException {
+  public List<JavaReadonlyFile> listFiles() throws DirectoryListingException {
     File[] files = delegate.listFiles();
     if (files == null) {
-      throw new IOException("failed to list files in " + getPath());
+      throw new DirectoryListingException("failed to list files in " + getPath());
     }
     List<JavaReadonlyFile> result = new ArrayList<JavaReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {
