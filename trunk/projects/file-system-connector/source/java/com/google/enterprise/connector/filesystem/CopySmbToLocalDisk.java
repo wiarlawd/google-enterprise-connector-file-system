@@ -19,7 +19,9 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-/** Performs copies of SMB content directories to local disk. */
+/** Performs copies of SMB content directories to local disk.
+    This class is a utility; it is not necessary for a File System
+    Connetor to operate. */
 class CopySmbToLocalDisk {
   final private SmbReadonlyFile src;
   final private File dest;
@@ -55,7 +57,8 @@ class CopySmbToLocalDisk {
          "smb://172.25.51.99/office/50k/" \
          "/smbdup/50k"
    */
-  public static void main(String a[]) throws IOException, RepositoryDocumentException {
+  public static void main(String a[]) throws IOException, RepositoryDocumentException,
+      DirectoryListingException {
     String startPath = a[0];
     String endPath = a[1];
     Credentials creds = new Credentials("", "admin", "test");
@@ -78,7 +81,7 @@ class CopySmbToLocalDisk {
     System.out.println("byte/s  " + byteRateSecs);
   }
 
-  private void copy() throws IOException {
+  private void copy() throws IOException, DirectoryListingException {
     processDirectory(src);
   }
 
@@ -109,7 +112,8 @@ class CopySmbToLocalDisk {
     in.close();
   }
 
-  private void processDirectory(ReadonlyFile d) throws IOException {
+  private void processDirectory(ReadonlyFile d) throws IOException,
+      DirectoryListingException {
     if (!d.isDirectory()) {
       throw new IllegalStateException("not dir: " + d);
     }

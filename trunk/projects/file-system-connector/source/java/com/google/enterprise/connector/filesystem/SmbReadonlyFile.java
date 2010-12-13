@@ -116,25 +116,12 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   /* @Override */
   public Acl getAcl() throws IOException {
     SmbAclBuilder builder = new SmbAclBuilder(delegate, stripDomainFromAces);
-    // TODO: Remove retries when JCIFS lib fixes "All pipe instances are busy."
-    // Note that JCIFS 1.3.14, which claims to have fixed problem, appears to
-    // have increased the frequency of occurance by approximately 100x.
-    int maxAttempts = 10;
-    int sleepTimeMillis = 30;
-    for (int i = 0; i < maxAttempts; i++) {
-      try {
-        return builder.build();
-      } catch (SmbException e) {
-        LOG.finest("Caught exception (attempt " + i + "): " + e.getMessage());
-        try {
-          Thread.sleep(sleepTimeMillis);
-        } catch (InterruptedException interruption) {
-          Thread.currentThread().interrupt();
-          return Acl.USE_HEAD_REQUEST;
-        }
-      }
+    try {
+      return builder.build();
+    } catch (SmbException e) {
+      LOG.warning("Failed to get ACL: " + e.getMessage());
+      return Acl.USE_HEAD_REQUEST;
     }
-    return Acl.USE_HEAD_REQUEST;
   }
 
   /* @Override */

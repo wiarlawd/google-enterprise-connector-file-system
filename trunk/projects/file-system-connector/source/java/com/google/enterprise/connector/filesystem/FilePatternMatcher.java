@@ -42,11 +42,11 @@ public class FilePatternMatcher {
    */
   public FilePatternMatcher(Iterable<String> includePatterns,
           Iterable<String> excludePatterns) {
-    include = new UrlMatcher(false);
+    include = new UrlMatcher(false /* disable cache */);
 
     addPatterns(include, includePatterns);
 
-    exclude = new UrlMatcher(false);
+    exclude = new UrlMatcher(false /* disable cache */);
     addPatterns(exclude, excludePatterns);
   }
 
