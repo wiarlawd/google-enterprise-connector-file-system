@@ -10,6 +10,33 @@ issues and workarounds.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
+Release 2.6.8, December 15, 2010
+================================
+Introduction
+------------
+This is a maintenance release that improves quality, reliability, and performance with new functionality.  All users of
+previous 2.6.0 releases should upgrade to this release.
+
+Summary of Changes / New Features
+---------------------------------
+This release focuses primarily on improving the performance of File System connector and supporting NFS v3.
+
+Features:
+3175810: File System Connector Needs to Support NFS v3
+
+Issues fixed from last release:
+-------------------------------
+3122061: File System Connector goes into infinite loop when trying to do directory listing where it doesn't have permission to view directory.
+3206057: File system connector performance problems.
+3612041: Indicate HEAD_REQUEST when connector has trouble getting ACLs.
+
+Version Compatibility
+---------------------
+* This version works with Connector Manager Version 2.4.0 and above.It is recommended to upgrade to the latest
+Connector Manager version which is 2.6.6.
+* Users of previous release should upgrade to this release.
+* Content indexed with earlier version of the connector will have to be re-indexed.
+
 
 Release 2.6.0, May 24, 2010
 ================================
