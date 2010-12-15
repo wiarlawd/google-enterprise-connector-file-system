@@ -22,13 +22,14 @@ Summary of Changes / New Features
 This release focuses primarily on improving the performance of File System connector and supporting NFS v3.
 
 Features:
-3175810: File System Connector Needs to Support NFS v3
+Issue 3175810: File System Connector Needs to Support NFS v3
 
 Issues fixed from last release:
 -------------------------------
-3122061: File System Connector goes into infinite loop when trying to do directory listing where it doesn't have permission to view directory.
-3206057: File system connector performance problems.
-3612041: Indicate HEAD_REQUEST when connector has trouble getting ACLs.
+Issue 3122061: File System Connector goes into infinite loop when trying to do directory listing where it doesn't have permission to view directory.
+Issue 3206057: File system connector performance problems.
+Issue 3612041: Indicate HEAD_REQUEST when connector has trouble getting ACLs.
+Issue 3175866: File System Connector Should Not Modify Last Access Time.
 
 Version Compatibility
 ---------------------
