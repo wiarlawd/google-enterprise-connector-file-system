@@ -22,6 +22,7 @@ import com.google.enterprise.connector.ldap.LdapHandler.LdapConnectionSettings;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule;
 import com.google.enterprise.connector.ldap.LdapHandler.LdapRule.Scope;
 
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -80,15 +81,25 @@ public class LdapConnectorConfig {
     String password = getTrimmedValueFromConfig(config, ConfigName.PASSWORD);
     if(password == null) {
       password = "";
-    }    
+    }
     String methodString = getTrimmedValueFromConfig(config, ConfigName.METHOD);
     String basedn = getTrimmedValueFromConfig(config, ConfigName.BASEDN);
     String filter = getTrimmedValueFromConfig(config, ConfigName.FILTER);
     String schemaKey = getTrimmedValueFromConfig(config, ConfigName.SCHEMA_KEY);
 
+    String pseudokey = ConfigName.SCHEMA.toString() + "_";
+    int maxSchemaElements = LdapConstants.MAX_SCHEMA_ELEMENTS;
+    Set<String> keySet = config.keySet();
+    for (Iterator iterator = keySet.iterator(); iterator.hasNext();) {
+      String string = (String) iterator.next();
+    	if (string.contains(pseudokey)) {
+    	  maxSchemaElements = getSelectedMaxSchemaElementNumber(keySet, pseudokey);
+    	  break;
+    	}
+    }
     Set<String> tempSchema = new TreeSet<String>();
 
-    for (int i = 0; i < LdapConstants.MAX_SCHEMA_ELEMENTS; i++) {
+    for (int i = 0; i <= maxSchemaElements; i++) {
       String pseudoKey = ConfigName.SCHEMA.toString() + "_" + i;
       String attributeName = getTrimmedValue(config.get(pseudoKey));
       if (attributeName != null) {
@@ -161,6 +172,20 @@ public class LdapConnectorConfig {
     // only create an LdapRule if one was supplied
     this.rule = (this.filter == null) ? null : new LdapRule(Scope.SUBTREE, this.filter);
   }
+
+  private int getSelectedMaxSchemaElementNumber(Set<String> keySet, String pseudoKey){
+	String schemaKey = ConfigName.SCHEMA_KEY.toString();
+  	int maxSchemaNumber = 0;
+  	for (String key : keySet) {
+  	  if(key.contains(pseudoKey) && !key.contentEquals(schemaKey)) {
+  		int number = Integer.parseInt(key.substring(pseudoKey.length()));
+  		  if(number > maxSchemaNumber){
+  			maxSchemaNumber = number;
+  		  }
+  		}
+  	  }
+  	  return maxSchemaNumber;
+    }
 
   private String getTrimmedValueFromConfig(Map<String, String> config, ConfigName name) {
     String value = getTrimmedValue(config.get(name.toString()));
