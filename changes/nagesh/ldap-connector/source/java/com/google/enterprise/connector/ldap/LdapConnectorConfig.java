@@ -88,23 +88,24 @@ public class LdapConnectorConfig {
     String schemaKey = getTrimmedValueFromConfig(config, ConfigName.SCHEMA_KEY);
 
     String pseudokey = ConfigName.SCHEMA.toString() + "_";
-    int maxSchemaElements = LdapConstants.MAX_SCHEMA_ELEMENTS;
     Set<String> keySet = config.keySet();
-    for (Iterator iterator = keySet.iterator(); iterator.hasNext();) {
-      String string = (String) iterator.next();
-    	if (string.contains(pseudokey)) {
-    	  maxSchemaElements = getSelectedMaxSchemaElementNumber(keySet, pseudokey);
-    	  break;
-    	}
+    Set<String> schemaElements = new TreeSet<String>();
+
+    for (Iterator<String> iterator = keySet.iterator(); iterator.hasNext();) {
+      String key = (String) iterator.next();
+    if (key.contains(pseudokey) && !key.contentEquals(ConfigName.SCHEMA_KEY.toString())) {
+    	schemaElements.add(key);
+      }
     }
     Set<String> tempSchema = new TreeSet<String>();
 
-    for (int i = 0; i <= maxSchemaElements; i++) {
-      String pseudoKey = ConfigName.SCHEMA.toString() + "_" + i;
-      String attributeName = getTrimmedValue(config.get(pseudoKey));
-      if (attributeName != null) {
-        tempSchema.add(attributeName);
-      }
+    if (!schemaElements.isEmpty()) {
+      for (String schemaElement : schemaElements) {
+    	String attributeName = getTrimmedValue(config.get(schemaElement));
+    	if (attributeName != null) {
+    	  tempSchema.add(attributeName);
+    	}
+	  }
     }
 
     if (schemaKey == null || schemaKey.length() < 1) {
@@ -173,19 +174,6 @@ public class LdapConnectorConfig {
     this.rule = (this.filter == null) ? null : new LdapRule(Scope.SUBTREE, this.filter);
   }
 
-  private int getSelectedMaxSchemaElementNumber(Set<String> keySet, String pseudoKey){
-	String schemaKey = ConfigName.SCHEMA_KEY.toString();
-  	int maxSchemaNumber = 0;
-  	for (String key : keySet) {
-  	  if(key.contains(pseudoKey) && !key.contentEquals(schemaKey)) {
-  		int number = Integer.parseInt(key.substring(pseudoKey.length()));
-  		  if(number > maxSchemaNumber){
-  			maxSchemaNumber = number;
-  		  }
-  		}
-  	  }
-  	  return maxSchemaNumber;
-    }
 
   private String getTrimmedValueFromConfig(Map<String, String> config, ConfigName name) {
     String value = getTrimmedValue(config.get(name.toString()));
