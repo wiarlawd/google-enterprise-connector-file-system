@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.IOExceptionHelper;
+import com.google.enterprise.connector.util.diffing.IOExceptionHelper;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import java.io.BufferedInputStream;

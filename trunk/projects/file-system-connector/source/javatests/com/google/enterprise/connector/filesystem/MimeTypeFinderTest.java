@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.FakeTraversalContext;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import junit.framework.TestCase;

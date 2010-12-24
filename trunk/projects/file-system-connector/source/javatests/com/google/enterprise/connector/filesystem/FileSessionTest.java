@@ -14,14 +14,14 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.ChangeQueue;
-import com.google.enterprise.connector.diffing.ChangeSource;
-import com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory;
-import com.google.enterprise.connector.diffing.DiffingConnector;
-import com.google.enterprise.connector.diffing.DiffingConnectorTraversalManager;
-import com.google.enterprise.connector.diffing.FakeDocumentSnapshotRepositoryMonitorManager;
-import com.google.enterprise.connector.diffing.FakeTraversalContext;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.diffing.ChangeQueue;
+import com.google.enterprise.connector.util.diffing.ChangeSource;
+import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
+import com.google.enterprise.connector.util.diffing.DiffingConnector;
+import com.google.enterprise.connector.util.diffing.DiffingConnectorTraversalManager;
+import com.google.enterprise.connector.util.diffing.FakeDocumentSnapshotRepositoryMonitorManager;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Session;
 import com.google.enterprise.connector.spi.TraversalContext;

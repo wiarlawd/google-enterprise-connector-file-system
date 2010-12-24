@@ -14,10 +14,10 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocIdUtil;
-import com.google.enterprise.connector.diffing.DocumentHandle;
-import com.google.enterprise.connector.diffing.GenericDocument;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.diffing.DocIdUtil;
+import com.google.enterprise.connector.util.diffing.DocumentHandle;
+import com.google.enterprise.connector.util.diffing.GenericDocument;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -129,7 +129,8 @@ public class FileDocumentHandle implements DocumentHandle {
     result.setProperty(SpiConstants.PROPNAME_MIMETYPE, mimeType);
     try {
       DateTime lastModified = new DateTime(file.getLastModified());
-      result.setProperty(SpiConstants.PROPNAME_LASTMODIFIED, lastModified);
+      result.setProperty(SpiConstants.PROPNAME_LASTMODIFIED,
+          lastModified.toCalendar(null /* null means default locale */));
     } catch (IOException e) {
       LOG.log(Level.WARNING, "failed to get last-modified time for file: "
           + file.getPath(), e);

@@ -13,13 +13,13 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.ChecksumGenerator;
-import com.google.enterprise.connector.diffing.Clock;
-import com.google.enterprise.connector.diffing.DocumentHandle;
-import com.google.enterprise.connector.diffing.DocumentSink;
-import com.google.enterprise.connector.diffing.DocumentSnapshot;
-import com.google.enterprise.connector.diffing.FilterReason;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.ChecksumGenerator;
+import com.google.enterprise.connector.util.Clock;
+import com.google.enterprise.connector.util.diffing.DocumentHandle;
+import com.google.enterprise.connector.util.diffing.DocumentSink;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.util.diffing.FilterReason;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
 

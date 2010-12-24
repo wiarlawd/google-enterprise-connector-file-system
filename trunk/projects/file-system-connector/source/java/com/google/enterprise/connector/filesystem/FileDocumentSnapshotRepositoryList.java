@@ -1,10 +1,10 @@
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.ChecksumGenerator;
-import com.google.enterprise.connector.diffing.DocumentSink;
-import com.google.enterprise.connector.diffing.LoggingDocumentSink;
-import com.google.enterprise.connector.diffing.SystemClock;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.ChecksumGenerator;
+import com.google.enterprise.connector.util.diffing.DocumentSink;
+import com.google.enterprise.connector.util.diffing.LoggingDocumentSink;
+import com.google.enterprise.connector.util.SystemClock;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import java.util.ArrayList;

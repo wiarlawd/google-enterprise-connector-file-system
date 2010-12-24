@@ -14,18 +14,18 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.ChangeQueue;
-import com.google.enterprise.connector.diffing.CheckpointAndChangeQueue;
-import com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory;
-import com.google.enterprise.connector.diffing.DiffingConnector;
-import com.google.enterprise.connector.diffing.DocumentSnapshot;
-import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
-import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
-import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManagerImpl;
-import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManager;
-import com.google.enterprise.connector.diffing.FakeTraversalContext;
-import com.google.enterprise.connector.diffing.SnapshotRepository;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.diffing.ChangeQueue;
+import com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue;
+import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
+import com.google.enterprise.connector.util.diffing.DiffingConnector;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.util.BasicChecksumGenerator;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitorManagerImpl;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitorManager;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
+import com.google.enterprise.connector.util.diffing.SnapshotRepository;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Connector;
 import com.google.enterprise.connector.spi.ConnectorFactory;
 import com.google.enterprise.connector.spi.RepositoryException;

@@ -41,7 +41,7 @@
         class = "com.google.enterprise.connector.filesystem.MimeTypeFinder"/>
 
   <bean id = "change-queue"
-        class = "com.google.enterprise.connector.diffing.ChangeQueue">
+        class = "com.google.enterprise.connector.util.diffing.ChangeQueue">
     <constructor-arg index="0" value="100"/>
     <constructor-arg index="1" value="10000"/>
   </bean>
@@ -59,12 +59,12 @@
   </bean>
   
   <bean id = "internal-document-handle-factory"
-        class = "com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory"
+        class = "com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory"
         singleton = "true">
   </bean>
   
   <bean id = "traversal-context-manager"
-        class = "com.google.enterprise.connector.diffing.TraversalContextManager"
+        class = "com.google.enterprise.connector.util.diffing.TraversalContextManager"
         singleton = "true">
   </bean>
   
@@ -82,7 +82,7 @@
   </bean>
 
   <bean id = "checkpoint-and-change-queue"
-        class = "com.google.enterprise.connector.diffing.CheckpointAndChangeQueue">
+        class = "com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue">
     <constructor-arg ref="change-queue"/>
     <constructor-arg ref="queue-dir"/>
     <constructor-arg ref="internal-document-handle-factory"/>
@@ -90,7 +90,7 @@
   </bean>
 
   <bean id = "checksum-generator"
-        class = "com.google.enterprise.connector.diffing.BasicChecksumGenerator">
+        class = "com.google.enterprise.connector.util.BasicChecksumGenerator">
     <constructor-arg index="0" value="SHA1"/>
   </bean>
 
@@ -204,7 +204,7 @@
   </bean>
 
   <bean id = "monitor-manager"
-        class = "com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManagerImpl"
+        class = "com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitorManagerImpl"
         singleton = "true">
     <constructor-arg ref="file-document-snapshot-repository-list"/>
     <constructor-arg ref="file-document-snapshot-factory"/>
@@ -215,7 +215,7 @@
  </bean>
 
   <bean id = "file-connector"
-        class = "com.google.enterprise.connector.diffing.DiffingConnector"
+        class = "com.google.enterprise.connector.util.diffing.DiffingConnector"
         singleton = "false">
     <constructor-arg ref="authz"/>
     <constructor-arg ref="monitor-manager"/>

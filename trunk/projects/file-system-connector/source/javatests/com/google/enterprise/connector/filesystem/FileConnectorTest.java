@@ -14,20 +14,20 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.BasicChecksumGenerator;
-import com.google.enterprise.connector.diffing.ChangeQueue;
-import com.google.enterprise.connector.diffing.CheckpointAndChangeQueue;
-import com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory;
-import com.google.enterprise.connector.diffing.DiffingConnector;
-import com.google.enterprise.connector.diffing.DiffingConnectorTraversalManager;
-import com.google.enterprise.connector.diffing.DocumentSnapshot;
-import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
-import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManager;
-import com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManagerImpl;
-import com.google.enterprise.connector.diffing.FakeTraversalContext;
-import com.google.enterprise.connector.diffing.SnapshotRepository;
-import com.google.enterprise.connector.diffing.TestDirectoryManager;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.BasicChecksumGenerator;
+import com.google.enterprise.connector.util.diffing.ChangeQueue;
+import com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue;
+import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
+import com.google.enterprise.connector.util.diffing.DiffingConnector;
+import com.google.enterprise.connector.util.diffing.DiffingConnectorTraversalManager;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshot;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitorManager;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitorManagerImpl;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
+import com.google.enterprise.connector.util.diffing.SnapshotRepository;
+import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.Property;

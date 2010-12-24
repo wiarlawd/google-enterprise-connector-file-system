@@ -13,9 +13,9 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentHandle;
-import com.google.enterprise.connector.diffing.DocumentHandleFactory;
-import com.google.enterprise.connector.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.diffing.DocumentHandle;
+import com.google.enterprise.connector.util.diffing.DocumentHandleFactory;
+import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.filesystem.FileDocumentHandle.Field;
 
 import org.json.JSONException;

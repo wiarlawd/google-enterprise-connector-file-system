@@ -13,8 +13,8 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.Clock;
-import com.google.enterprise.connector.diffing.SystemClock;
+import com.google.enterprise.connector.util.Clock;
+import com.google.enterprise.connector.util.SystemClock;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

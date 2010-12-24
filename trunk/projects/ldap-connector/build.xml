@@ -32,14 +32,11 @@
   <property name="file-system-connector.dir"
             location="${file-system-connector-projects.dir}/file-system-connector" />
   <property name="fc.jar.dir" value="${file-system-connector.dir}/build/prod/jar" />
-  <property name="fc.test.jar.dir" value="${file-system-connector.dir}/build/tests/jar" />
 
   <property name="config.dir" value="config" />
 
   <property name="src-prod.dir" value="source/java" />
   <property name="src-tests.dir" value="source/javatests" />
-
-  <property name="diffing-src-prod.dir" value="../file-system-connector/source/java" />
 
   <property name="jar-prod.dir" value="${build-prod.dir}/jar" />
   <property name="jar-prod.file" value="${jar-prod.dir}/connector-ldap.jar" />
@@ -62,6 +59,7 @@
     <mkdir dir="${classes-prod.dir}" />
     <mkdir dir="${classes-tests.dir}" />
     <mkdir dir="${jar-tests.dir}" />
+    <mkdir dir="${tests_out.dir}" />
   </target>
 
   <target name="compile_prod" depends="init">
@@ -70,17 +68,6 @@
            debug="${COMPILE_DEBUG_FLAG}"
            debuglevel="${COMPILE_DEBUG_LEVEL}"
            target="1.5" source="1.5">
-      <classpath>
-        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
-        <fileset dir="${fc.jar.dir}" includes="**/*.jar" />
-        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-      </classpath>
-    </javac>
-    <javac srcdir="${diffing-src-prod.dir}" destdir="${classes-prod.dir}"
-           debug="${COMPILE_DEBUG_FLAG}"
-           debuglevel="${COMPILE_DEBUG_LEVEL}"
-           target="1.5" source="1.5"
-	   excludes="**/filesystem/*">
       <classpath>
         <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
         <fileset dir="${fc.jar.dir}" includes="**/*.jar" />
@@ -117,7 +104,6 @@
       <classpath>
         <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
         <fileset dir="${fc.jar.dir}" includes="**/*.jar" />
-        <fileset dir="${fc.test.jar.dir}" includes="**/*.jar" />
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
         <fileset file="${jar-prod.file}" />
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
@@ -148,17 +134,17 @@
   </target>
 
   <target name="run_tests" depends="compile_tests,jar_prod">
-    <mkdir dir="${classes-tests.dir}/com/google/enterprise/connector/filesystem/config"/>
+    <mkdir dir="${classes-tests.dir}/com/google/enterprise/connector/ldap/config"/>
 
-    <copy todir="${classes-tests.dir}/com/google/enterprise/connector/filesystem/config" >
-      <fileset dir="${config.dir}" excludes="**/*.properties" />
+    <copy todir="${classes-tests.dir}/com/google/enterprise/connector/ldap/config" >
+      <fileset dir="${config.dir}" />
     </copy>
 
     <junit printsummary="yes" haltonfailure="yes">
       <assertions><enable/></assertions>
       <classpath>
         <pathelement location="${classes-tests.dir}" />
-        <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
+        <fileset dir="${connector-manager-thirdparty-jar.dir}">
           <include name="**/spring.jar" />
           <include name="**/commons-logging.jar" />
         </fileset>

@@ -13,8 +13,8 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentSink;
-import com.google.enterprise.connector.diffing.FilterReason;
+import com.google.enterprise.connector.util.diffing.DocumentSink;
+import com.google.enterprise.connector.util.diffing.FilterReason;
 
 import java.util.ArrayList;
 import java.util.List;

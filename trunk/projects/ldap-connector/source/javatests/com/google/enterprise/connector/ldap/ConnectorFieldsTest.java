@@ -239,6 +239,9 @@ public class ConnectorFieldsTest extends TestCase {
       + "<html xmlns=\"http://www.w3.org/1999/xhtml\">"
       + "<head><title/></head><body><table>";
 
+  // TODO: Replace with mechanism that doesn't require internet.
+  // "\"http://www.corp.google.com/~XYZ/xhtml1-strict.dtd\">"
+
   private static final String HTML_SUFFIX = "</table></body></html>";
 
   /**

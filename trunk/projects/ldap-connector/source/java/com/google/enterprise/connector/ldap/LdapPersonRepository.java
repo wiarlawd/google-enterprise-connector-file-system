@@ -16,8 +16,8 @@ package com.google.enterprise.connector.ldap;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
-import com.google.enterprise.connector.diffing.SnapshotRepository;
-import com.google.enterprise.connector.diffing.SnapshotRepositoryRuntimeException;
+import com.google.enterprise.connector.util.diffing.SnapshotRepository;
+import com.google.enterprise.connector.util.diffing.SnapshotRepositoryRuntimeException;
 
 import java.util.Iterator;
 import java.util.logging.Level;

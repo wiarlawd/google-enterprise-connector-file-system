@@ -13,7 +13,7 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.filesystem.FileDocumentSnapshot.Field;
 
 import org.json.JSONException;

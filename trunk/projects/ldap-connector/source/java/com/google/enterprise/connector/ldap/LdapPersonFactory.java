@@ -14,8 +14,8 @@
 
 package com.google.enterprise.connector.ldap;
 
-import com.google.enterprise.connector.diffing.DocumentHandleFactory;
-import com.google.enterprise.connector.diffing.DocumentSnapshotFactory;
+import com.google.enterprise.connector.util.diffing.DocumentHandleFactory;
+import com.google.enterprise.connector.util.diffing.DocumentSnapshotFactory;
 
 /**
  * Top-level factory for Ldap Connector objects

@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.diffing.JarUtils;
+import com.google.enterprise.connector.util.JarUtils;
 
 // TODO: import JarUtils from connector-util.jar when it is available.
 
