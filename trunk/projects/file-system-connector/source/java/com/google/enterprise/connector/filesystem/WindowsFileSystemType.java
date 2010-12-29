@@ -28,9 +28,19 @@ import java.util.regex.Pattern;
 public class WindowsFileSystemType implements FileSystemType {
   private static final String COLON = ":";
 
+  /**
+   * Flag to turn on/off the access time reset feature for windows local files.
+   */
+  private final boolean accessTimeResetFlag;
+
+  public WindowsFileSystemType(boolean accessTimeResetFlag) {
+    super();
+    this.accessTimeResetFlag = accessTimeResetFlag;
+  }
+
   /* @Override */
   public WindowsReadonlyFile getFile(String path, Credentials credentials) {
-    return new WindowsReadonlyFile(path);
+    return new WindowsReadonlyFile(path, accessTimeResetFlag);
   }
 
   /* @Override */

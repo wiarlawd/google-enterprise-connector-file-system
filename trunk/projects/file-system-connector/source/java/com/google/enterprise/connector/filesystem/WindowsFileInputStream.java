@@ -44,6 +44,10 @@ class WindowsFileInputStream extends FileInputStream {
    * Flag to see if the last access time was set properly during close
    */
   private boolean lastAccessTimeSet = false;
+  /**
+   * Flag to turn on / off the last access time reset feature for windows local file crawl.
+   */
+  private final boolean accessTimeResetFlag;
 
   /**
    * This constructor initializes the file name and the last access time for the
@@ -51,19 +55,23 @@ class WindowsFileInputStream extends FileInputStream {
    * 
    * @param file File to be streamed
    * @param lastAccessTimeOfFile Time this file was last accessed
+   * @param accessTimeResetFlag If true the code will try to reset the last access time, otherwise not.
    * @throws FileNotFoundException
    */
-  WindowsFileInputStream(File file, Timestamp lastAccessTimeOfFile)
-          throws FileNotFoundException {
+  WindowsFileInputStream(File file, Timestamp lastAccessTimeOfFile,
+      boolean accessTimeResetFlag) throws FileNotFoundException {
     super(file);
     this.fileName = file.getAbsolutePath();
     this.lastAccessTimeOfFile = lastAccessTimeOfFile;
+    this.accessTimeResetFlag = accessTimeResetFlag;
   }
 
   @Override
   public void close() throws IOException {
     super.close();
-    setLastAccessTime();
+    if (accessTimeResetFlag) {
+      setLastAccessTime();
+    }
   }
 
   /**
@@ -81,8 +89,9 @@ class WindowsFileInputStream extends FileInputStream {
   @Override
   protected void finalize() throws IOException {
     super.finalize();
-    if (!lastAccessTimeSet
-            && !WindowsFileTimeUtil.setFileAccessTime(this.fileName, this.lastAccessTimeOfFile)) {
+    if (accessTimeResetFlag
+        && !lastAccessTimeSet
+        && !WindowsFileTimeUtil.setFileAccessTime(this.fileName, this.lastAccessTimeOfFile)) {
       // TODO Figure out alternatives
       LOG.finest("Error setting the last access time for file : "
               + this.fileName);

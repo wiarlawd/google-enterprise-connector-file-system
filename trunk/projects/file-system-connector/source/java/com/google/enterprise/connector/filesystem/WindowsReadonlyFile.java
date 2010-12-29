@@ -43,10 +43,15 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
    * Underlying java.io.File delegate
    */
   private final File delegate;
+  /**
+   * Flag to turn on / off the last access time reset feature
+   */
+  private final boolean accessTimeResetFlag;
   private static final Logger LOG = Logger.getLogger(WindowsReadonlyFile.class.getName());
 
-  public WindowsReadonlyFile(File file) {
+  public WindowsReadonlyFile(File file, boolean accessTimeResetFlag) {
     this.delegate = file;
+    this.accessTimeResetFlag = accessTimeResetFlag;
     if (delegate.isFile() && lastAccessTimeOfFile == null) {
       lastAccessTimeOfFile = this.getLastAccessTime(file.getAbsolutePath());
       LOG.finest("Getting the last access time for " + file.getAbsolutePath()
@@ -54,8 +59,8 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
     }
   }
 
-  public WindowsReadonlyFile(String absolutePath) {
-    this(new File(absolutePath));
+  public WindowsReadonlyFile(String absolutePath, boolean accessTimeResetFlag) {
+    this(new File(absolutePath), accessTimeResetFlag);
   }
 
   /* @Override */
@@ -76,7 +81,8 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
 
   /* @Override */
   public InputStream getInputStream() throws IOException {
-    return new WindowsFileInputStream(delegate, lastAccessTimeOfFile);
+    return new WindowsFileInputStream(delegate, lastAccessTimeOfFile,
+            accessTimeResetFlag);
   }
 
   /* @Override */
@@ -116,7 +122,7 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
     List<WindowsReadonlyFile> result = new ArrayList<WindowsReadonlyFile>(
             files.length);
     for (int k = 0; k < files.length; ++k) {
-      result.add(new WindowsReadonlyFile(files[k]));
+      result.add(new WindowsReadonlyFile(files[k], this.accessTimeResetFlag));
     }
     Collections.sort(result, new Comparator<WindowsReadonlyFile>() {
       /* @Override */
