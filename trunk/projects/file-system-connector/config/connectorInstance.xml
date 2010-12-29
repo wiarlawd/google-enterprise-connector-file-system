@@ -8,6 +8,10 @@
   </bean>
   <bean id = "windows-file-system-type"
         class = "com.google.enterprise.connector.filesystem.WindowsFileSystemType">
+    <!-- 
+      Flag to turn on / off last access time reset feature
+    -->
+    <constructor-arg value="false"/>
   </bean>
   <bean id = "smb-file-system-type"
         class = "com.google.enterprise.connector.filesystem.SmbFileSystemType">
