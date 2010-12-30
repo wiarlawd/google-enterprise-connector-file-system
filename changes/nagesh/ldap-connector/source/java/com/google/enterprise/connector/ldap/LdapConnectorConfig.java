@@ -27,7 +27,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 /**
  * An encapsulation of all the config needed for a working Ldap Connector
  * instance.
@@ -90,10 +91,11 @@ public class LdapConnectorConfig {
     String pseudokey = ConfigName.SCHEMA.toString() + "_";
     Set<String> keySet = config.keySet();
     Set<String> schemaElements = new TreeSet<String>();
-
+    Pattern keyPattern = Pattern.compile(pseudokey + "\\d");
     for (Iterator<String> iterator = keySet.iterator(); iterator.hasNext();) {
       String key = (String) iterator.next();
-    if (key.contains(pseudokey) && !key.contentEquals(ConfigName.SCHEMA_KEY.toString())) {
+      Matcher matcher = keyPattern.matcher(key);
+      if (matcher.find()) {
     	schemaElements.add(key);
       }
     }
