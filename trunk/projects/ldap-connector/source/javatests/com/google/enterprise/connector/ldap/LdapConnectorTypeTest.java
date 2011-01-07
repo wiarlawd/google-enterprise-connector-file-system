@@ -104,10 +104,6 @@ public class LdapConnectorTypeTest extends TestCase {
     ConnectorFieldsTest.validateXhtml(formSnippet);
     List<String> lines = findMatchingLines(formSnippet, "schema");
     assertTrue(0 < lines.size());
-    String p = b.getString("schema_key");
-    String line = findMatchingLine(formSnippet, p);
-    System.out.println(line);
-    assertTrue(line.contains("type=\"text\""));
   }
 
   public void testValidateConfigGetSchemaSimpleAuth() throws Exception {
@@ -141,10 +137,6 @@ public class LdapConnectorTypeTest extends TestCase {
     ConnectorFieldsTest.validateXhtml(formSnippet);
     List<String> lines = findMatchingLines(formSnippet, "schema");
     assertTrue(0 < lines.size());
-    String p = b.getString("schema_key");
-    line = findMatchingLine(formSnippet, p);
-    System.out.println(line);
-    assertTrue(line.contains("type=\"text\""));
   }
 
   /*
