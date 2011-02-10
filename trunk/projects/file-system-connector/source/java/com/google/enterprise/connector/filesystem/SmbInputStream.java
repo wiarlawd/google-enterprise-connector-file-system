@@ -1,0 +1,65 @@
+// Copyright 2011 Google Inc. All Rights Reserved.
+
+package com.google.enterprise.connector.filesystem;
+
+import jcifs.smb.SmbException;
+import jcifs.smb.SmbFile;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Wrapper Input stream for smbfile so that it can 
+ * reset the last access time 
+ */
+public class SmbInputStream extends BufferedInputStream {
+
+  private final boolean lastAccessTimeResetFlag;
+  private final long lastAccessTime;
+  private final SmbFile delegate;
+  private static final Logger LOG = Logger.getLogger(SmbInputStream.class.getName());
+  /**
+   * @param delegate
+   * @param lastAccessTimeResetFlag
+   * @param lastAccessTime
+   * @throws IOException 
+   */
+  public SmbInputStream(SmbFile delegate, boolean lastAccessTimeResetFlag, long lastAccessTime) throws IOException {
+    super(delegate.getInputStream());
+    this.delegate = delegate;
+    this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
+    this.lastAccessTime = lastAccessTime;
+  }
+  
+  /**
+   * @return the lastAccessTime
+   */
+  public long getLastAccessTime() {
+    return lastAccessTime;
+  }
+
+  @Override
+  public void close() throws IOException {
+    super.close();
+    if (lastAccessTimeResetFlag) {
+      setLastAccessTime();
+    }
+  }
+
+  /**
+   * This method sets the last access time back to the file
+   * 
+   */
+  private void setLastAccessTime() {
+    LOG.finest("Setting last access time for : " + this.delegate.getPath() + " as : "
+            + new Date(this.lastAccessTime));
+    try {
+      delegate.setLastAccess(this.lastAccessTime);
+    } catch (SmbException e) {
+      LOG.log(Level.WARNING,"Couldn't set the last access time for : " + delegate.getPath(), e);
+    }
+  }
+}
