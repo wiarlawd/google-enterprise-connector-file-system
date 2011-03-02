@@ -54,12 +54,12 @@ public class SmbInputStream extends BufferedInputStream {
    * 
    */
   private void setLastAccessTime() {
-    LOG.finest("Setting last access time for : " + this.delegate.getPath() + " as : "
-            + new Date(this.lastAccessTime));
-    try {
-      delegate.setLastAccess(this.lastAccessTime);
-    } catch (SmbException e) {
-      LOG.log(Level.WARNING,"Couldn't set the last access time for : " + delegate.getPath(), e);
-    }
+//    LOG.finest("Setting last access time for : " + this.delegate.getPath() + " as : "
+//            + new Date(this.lastAccessTime));
+//    try {
+//      delegate.setLastAccess(this.lastAccessTime);
+//    } catch (SmbException e) {
+//      LOG.log(Level.WARNING,"Couldn't set the last access time for : " + delegate.getPath(), e);
+//    }
   }
 }
