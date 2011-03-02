@@ -43,7 +43,7 @@ public class FileSessionTest extends TestCase {
     changes = new ChangeQueue(100, 10);
     FileSystemTypeRegistry fileSystemTypeRegistry =
       new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
-          new SmbFileSystemType(false)));
+          new SmbFileSystemType(false,false)));
     authz = new FileAuthorizationManager(new PathParser(
         fileSystemTypeRegistry));
     TraversalContext traversalContext = new FakeTraversalContext();

@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,6 +28,9 @@ import java.util.regex.Pattern;
  */
 public class WindowsFileSystemType implements FileSystemType {
   private static final String COLON = ":";
+  
+  private static final Logger LOG =
+    Logger.getLogger(WindowsFileSystemType.class.getName());
 
   /* @Override */
   public WindowsReadonlyFile getFile(String path, Credentials credentials) {
@@ -47,14 +51,18 @@ public class WindowsFileSystemType implements FileSystemType {
   public boolean isPath(String path) {
     if (path == null || path.trim().length() < 1
             || path.trim().indexOf(COLON) == -1) {
+      LOG.warning("isPath got a null or 0 length path so returning false");
       return false;
     }
     String[] arr = path.split(COLON);
     String driveLetter = arr[0];
     if (driveLetter == null || driveLetter.trim().length() == 0
             || driveLetter.trim().length() > 1) {
+      LOG.warning("isPath got an invalid drive letter may be not a windows file for path : " + path);
       return false;
     } else if (!isAllowedDriveLetter(arr[0])) {
+      LOG.warning("isPath got a drive letter which is not allowed for windows file; "
+          + " may be not a windows file for path : " + path);
       return false;
     }
     return true;
@@ -80,6 +88,7 @@ public class WindowsFileSystemType implements FileSystemType {
     }
     WindowsReadonlyFile result = getFile(path, credentials);
     if (!result.canRead()) {
+      LOG.warning("canRead returned false for path : " + path);
       throw new RepositoryDocumentException("Failed to open file : " + path);
     }
     return result;

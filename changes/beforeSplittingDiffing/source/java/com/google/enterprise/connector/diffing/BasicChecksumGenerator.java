@@ -51,6 +51,9 @@ public class BasicChecksumGenerator implements ChecksumGenerator {
   }
 
   /**
+   * This method gets the inputstream and generates a checksum out of it.
+   * NOTE: This method does not close the inputstream passed to it so it is the 
+   * caller's responsibility to close the stream after the execution of this method.
    * @param in input stream to create a checksum for
    * @return a checksum for the bytes of {@code in}
    * @throws IOException
@@ -63,8 +66,6 @@ public class BasicChecksumGenerator implements ChecksumGenerator {
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException("failed to get a message digest for " + algorithm);
     }
-
-    try {
       byte[] buf = new byte[BUF_SIZE];
       int count = in.read(buf);
       while (count != -1) {
@@ -78,18 +79,25 @@ public class BasicChecksumGenerator implements ChecksumGenerator {
         result.append(byteToHex[digestBytes[k] & 0xFF]);
       }
       return result.toString();
-    } finally {
-      in.close();
-    }
   }
 
   /* @Override */
   public String getChecksum(String input) {
+    ByteArrayInputStream in = null;
     try {
-      return getChecksum(new ByteArrayInputStream(
-          input.getBytes(Charsets.UTF_8.name())));
+      in = new ByteArrayInputStream(
+          input.getBytes(Charsets.UTF_8.name()));
+      return getChecksum(in);
     } catch (IOException e) {
       throw new RuntimeException("IO exception reading a string!?");
     }
+    finally {
+      try {
+        in.close();
+      } catch (IOException e) {
+        throw new RuntimeException("IO exception closing the input stream for string");
+      }
+    }
+    
   }
 }

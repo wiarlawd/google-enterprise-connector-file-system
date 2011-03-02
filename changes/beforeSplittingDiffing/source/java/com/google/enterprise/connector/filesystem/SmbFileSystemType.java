@@ -47,6 +47,10 @@ public class SmbFileSystemType implements FileSystemType {
   }
 
   private final boolean stripDomainFromAces;
+  /**
+   * Flag to turn on / off the last access time reset feature for SMB crawls
+   */
+  private final boolean lastAccessTimeResetFlag;
 
   /**
    * Configures the jcifs library by loading configuration properties from the
@@ -92,15 +96,19 @@ public class SmbFileSystemType implements FileSystemType {
    *        {@link SmbReadonlyFile#getAcl()} {@link SmbReadonlyFile} objects
    *        this creates and if false domains will be included in the form
    *        {@literal domainName\\userOrGroupName}.
+   * @param lastAccessTimeResetFlag if true the application will try to reset the 
+   *        last access time of the file it crawled; if false the last access time 
+   *        will not be reset and will change after the file crawl.       
    */
-  public SmbFileSystemType(boolean stripDomainFromAces) {
+  public SmbFileSystemType(boolean stripDomainFromAces, boolean lastAccessTimeResetFlag) {
     this.stripDomainFromAces = stripDomainFromAces;
+    this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
   }
 
   /* @Override */
   public SmbReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryDocumentException {
-    return new SmbReadonlyFile(path, credentials, stripDomainFromAces);
+    return new SmbReadonlyFile(path, credentials, stripDomainFromAces, lastAccessTimeResetFlag);
   }
 
   /* @Override */
@@ -147,7 +155,7 @@ public class SmbFileSystemType implements FileSystemType {
   private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials) {
     SmbReadonlyFile result = null;
     try {
-      result = new SmbReadonlyFile(path, credentials, stripDomainFromAces);
+      result = new SmbReadonlyFile(path, credentials, stripDomainFromAces, lastAccessTimeResetFlag);
       if (!result.canRead()) {
         result = null;
       }
