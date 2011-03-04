@@ -24,9 +24,9 @@ must configure the GSA to
   # Determine the authenticated user's groups.
 
 For detailed information please refer to these links
-  # [http://code.google.com/apis/searchappliance/documentation/62/secure_search/secure_search_overview.html Managing Search for Controlled-Access Content]
-  # [http://code.google.com/apis/searchappliance/documentation/62/secure_search/secure_search_crwlsrv.html#serve_for_controlled_access_content Authenticating users]
-  # [http://code.google.com/apis/searchappliance/documentation/62/secure_search/secure_search_crwlsrv.html#PolicyAccessControlLists Policy ACLs] 
+  # [http://code.google.com/apis/searchappliance/documentation/68/secure_search/secure_search_overview.html Managing Search for Controlled-Access Content]
+  # [http://code.google.com/apis/searchappliance/documentation/68/secure_search/secure_search_crwlsrv.html#serve_for_controlled_access_content Authenticating users]
+  # [http://code.google.com/apis/searchappliance/documentation/68/secure_search/secure_search_crwlsrv.html#PolicyAccessControlLists Policy ACLs] 
 
 Before configuring a File System Connector you must install one. An Installer
 will be provided soon. For manual installation instructions please refer to http://code.google.com/p/google-enterprise-connector-file-system/wiki/ManualInstallation.
