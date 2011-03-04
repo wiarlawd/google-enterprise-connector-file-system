@@ -43,7 +43,7 @@ help links on the 'Connector Administration->Connectors' screen on your GSA.
 
 The File System Connector configuration includes URL patterns. These patterns
 follow the conventions of the patterns supported by the GSA. For more information see
-http://code.google.com/apis/searchappliance/documentation/62/admin/URL_patterns.html
+http://code.google.com/apis/searchappliance/documentation/68/admin_crawl/URL_patterns.html
 
 =Form Elements=
 The following sections describe the information to enter in the File System Connector
