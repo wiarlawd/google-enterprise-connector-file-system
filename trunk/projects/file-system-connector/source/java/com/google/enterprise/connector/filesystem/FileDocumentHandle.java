@@ -153,22 +153,27 @@ public class FileDocumentHandle implements DocumentHandle {
       MimeTypeFinder mimeTypeFinder = context.getMimeTypeFinder();
       return mimeTypeFinder.find(
           traversalContext,
-          file.getPath(), new FileInfoInputStreamFactory(file));
+              file.getPath(), new FileInfoInputStreamFactory(file));
     } catch (IOException ioe) {
       throw new RepositoryDocumentException("Unable to get mime type for file "
           + file.getPath(), ioe);
     }
   }
 
-  private void fetchAcl(GenericDocument document, ReadonlyFile<?> file)
-      throws RepositoryException {
-    Acl acl = getAcl(file);
-    if (!context.markAllDocumentsPublic && !acl.isPublic()) {
-      document.setProperty(SpiConstants.PROPNAME_ISPUBLIC,
-          Boolean.FALSE.toString());
-      if (context.pushAcls && acl.isDeterminate()) {
-        document.setProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
-        document.setProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
+  private void fetchAcl(GenericDocument document, ReadonlyFile<?> file) throws RepositoryException {
+    if (context.markAllDocumentsPublic) {
+      LOG.finest("public flag is true so setting the PROPNAME_ISPUBLIC to TRUE");
+      document.setProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.TRUE.toString());
+    } else {
+      LOG.finest("public flag is false so setting the PROPNAME_ISPUBLIC to FALSE");
+      document.setProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.FALSE.toString());
+      if (context.pushAcls) {
+        LOG.finest("pushAcls flag is true so adding ACL to the document");
+        Acl acl = getAcl(file);
+        if (acl.isDeterminate()) {
+          document.setProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
+          document.setProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
+        }
       }
     }
   }
@@ -214,8 +219,17 @@ public class FileDocumentHandle implements DocumentHandle {
 
     DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
         boolean pushAcls, boolean markAllDocumentsPublic,
-        Credentials credentials,
-        MimeTypeFinder mimeTypeFinder,
+        String domain, String userName, String password,
+        MimeTypeFinder mimeTypeFinder, 
+        TraversalContextManager traversalContextManager) {
+      this(fileSystemTypeRegistry, pushAcls, markAllDocumentsPublic,
+          new Credentials(domain, userName, password),
+          mimeTypeFinder, traversalContextManager);
+    }
+
+    DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
+        boolean pushAcls, boolean markAllDocumentsPublic,
+        Credentials credentials, MimeTypeFinder mimeTypeFinder,
         TraversalContextManager traversalContextManager) {
       if (pushAcls && markAllDocumentsPublic) {
         throw new IllegalArgumentException(

@@ -72,8 +72,8 @@
         singleton = "true">
   </bean>
   
-  <bean id = "client-document-handle-factory"
-        class = "com.google.enterprise.connector.filesystem.FileDocumentHandleFactory"
+  <bean id = "document-context"
+        class = "com.google.enterprise.connector.filesystem.FileDocumentHandle$DocumentContext"
         singleton = "true">
     <constructor-arg ref="file-system-type-registry"/>
     <constructor-arg value="true"/>
@@ -85,6 +85,12 @@
     <constructor-arg ref="traversal-context-manager"/>
   </bean>
 
+  <bean id = "client-document-handle-factory"
+        class = "com.google.enterprise.connector.filesystem.FileDocumentHandleFactory"
+        singleton = "true">
+    <constructor-arg ref="document-context"/>
+  </bean>
+  
   <bean id = "checkpoint-and-change-queue"
         class = "com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue">
     <constructor-arg ref="change-queue"/>
@@ -193,13 +199,7 @@
         <value>${exclude_23}</value>
       </list>
     </constructor-arg>
-    <constructor-arg value="${user}"/>
-    <constructor-arg value="${password}"/>
-    <constructor-arg value="${domain}"/>
-    <constructor-arg ref="traversal-context-manager"/>
-    <constructor-arg ref="file-system-type-registry"/>
-    <constructor-arg value="true"/>
-    <constructor-arg value="false"/>       
+    <constructor-arg ref="document-context"/>
   </bean>
   
   <bean id = "file-document-snapshot-factory"

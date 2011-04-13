@@ -14,14 +14,15 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
+import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.util.BasicChecksumGenerator;
+import com.google.enterprise.connector.util.SystemClock;
 import com.google.enterprise.connector.util.diffing.DocumentSink;
 import com.google.enterprise.connector.util.diffing.DocumentSnapshot;
-import com.google.enterprise.connector.util.BasicChecksumGenerator;
-import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 import com.google.enterprise.connector.util.diffing.FilterReason;
-import com.google.enterprise.connector.util.SystemClock;
 import com.google.enterprise.connector.util.diffing.TraversalContextManager;
-import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 
 import junit.framework.TestCase;
 
@@ -53,12 +54,13 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
     tcm.setTraversalContext(TRAVERSAL_CONTEXT);
     FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
-
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+        PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        MIME_TYPE_FINDER, tcm);
     FileDocumentSnapshotRepository result =
         new FileDocumentSnapshotRepository(root, sink, matcher,
-            tcm, CHECKSUM_GENERATOR, SystemClock.INSTANCE,
-            MIME_TYPE_FINDER, CREDENTIALS, fileSystemTypeRegistry,
-            PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
+            CHECKSUM_GENERATOR, SystemClock.INSTANCE,
+            context);
     return result;
   }
 
@@ -165,11 +167,13 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
     tcm.setTraversalContext(new FakeTraversalContext(maxSizeData.length()));
     FileSystemTypeRegistry fileSystemTypeRegistry =
       new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+        PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        MIME_TYPE_FINDER, tcm);
     FileDocumentSnapshotRepository dsr =
       new FileDocumentSnapshotRepository(root, sink, ALL_MATCHER,
-          tcm , CHECKSUM_GENERATOR, SystemClock.INSTANCE, MIME_TYPE_FINDER,
-          CREDENTIALS, fileSystemTypeRegistry, PUSH_ACLS,
-          MARK_ALL_DOCUMENTS_PUBLIC);
+          CHECKSUM_GENERATOR, SystemClock.INSTANCE,
+          context);
     for(int ix= 0; ix < 2; ix++) {
       Iterator<FileDocumentSnapshot> it = dsr.iterator();
       assertTrue(it.hasNext());

@@ -15,15 +15,17 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.BasicChecksumGenerator;
 import com.google.enterprise.connector.util.ChecksumGenerator;
 import com.google.enterprise.connector.util.Clock;
+import com.google.enterprise.connector.util.SystemClock;
 import com.google.enterprise.connector.util.diffing.DocumentHandle;
 import com.google.enterprise.connector.util.diffing.DocumentSink;
 import com.google.enterprise.connector.util.diffing.DocumentSnapshot;
 import com.google.enterprise.connector.util.diffing.DocumentSnapshotFactory;
 import com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitor;
-import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 import com.google.enterprise.connector.util.diffing.FilterReason;
 import com.google.enterprise.connector.util.diffing.LoggingDocumentSink;
 import com.google.enterprise.connector.util.diffing.MonitorCheckpoint;
@@ -33,10 +35,9 @@ import com.google.enterprise.connector.util.diffing.SnapshotStore;
 import com.google.enterprise.connector.util.diffing.SnapshotStoreException;
 import com.google.enterprise.connector.util.diffing.SnapshotWriter;
 import com.google.enterprise.connector.util.diffing.SnapshotWriterException;
-import com.google.enterprise.connector.util.SystemClock;
-import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 import com.google.enterprise.connector.util.diffing.TraversalContextManager;
-import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
+import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
 import junit.framework.TestCase;
 
@@ -277,11 +278,12 @@ public class  FileSystemMonitorTest extends TestCase {
       DocumentSink fileSink, Clock clock, DocumentSnapshotRepositoryMonitor.Callback customVisitor) {
     TraversalContextManager tcm = new TraversalContextManager();
     tcm.setTraversalContext(traversalContext);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+        PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        new MimeTypeFinder(), tcm);
     SnapshotRepository<? extends DocumentSnapshot> snapshotRepository =
         new FileDocumentSnapshotRepository(
-            root, fileSink, myMatcher, tcm, generator, clock,
-            new MimeTypeFinder(), CREDENTIALS, fileSystemTypeRegistry,
-            PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
+            root, fileSink, myMatcher, generator, clock, context);
     return new DocumentSnapshotRepositoryMonitor("name", snapshotRepository, store,
         customVisitor, fileSink, null, documentSnapshotFactory);
   }
@@ -1114,11 +1116,12 @@ public class  FileSystemMonitorTest extends TestCase {
     DocumentSink documentSink = new LoggingDocumentSink();
     TraversalContextManager tcm = new TraversalContextManager();
     tcm.setTraversalContext(traversalContext);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,PUSH_ACLS,
+        MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        new MimeTypeFinder(), tcm);
     SnapshotRepository<? extends DocumentSnapshot> query =
         new FileDocumentSnapshotRepository(root, documentSink, matcher,
-            tcm, checksumGenerator, SystemClock.INSTANCE,
-            new MimeTypeFinder(), CREDENTIALS, fileSystemTypeRegistry,
-            PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
+            checksumGenerator, SystemClock.INSTANCE, context);
 
     visitor = new CountingVisitor();
     monitor = new DocumentSnapshotRepositoryMonitor("name", query, failingStore, visitor,
@@ -1200,15 +1203,17 @@ public class  FileSystemMonitorTest extends TestCase {
     TraversalContextManager tcm = new TraversalContextManager();
     tcm.setTraversalContext(traversalContext);
     DocumentSink documentSink = new LoggingDocumentSink();
-    SnapshotRepository<? extends DocumentSnapshot>  snapshotRepository =
-        new FileDocumentSnapshotRepository(
-        root, documentSink, matcher, tcm, checksumGenerator,
-        SystemClock.INSTANCE, new MimeTypeFinder(), CREDENTIALS,
-        fileSystemTypeRegistry, PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC);
-
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,PUSH_ACLS,
+        MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        new MimeTypeFinder(), tcm);
+    SnapshotRepository<? extends DocumentSnapshot>snapshotRepository =
+        new FileDocumentSnapshotRepository(root, documentSink, matcher,
+            checksumGenerator, SystemClock.INSTANCE, context);
+    
     visitor = new CountingVisitor();
 
-    monitor = new DocumentSnapshotRepositoryMonitor("name", snapshotRepository, failingStore,
+    monitor = new DocumentSnapshotRepositoryMonitor("name",
+        snapshotRepository, failingStore,
         visitor,  documentSink, saveOldestMonitorCp,
         documentSnapshotFactory);
 

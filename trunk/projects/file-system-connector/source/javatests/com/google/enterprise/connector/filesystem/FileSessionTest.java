@@ -14,17 +14,18 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
+import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.Session;
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.diffing.ChangeQueue;
 import com.google.enterprise.connector.util.diffing.ChangeSource;
 import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
 import com.google.enterprise.connector.util.diffing.DiffingConnector;
 import com.google.enterprise.connector.util.diffing.DiffingConnectorTraversalManager;
 import com.google.enterprise.connector.util.diffing.FakeDocumentSnapshotRepositoryMonitorManager;
-import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 import com.google.enterprise.connector.util.diffing.TraversalContextManager;
-import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.Session;
-import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 
 import junit.framework.TestCase;
 
@@ -49,9 +50,9 @@ public class FileSessionTest extends TestCase {
     TraversalContext traversalContext = new FakeTraversalContext();
     TraversalContextManager tcm = new TraversalContextManager();
     tcm.setTraversalContext(traversalContext);
-    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
-        fileSystemTypeRegistry, false, true, null, null, null,
-        new MimeTypeFinder(), tcm);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry, false,
+        true, null, null, null, new MimeTypeFinder(), tcm);
+    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(context);
     monitorManager = new FakeDocumentSnapshotRepositoryMonitorManager(changes,
         this, new DeleteDocumentHandleFactory(), clientFactory);
     session = new DiffingConnector(authz, monitorManager, tcm);

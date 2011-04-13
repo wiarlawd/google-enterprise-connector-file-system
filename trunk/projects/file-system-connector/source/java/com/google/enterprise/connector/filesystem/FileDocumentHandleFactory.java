@@ -15,7 +15,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.util.diffing.DocumentHandle;
 import com.google.enterprise.connector.util.diffing.DocumentHandleFactory;
-import com.google.enterprise.connector.util.diffing.TraversalContextManager;
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
 import com.google.enterprise.connector.filesystem.FileDocumentHandle.Field;
 
 import org.json.JSONException;
@@ -25,15 +25,8 @@ public class FileDocumentHandleFactory implements DocumentHandleFactory {
 
   private final FileDocumentHandle.DocumentContext context;
 
-  FileDocumentHandleFactory(FileSystemTypeRegistry fileSystemTypeRegistry,
-      boolean pushAcls, boolean markAllDocumentsPublic,
-      String domainName, String userName, String password,
-      MimeTypeFinder mimeTypeFinder,
-      TraversalContextManager traversalContextManager) {
-    context = new FileDocumentHandle.DocumentContext(
-        fileSystemTypeRegistry, pushAcls, markAllDocumentsPublic,
-        FileConnectorType.newCredentials(domainName, userName, password),
-        mimeTypeFinder, traversalContextManager);
+  FileDocumentHandleFactory(DocumentContext context) {
+    this.context = context;
   }
 
   public DocumentHandle fromString(String stringForm)

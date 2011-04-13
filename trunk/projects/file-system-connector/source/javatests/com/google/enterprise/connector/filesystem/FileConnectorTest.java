@@ -28,6 +28,7 @@ import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext
 import com.google.enterprise.connector.util.diffing.SnapshotRepository;
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 import com.google.enterprise.connector.util.diffing.TraversalContextManager;
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentList;
 import com.google.enterprise.connector.spi.Property;
@@ -92,9 +93,9 @@ public class FileConnectorTest extends TestCase {
     TraversalContext traversalContext = new FakeTraversalContext();
     TraversalContextManager tcm = new TraversalContextManager();
     tcm.setTraversalContext(traversalContext);
-    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
-        fileSystemTypeRegistry, false, true, null, null, null,
-        new MimeTypeFinder(), tcm);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry, false,
+        true, null, null, null, new MimeTypeFinder(), tcm);
+    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(context);
     changeQueue = new ChangeQueue(100, 10000);
     checksumGenerator = new BasicChecksumGenerator("SHA1");
     TestDirectoryManager testDirectoryManager  = new TestDirectoryManager(this);
@@ -111,11 +112,13 @@ public class FileConnectorTest extends TestCase {
             new DeleteDocumentHandleFactory(), clientFactory);
     final boolean pushAcls = true;
     final boolean markAllDocumentsPublic = false;
+    DocumentContext docContext = new DocumentContext(fileSystemTypeRegistry, pushAcls,
+        markAllDocumentsPublic, null, user, password,
+        new MimeTypeFinder(),tcm);
     List<? extends SnapshotRepository<? extends DocumentSnapshot>>
     repositories = new FileDocumentSnapshotRepositoryList(checksumGenerator,
-      pathParser, startPaths, includePatterns, excludePatterns,
-      user, password, null /* domain */, tcm,
-      fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
+        pathParser, startPaths, includePatterns, excludePatterns,
+        docContext);
     DocumentSnapshotFactory documentSnapshotFactory =
         new FileDocumentSnapshotFactory();
     fileSystemMonitorManager = new DocumentSnapshotRepositoryMonitorManagerImpl(

@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
 import com.google.enterprise.connector.util.ChecksumGenerator;
 import com.google.enterprise.connector.util.Clock;
 import com.google.enterprise.connector.util.diffing.DocumentHandle;
@@ -93,6 +94,27 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
     this.checksum = checksum;
     this.scanTime = scanTime;
     this.isStable = isStable;
+  }
+
+  /**
+   * @param next
+   * @param checksumGenerator
+   * @param clock
+   * @param context
+   */
+  public FileDocumentSnapshot(ReadonlyFile<?> file, ChecksumGenerator checksumGenerator,
+      Clock clock, DocumentSink documentSink, DocumentContext context) {
+    this(file.getFileSystemType(), file.getPath());
+    getUpdateSupport = new GetUpdateSupport(file,
+        checksumGenerator,
+        clock,
+        context.getTraversalContextManager(),
+        context.getMimeTypeFinder(),
+        documentSink,
+        context.getCredentials(),
+        context.getFileSystemTypeRegistry(),
+        context.isPushAcls(),
+        context.isMarkAllDocumentsPublic());
   }
 
   /* @Override */
@@ -353,11 +375,15 @@ public class FileDocumentSnapshot implements DocumentSnapshot {
         FileDocumentSnapshot gsaSnapshot = castGsaSnapshot(onGsa);
         FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
         lastModified = file.getLastModified();
-        acl = infoCache.getAcl();
+        if (this.pushAcls) {
+          acl = infoCache.getAcl();
+        } else {
+            acl = Acl.USE_HEAD_REQUEST;
+        }
 
         if (gsaSnapshot == null
             || gsaSnapshot.getLastModified() != getLastModified()
-            || !gsaSnapshot.getAcl().equals(infoCache.getAcl())
+            || !gsaSnapshot.getAcl().equals(acl)
             || (!gsaSnapshot.isStable() && !gsaSnapshot.getChecksum().equals(
                 infoCache.getChecksum()))) {
           checksum = infoCache.getChecksum();
