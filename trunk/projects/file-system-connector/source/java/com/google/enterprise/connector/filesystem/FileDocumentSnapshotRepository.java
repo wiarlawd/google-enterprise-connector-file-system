@@ -131,8 +131,12 @@ public class FileDocumentSnapshotRepository
           ReadonlyFile<?> f = l.get(0);
           if (f.isDirectory()) {
             l.remove(0);
-            // Copy of the returned list because we modify our copy.
-            traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(listFiles(f)));
+            if (f.acceptedBy(matcher)) {
+              // Copy of the returned list because we modify our copy.
+              traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(listFiles(f)));
+            } else {
+              fileSink.add(f.getPath(), FilterReason.PATTERN_MISMATCH);
+            }
           } else if (!isQualifiyingFile(f)) {
             l.remove(0);
           } else
