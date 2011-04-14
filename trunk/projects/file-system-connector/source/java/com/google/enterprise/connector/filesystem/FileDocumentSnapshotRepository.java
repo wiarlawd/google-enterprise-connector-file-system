@@ -147,6 +147,13 @@ public class FileDocumentSnapshotRepository
 
     boolean isQualifiyingFile(ReadonlyFile<?> f) throws SnapshotRepositoryRuntimeException {
       try {
+        if (!f.isRegularFile() || !f.canRead()) {
+          //TODO : Add a separate Filter reason for scenarios where the file
+          //can't be read or its not a regular file
+          fileSink.add(f.getPath(), FilterReason.IO_EXCEPTION);
+          return false;
+        }
+
         TraversalContext traversalContext =
           context.getTraversalContextManager().getTraversalContext();
         if ((traversalContext != null)
