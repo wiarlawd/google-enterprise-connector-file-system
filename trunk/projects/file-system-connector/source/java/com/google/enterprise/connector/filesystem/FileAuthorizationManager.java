@@ -75,8 +75,11 @@ public class FileAuthorizationManager implements AuthorizationManager {
   /* @Override */
   public List<AuthorizationResponse> authorizeDocids(Collection<String> docIds,
       AuthenticationIdentity identity) {
-    List<AuthorizationResponse> authorized =
-        new ArrayList<AuthorizationResponse>();
+    LOG.info("User name passed is : " + getShowString(identity.getUsername(),
+        false) + " password is :"
+        + getShowString(identity.getPassword(), true) + " domain is : "
+        + getShowString(identity.getDomain(), false));
+    List<AuthorizationResponse> authorized = new ArrayList<AuthorizationResponse>();
     List<String> authorizedIds = new ArrayList<String>();
     List<String> notAutorizedIds = new ArrayList<String>();
     for (String docId : docIds) {
@@ -94,5 +97,22 @@ public class FileAuthorizationManager implements AuthorizationManager {
           + " not authorized Ids = " + notAutorizedIds);
     }
     return authorized;
+  }
+
+  /**
+   * @param arg String to show
+   * @param isPassword Whether the string to show is password or not
+   * @return checks whether the input is null or blank, if yes then returns "blank or null", 
+   * If the input is not null or blank, then if it is a password then it returns "is not blank or null" 
+   * if it is not password and not blank or null then returns the input as it is.
+   */
+  private String getShowString(String arg, boolean isPassword) {
+    if (arg == null || arg.isEmpty() || arg.trim().length() < 1) {
+      return "blank or null";
+    } else if (isPassword){
+      return "is not blank or null";
+    } else {
+      return arg;
+    }
   }
 }
