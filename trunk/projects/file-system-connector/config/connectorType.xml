@@ -8,6 +8,10 @@
       Temporary flag to strip domains from ACE users and groups to match GSA.
     -->
     <constructor-arg value="true"/>
+    <!-- 
+      Flag to turn on/ off the last access time reset feature
+    -->
+    <constructor-arg value="true"/>
   </bean>
 
   <bean id = "java-file-system-type"
