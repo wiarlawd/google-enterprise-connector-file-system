@@ -181,7 +181,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       return Acl.USE_HEAD_REQUEST;
     }
     catch (IOException e) {
-      LOG.log(Level.FINEST,"Got IOException while getting ACLs", e);
+      LOG.log(Level.WARNING,"Cannot process ACL...Got IOException while getting ACLs for " + this.getPath(), e);
       throw e;
     }
   }
