@@ -190,8 +190,8 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
   }
 
   public void testQuery_filterNotIncludPattern() throws Exception {
-    List<String> include = ImmutableList.of("/foo/bar/f1");
-    List<String> exclude = ImmutableList.of();
+    List<String> include = ImmutableList.of("/foo/bar");
+    List<String> exclude = ImmutableList.of("/foo/bar/d1");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
 
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
@@ -210,7 +210,7 @@ public class FileDocumentSnapshotRepositoryTest extends TestCase {
       assertEquals(1, sink.getCountSunk());
       //Note d1 is not included either but FileRepositoryQuery traverses
       //it anyway.
-      assertTrue(sink.contains(notIncluded.getPath(), FilterReason.PATTERN_MISMATCH));
+      assertTrue(sink.contains(d1.getPath(), FilterReason.PATTERN_MISMATCH));
       sink.reset();
     }
   }
