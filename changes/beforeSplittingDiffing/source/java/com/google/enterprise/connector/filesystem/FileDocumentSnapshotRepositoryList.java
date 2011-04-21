@@ -7,6 +7,7 @@ import com.google.enterprise.connector.diffing.SystemClock;
 import com.google.enterprise.connector.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,6 +25,7 @@ public class FileDocumentSnapshotRepositoryList
   private final FileSystemTypeRegistry fileSystemTypeRegistry;
   private final boolean pushAcls;
   private final boolean markAllDocumentsPublic;
+  private final File nfsMountsDir;
 
   /**
    * Constructs a {@link FileDocumentSnapshotRepositoryList} from
@@ -38,7 +40,8 @@ public class FileDocumentSnapshotRepositoryList
       String userName, String password, String domainName,
       TraversalContextManager traversalContextManager,
       FileSystemTypeRegistry fileSystemTypeRegistry,
-      boolean pushAcls, boolean markAllDocumentsPublic)
+      boolean pushAcls, boolean markAllDocumentsPublic,
+      File nfsMountsDirectory)
       throws RepositoryDocumentException {
     this.checksumGenerator = checksumGenerator;
     this.pathParser = pathParser;
@@ -51,6 +54,9 @@ public class FileDocumentSnapshotRepositoryList
     this.fileSystemTypeRegistry = fileSystemTypeRegistry;
     this.pushAcls = pushAcls;
     this.markAllDocumentsPublic = markAllDocumentsPublic;
+    this.nfsMountsDir = nfsMountsDirectory;
+
+    NetappFilerMountManager.registerNetappFilerStartpaths(nfsMountsDir, startPaths);
     for (String startPath : startPaths) {
       add(newFileDocumentSnapshotRepository(startPath));
     }

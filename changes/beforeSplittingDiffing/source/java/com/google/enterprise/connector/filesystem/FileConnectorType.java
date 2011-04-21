@@ -534,11 +534,21 @@ public class FileConnectorType implements ConnectorType {
           path += "/";
         }
 
+        // TODO: Add verification of netapp URLs.
+        if (path.startsWith("netapp://")) {
+          LOG.info("Skipping verifing readability of " + path);
+          continue;
+        }
+
         try {
           ReadonlyFile<?> file = pathParser.getFile(path, credentials);
-          if (file.isDirectory()) {
-            for (ReadonlyFile<?> sub : file.listFiles()) {
-              LOG.finest("list: " + sub.getPath());
+          if (file instanceof NetappFilerReadonlyFile) {
+            // TODO: 1) mount 2) check 3) umount.
+          } else {
+            if (file.isDirectory()) {
+              for (ReadonlyFile<?> sub : file.listFiles()) {
+                LOG.finest("list: " + sub.getPath());
+              }
             }
           }
           LOG.info("successfully read " + path);
@@ -582,6 +592,13 @@ public class FileConnectorType implements ConnectorType {
           includeField.lines, excludeField.lines);
 
       for (String path : filterUserEnteredList(startField.lines)) {
+
+        // TODO: Add verification of netapp URLs.
+        if (path.startsWith("netapp://")) {
+          LOG.info("Skipping verifing readability of " + path);
+          continue;
+        }
+
         try {
           ReadonlyFile<?> file = pathParser.getFile(path, credentials);
           if (file.acceptedBy(filePatternMatcher)) {

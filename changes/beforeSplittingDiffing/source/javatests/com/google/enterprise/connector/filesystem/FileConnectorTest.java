@@ -115,7 +115,7 @@ public class FileConnectorTest extends TestCase {
     repositories = new FileDocumentSnapshotRepositoryList(checksumGenerator,
       pathParser, startPaths, includePatterns, excludePatterns,
       user, password, null /* domain */, tcm,
-      fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
+      fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls, /* nfs mounts dir */ null);
     DocumentSnapshotFactory documentSnapshotFactory =
         new FileDocumentSnapshotFactory();
     fileSystemMonitorManager = new DocumentSnapshotRepositoryMonitorManagerImpl(

@@ -87,7 +87,7 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         repositories = new FileDocumentSnapshotRepositoryList(checksumGenerator,
           pathParser, startPaths, includePatterns, excludePatterns,
           null /* userName */, null /* password */, null /* domain */, tcm,
-          fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls);
+          fileSystemTypeRegistry, markAllDocumentsPublic, pushAcls, /* nfs mounts dir */ null);
     DocumentSnapshotFactory documentSnapshotFactory =
         new FileDocumentSnapshotFactory();
     DocumentSnapshotRepositoryMonitorManager fileSystemMonitorManager =

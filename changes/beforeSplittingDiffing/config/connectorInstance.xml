@@ -24,6 +24,10 @@
   <bean id = "nfs-file-system-type"
         class = "com.google.enterprise.connector.filesystem.NfsFileSystemType">
   </bean>
+  
+  <bean id = "netappfiler-file-system-type"
+        class = "com.google.enterprise.connector.filesystem.NetappFilerFileSystemType">
+  </bean>
 
   <bean id="file-system-type-registry"
     class="com.google.enterprise.connector.filesystem.FileSystemTypeRegistry">
@@ -33,6 +37,7 @@
         <ref bean="windows-file-system-type" />
         <ref bean="smb-file-system-type" />
         <ref bean="nfs-file-system-type" />
+        <ref bean="netappfiler-file-system-type" />
       </list>
     </constructor-arg>
   </bean>
@@ -61,7 +66,13 @@
         singleton = "false">
     <constructor-arg index="0" value="${googleConnectorWorkDir}/snapshots"/>
   </bean>
-  
+
+  <bean id = "nfs-mounts-dir"
+        class = "java.io.File"
+        singleton = "false">
+    <constructor-arg index="0" value="${googleConnectorWorkDir}/nfs-mounts"/>
+  </bean>
+
   <bean id = "internal-document-handle-factory"
         class = "com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory"
         singleton = "true">
@@ -103,12 +114,10 @@
         singleton = "false">
     <constructor-arg ref="path-parser"/>
   </bean>
-  
-  <bean id = "file-document-snapshot-repository-list"
-       class = "com.google.enterprise.connector.filesystem.FileDocumentSnapshotRepositoryList"
-       singleton = "true">
-    <constructor-arg ref="checksum-generator"/>
-    <constructor-arg ref="path-parser"/>
+
+  <bean id = "start-paths"
+        class = "java.util.ArrayList"
+        singleton = "false">
     <constructor-arg>
       <list>
         <value>${start_0}</value>
@@ -137,6 +146,15 @@
         <value>${start_23}</value>
       </list>
     </constructor-arg>
+  </bean>
+
+
+  <bean id = "file-document-snapshot-repository-list"
+       class = "com.google.enterprise.connector.filesystem.FileDocumentSnapshotRepositoryList"
+       singleton = "true">
+    <constructor-arg ref="checksum-generator"/>
+    <constructor-arg ref="path-parser"/>
+    <constructor-arg ref="start-paths"/>
     <constructor-arg>
       <list>
         <value>${include_0}</value>
@@ -200,6 +218,7 @@
     <constructor-arg ref="file-system-type-registry"/>
     <constructor-arg value="true"/>
     <constructor-arg value="false"/>       
+    <constructor-arg ref="nfs-mounts-dir"/>
   </bean>
   
   <bean id = "file-document-snapshot-factory"
@@ -216,13 +235,23 @@
     <constructor-arg ref="checksum-generator"/>
     <constructor-arg ref="change-queue"/>
     <constructor-arg ref="checkpoint-and-change-queue"/>     
- </bean>
+  </bean>
+
+  <!-- Spring complains when I reuse nfs-mounts-dir in file-connector -->
+  <bean id = "nfs-mounts-dir-2"
+        class = "java.io.File"
+        singleton = "false">
+    <constructor-arg index="0" value="${googleConnectorWorkDir}/nfs-mounts"/>
+  </bean>
 
   <bean id = "file-connector"
-        class = "com.google.enterprise.connector.diffing.DiffingConnector"
+        class = "com.google.enterprise.connector.filesystem.FileConnector"
         singleton = "false">
     <constructor-arg ref="authz"/>
     <constructor-arg ref="monitor-manager"/>
     <constructor-arg ref="traversal-context-manager"/>
+    <constructor-arg ref="start-paths"/>
+    <constructor-arg ref="nfs-mounts-dir-2"/>
   </bean>
+
 </beans>
