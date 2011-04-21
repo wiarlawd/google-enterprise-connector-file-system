@@ -85,7 +85,8 @@ public class FileDocumentHandleTest extends TestCase {
     DateTime lastModified =
         new DateTime(Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_LASTMODIFIED));
     assertEquals(LAST_MODIFIED.getMillis(), lastModified.getMillis());
-    assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
+    assertNotNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
+    assertEquals(Boolean.TRUE.toString(), Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
   }
@@ -162,7 +163,8 @@ public class FileDocumentHandleTest extends TestCase {
     FileDocumentHandle fdh = new FileDocumentHandle(foo.getFileSystemType(),
         foo.getPath(), false, context);
     Document addedDoc = fdh.getDocument();
-    assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
+    assertNotNull(addedDoc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
+    assertEquals(Boolean.TRUE.toString(), Value.getSingleValueString(addedDoc, SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(addedDoc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
   }
