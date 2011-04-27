@@ -92,6 +92,9 @@ public class FileDocumentSnapshotRepository
       return new ArrayList<ReadonlyFile<?>>();
     } catch (IOException ioe) {
       throw new SnapshotRepositoryRuntimeException("IOException while processing the directory " + dir.getPath(), ioe);
+    } catch (InsufficientAccessException e) {
+      LOG.log(Level.WARNING, "Due to insufficient privileges, failed to list files in " + dir.getPath(), e);
+      return new ArrayList<ReadonlyFile<?>>();
     }
   }
 

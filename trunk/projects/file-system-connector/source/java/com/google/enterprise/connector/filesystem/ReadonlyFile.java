@@ -39,7 +39,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>> extends FileInfo {
    * @throws IOException if this is not a directory, or if it can't be read
    * @throws DirectoryListingException if the user is not authorized to read
    */
-  public List<T> listFiles() throws IOException, DirectoryListingException;
+  public List<T> listFiles() throws IOException, DirectoryListingException, InsufficientAccessException;
 
   /**
    * @return an input stream that reads this file.

@@ -20,7 +20,7 @@ package com.google.enterprise.connector.filesystem;
  */
 public class InsufficientAccessException extends Exception {
     /**
-     * Constructs a new DirectoryListingException with message.
+     * Constructs a new InsufficientAccessException with message.
      *
      * @param message the message.
      */
@@ -29,7 +29,7 @@ public class InsufficientAccessException extends Exception {
     }
 
     /**
-     * Constructs a new DirectoryListingException with message and cause.
+     * Constructs a new InsufficientAccessException with message and cause.
      *
      * @param message the message
      *

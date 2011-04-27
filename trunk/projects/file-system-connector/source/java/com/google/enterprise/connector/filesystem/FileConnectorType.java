@@ -57,7 +57,7 @@ public class FileConnectorType implements ConnectorType {
   enum ErrorMessages{CONNECTOR_INSTANTIATION_FAILED,
       MISSING_FIELDS, READ_START_PATH_FAILED, PATTERNS_ELIMINATED_START_PATH,
       ADD_ANOTHER_ROW_BUTTON, CANNOT_ADD_ANOTHER_ROW,
-      WRONG_SMB_TYPE, UNC_NEEDS_TRANSLATION }
+      ACCESS_DENIED, WRONG_SMB_TYPE, UNC_NEEDS_TRANSLATION }
 
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
@@ -543,32 +543,33 @@ public class FileConnectorType implements ConnectorType {
           }
           LOG.info("successfully read " + path);
         } catch (WrongSmbTypeException e3) {
-          LOG.info("Wrong SmbFile.getType(): " + path);
-          buf.append(String.format(bundle.getLocale(),
-              bundle.getString(ErrorMessages.WRONG_SMB_TYPE.name()),
-              path));
-          buf.append("\n");
+          addErrorToBuffer(buf, "Wrong SmbFile.getType(): ", path, e3, ErrorMessages.WRONG_SMB_TYPE);
         } catch (RepositoryDocumentException e1) {
-          LOG.info("failed to read start path: " + path);
-          buf.append(String.format(bundle.getLocale(),
-              bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
-              path));
-          buf.append("\n");
+          addErrorToBuffer(buf, "failed to list start path: ", path, e1, ErrorMessages.READ_START_PATH_FAILED);
         } catch (IOException e) {
-          LOG.info("failed to access start path: " + path + "; " + e);
-          buf.append(String.format(bundle.getLocale(),
-              bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
-              path));
-          buf.append("\n");
+          addErrorToBuffer(buf, "failed to list start path: ", path, e, ErrorMessages.READ_START_PATH_FAILED);
         } catch (DirectoryListingException e) {
-          LOG.info("failed to list start path: " + path + "; " + e);
-          buf.append(String.format(bundle.getLocale(),
-                bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
-                path));
-          buf.append("\n");
+          addErrorToBuffer(buf, "failed to list start path: ", path, e, ErrorMessages.READ_START_PATH_FAILED);
+        } catch (InsufficientAccessException e) {
+          addErrorToBuffer(buf, "Crawler user does not have enough privileges for path: ", path, e, ErrorMessages.ACCESS_DENIED);
         }
       }
       return XML.escape(buf.toString());
+    }
+
+    /**
+     * Add the error message to the buffer along with path information for
+     * which the error occured.
+     * @param buf Buffer 
+     * @param path path of the file for which the error occured
+     * @param e Exception with which the error occured
+     */
+    private void addErrorToBuffer(StringBuilder buf, String loggerMessage, String path, Exception e, ErrorMessages errorMessage) {
+      LOG.info(loggerMessage + path + "; " + e);
+      buf.append(String.format(bundle.getLocale(),
+            bundle.getString(errorMessage.name()),
+            path));
+      buf.append("\n");
     }
 
     /**

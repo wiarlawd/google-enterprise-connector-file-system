@@ -56,9 +56,11 @@ class CopySmbToLocalDisk {
          com.google.enterprise.connector.filesystem.CopySmbToLocalDisk \
          "smb://172.25.51.99/office/50k/" \
          "/smbdup/50k"
+   * @throws InsufficientAccessException In case when user doesn't have enough
+   * privileges to crawl the files.
    */
   public static void main(String a[]) throws IOException, RepositoryDocumentException,
-      DirectoryListingException {
+      DirectoryListingException, InsufficientAccessException {
     String startPath = a[0];
     String endPath = a[1];
     Credentials creds = new Credentials("", "admin", "test");
@@ -81,7 +83,7 @@ class CopySmbToLocalDisk {
     System.out.println("byte/s  " + byteRateSecs);
   }
 
-  private void copy() throws IOException, DirectoryListingException {
+  private void copy() throws IOException, DirectoryListingException, InsufficientAccessException {
     processDirectory(src);
   }
 
@@ -113,7 +115,7 @@ class CopySmbToLocalDisk {
   }
 
   private void processDirectory(ReadonlyFile d) throws IOException,
-      DirectoryListingException {
+      DirectoryListingException, InsufficientAccessException {
     if (!d.isDirectory()) {
       throw new IllegalStateException("not dir: " + d);
     }

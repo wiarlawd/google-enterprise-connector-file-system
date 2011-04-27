@@ -254,13 +254,13 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
-  public List<SmbReadonlyFile> listFiles() throws IOException, DirectoryListingException {
+  public List<SmbReadonlyFile> listFiles() throws IOException, DirectoryListingException, InsufficientAccessException {
     SmbFile[] files;
     try {
       files = delegate.listFiles();
     } catch (SmbException e) {
       if (e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-        throw new DirectoryListingException("failed to list files in " + getPath(), e);
+        throw new InsufficientAccessException("failed to list files in " + getPath(), e);
       } else {
         throw IOExceptionHelper.newIOException(
             "IOException while processing the directory " + getPath(), e);
