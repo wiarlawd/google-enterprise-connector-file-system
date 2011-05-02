@@ -16,7 +16,7 @@
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
   <property name="classes-tests.dir" value="${build-tests.dir}/classes" />
 
-  <property name="filesystem-project.dir" value="../file-system-connector" />
+  <!-- <property name="filesystem-project.dir" value="../file-system-connector" /> -->
 
   <property name="thirdparty-prod-jar.dir" value="${filesystem-project.dir}/third_party/prod" />
   <property name="thirdparty-test-jar.dir" value="${filesystem-project.dir}/third_party/test" />
@@ -48,6 +48,17 @@
   <property name="config-zip.dir" value  = "${zip.dir}/Config" />
   <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
 
+	<!--Cobertura properties -->
+
+   <property file="${config.dir}/build_code_coverage.properties" />
+		<path id="cobertura.classpath">
+			<fileset dir="${thirdparty-prod-jar.dir}">
+		     	<include name="**/*.jar" />
+		     </fileset>
+		</path>
+
+
+
   <target name="build" depends="init,compile_prod,jar_prod" />
 
   <target name="init">
@@ -76,7 +87,7 @@
     </javac>
   </target>
 
-  <target name="jar_prod" description="Build ${jar-prod.file}" 
+  <target name="jar_prod" description="Build ${jar-prod.file}"
           depends="compile_prod">
     <jar jarfile="${jar-prod.file}">
       <fileset dir="${classes-prod.dir}"/>
@@ -113,7 +124,7 @@
     </javac>
   </target>
 
-  <target name="jar_tests" description="Build ${jar-tests.file}" 
+  <target name="jar_tests" description="Build ${jar-tests.file}"
           depends="compile_tests">
     <jar jarfile="${jar-tests.file}">
       <fileset dir="${classes-tests.dir}"/>
@@ -133,7 +144,7 @@
     </jar>
   </target>
 
-  <target name="run_tests" depends="compile_tests,jar_prod">
+  <target name="run_tests" depends="compile_tests,jar_prod,instrument">
     <mkdir dir="${classes-tests.dir}/com/google/enterprise/connector/ldap/config"/>
 
     <copy todir="${classes-tests.dir}/com/google/enterprise/connector/ldap/config" >
@@ -142,6 +153,14 @@
 
     <junit printsummary="yes" haltonfailure="yes">
       <assertions><enable/></assertions>
+    	<!--
+    		                      The instrumented classes reference classes used by the
+    		                      Cobertura runtime, so Cobertura and its dependencies
+    		                      must be on your classpath.
+    		        -->
+      <classpath location="${instrumented.dir}" />
+      <classpath refid="cobertura.classpath" />
+
       <classpath>
         <pathelement location="${classes-tests.dir}" />
         <fileset dir="${connector-manager-thirdparty-jar.dir}">
@@ -155,6 +174,14 @@
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
         <pathelement location="${jar-prod.file}" />
       </classpath>
+      <formatter type="xml" />
+         <test name="${testcase}" todir="${reports.xml.dir}" if="testcase" />
+    	 <batchtest todir="${reports.xml.dir}" unless="testcase">
+    		<fileset dir="${test.dir}">
+    		    <include name="**/*Test.java" />
+    		</fileset>
+    	</batchtest>
+
       <formatter type="brief" usefile="no"/>
       <formatter type="plain" />
       <batchtest fork="yes" todir="${tests_out.dir}">
@@ -163,9 +190,107 @@
         </fileset>
       </batchtest>
     </junit>
+
+  	 <junitreport todir="${reports.xml.dir}">
+  		<fileset dir="${reports.xml.dir}">
+  		    <include name="TEST-*.xml" />
+  		</fileset>
+  	<report format="frames" todir="${reports.html.dir}" />
+  	</junitreport>
+
   </target>
 
   <target name="clean" description="Deletes all build files.">
     <delete dir="${build.dir}" />
   </target>
+
+	<!-- Cobertura Tasks -->
+
+		<taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+
+		    <target name="init_code_coverage">
+		        <mkdir dir="${classes.dir}" />
+		        <mkdir dir="${instrumented.dir}" />
+		        <mkdir dir="${reports.xml.dir}" />
+		        <mkdir dir="${reports.html.dir}" />
+		        <mkdir dir="${coverage.xml.dir}" />
+		        <mkdir dir="${coverage.summaryxml.dir}" />
+		        <mkdir dir="${coverage.html.dir}" />
+		    </target>
+
+
+		    <target name="compile_code_coverage" depends="init_code_coverage">
+		          <javac srcdir="${src.dir}" destdir="${classes.dir}" debug="true">
+		            <classpath>
+		                <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+		                <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+		             </classpath>
+		        </javac>
+		        <javac srcdir="${test.dir}" destdir="${classes.dir}" debug="true">
+		             <classpath>
+		                <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+		                <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+		             </classpath>
+		        </javac>
+		    </target>
+
+		    <target name="instrument" depends="compile_code_coverage">
+		                <!--
+		                    Remove the coverage data file and any old instrumentation.
+		                -->
+		                <delete file="cobertura.ser"/>
+		                <!-- <delete dir="${instrumented.dir}" /> -->
+
+		                <cobertura-instrument todir="${instrumented.dir}">
+		                    <!--
+		                        The following line causes instrument to ignore any
+		                        source line containing a reference to log4j, for the
+		                        purposes of coverage reporting.
+		                    -->
+		                    <ignore regex="org.apache.log4j.*" />
+
+		                    <fileset dir="${classes.dir}">
+		                        <!--
+		                            Instrument all the application classes, but
+		                            don't instrument the test classes.
+		                        -->
+		                        <include name="**/*.class" />
+		                        <exclude name="**/*Test.class" />
+		                    </fileset>
+		                </cobertura-instrument>
+		            </target>
+
+		    <target name="coverage-report">
+		                    <!--
+		                        Generate an XML file containing the coverage data using
+		                        the "srcdir" attribute.
+		                    -->
+		                    <cobertura-report srcdir="${src.dir}" destdir="${coverage.xml.dir}" format="xml" />
+		    </target>
+
+		     <target name="alternate-coverage-report">
+		                    <!--
+		                        Generate a series of HTML files containing the coverage
+		                        data in a user-readable form using nested source filesets.
+		                    -->
+		                    <cobertura-report destdir="${coverage.html.dir}">
+		                        <fileset dir="${src.dir}">
+		                            <include name="**/*.java"/>
+		                        </fileset>
+		                    </cobertura-report>
+		    </target>
+
+
+		    <target name="clean_code_coverage" description="Remove all files created by the build/test process.">
+		                    <delete dir="${classes.dir}" />
+		                    <delete dir="${instrumented.dir}" />
+		                    <delete dir="${reports.dir}" />
+		                    <delete file="cobertura.log" />
+		                    <delete file="cobertura.ser" />
+		    </target>
+
+
+		   <target name="run_code_coverage" depends="run_tests,coverage-report,alternate-coverage-report" description="Compile, instrument ourself, run the tests and generate JUnit and coverage reports."/>
+
+
 </project>
