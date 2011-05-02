@@ -18,24 +18,16 @@ package com.google.enterprise.connector.filesystem;
  * Should be thrown in cases where the crawler user does not have enough
  * privileges to perform the required operation.
  */
-public class InsufficientAccessException extends Exception {
-    /**
-     * Constructs a new InsufficientAccessException with message.
-     *
-     * @param message the message.
-     */
-    public InsufficientAccessException(String message) {
-      super(message);
-    }
+public class InsufficientAccessException extends FilesystemRepositoryDocumentException {
 
     /**
-     * Constructs a new InsufficientAccessException with message and cause.
+     * Constructs a new InsufficientAccessException with exception message 
+     * error message to be shown to user and cause.
      *
      * @param message the message
-     *
      * @param cause root failure cause
      */
     public InsufficientAccessException(String message, Throwable cause) {
-      super(message, cause);
+      super(message, FileSystemConnectorErrorMessages.ACCESS_DENIED, cause);
     }
 }

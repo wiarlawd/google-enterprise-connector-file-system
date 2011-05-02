@@ -3,20 +3,18 @@
 package com.google.enterprise.connector.filesystem;
 
 /**
- * @author vishvesh@google.com (Your Name Here)
- *
+ * Should be used in scenarios where the start path does not match with any 
+ * of the file systems known to the connector
  */
 public class UnknownFileSystemException extends FilesystemRepositoryDocumentException {
 
   /**
    * @param message
-   * @param error
    * @param cause
    */
   public UnknownFileSystemException(
-      String message, FileSystemConnectorErrorMessages error, Throwable cause) {
-    super(message, error, cause);
-    // TODO Auto-generated constructor stub
+      String message, Throwable cause) {
+    super(message, FileSystemConnectorErrorMessages.UNKNOWN_FILE_SYSTEM, cause);
   }
 
 }

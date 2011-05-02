@@ -77,7 +77,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
       setProperties(path, stripDomainFromAces, lastAccessTimeResetFlag);
     } catch (MalformedURLException e) {
-      throw new RepositoryDocumentException("malformed SMB path: " + path, e);
+      throw new IncorrectURLException("malformed SMB path: " + path, e);
     }
   }
 
@@ -271,6 +271,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       try {
         result.add(new SmbReadonlyFile(files[k], stripDomainFromAces, lastAccessTimeResetFlag));
       } catch (RepositoryDocumentException e) {
+        //TODO: This seems wrong. If we are not able to process a file 
+        //while listing the directory, may be we should skip it? 
         throw new DirectoryListingException(
             "Couldn't get last access time for a file :" + files[k].getPath(), e);
       }

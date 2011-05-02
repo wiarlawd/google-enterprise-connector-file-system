@@ -36,13 +36,13 @@ public class PathParser {
    * @throws RepositoryDocumentException
    */
   public ReadonlyFile<?> getFile(String path, Credentials credentials)
-      throws RepositoryDocumentException {
+      throws UnknownFileSystemException, RepositoryDocumentException {
     for (FileSystemType fileSystemType : fileSystemTypeRegisty) {
       if (fileSystemType.isPath(path)) {
         return fileSystemType.getReadableFile(path, credentials);
       }
     }
     // Cannot find anything.
-    throw new RepositoryDocumentException("path does not match known file system: " + path);
+    throw new UnknownFileSystemException("path does not match known file system: " + path, null);
   }
 }

@@ -33,8 +33,8 @@ public class FilesystemRepositoryDocumentException extends RepositoryDocumentExc
     /**
      * Constructs a new DirectoryListingException with message and cause.
      *
-     * @param message the message
-     *
+     * @param message the message to be logged
+     * @param error Error message to show to the user
      * @param cause root failure cause
      */
     public FilesystemRepositoryDocumentException(String message, FileSystemConnectorErrorMessages error, Throwable cause) {

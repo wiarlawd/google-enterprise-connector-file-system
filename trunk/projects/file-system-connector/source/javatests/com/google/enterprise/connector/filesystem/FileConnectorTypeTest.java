@@ -189,7 +189,7 @@ public class FileConnectorTypeTest extends TestCase {
           type.validateConfig(config, Locale.getDefault(), new MockFileConnectorFactory(
               snapshotDir, persistDir));
       assertNotNull(response);
-      assertEquals(US_BUNDLE.getString(FileConnectorType.ErrorMessages.MISSING_FIELDS.name()),
+      assertEquals(US_BUNDLE.getString(FileSystemConnectorErrorMessages.MISSING_FIELDS.name()),
           response.getMessage());
       assertTrue(response.getFormSnippet().contains(RED_ON));
       assertTrue(response.getFormSnippet().contains(RED_OFF));
@@ -202,7 +202,7 @@ public class FileConnectorTypeTest extends TestCase {
     ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
         new MockFileConnectorFactory(snapshotDir, persistDir));
     assertNotNull(response);
-    assertEquals(US_BUNDLE.getString(FileConnectorType.ErrorMessages.MISSING_FIELDS.name()),
+    assertEquals(US_BUNDLE.getString(FileSystemConnectorErrorMessages.MISSING_FIELDS.name()),
         response.getMessage());
     int ix = 0;
     String snippet = response.getFormSnippet();

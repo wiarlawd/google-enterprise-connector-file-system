@@ -54,11 +54,6 @@ public class FileConnectorType implements ConnectorType {
 
   private static final Logger LOG = Logger.getLogger(FileConnectorType.class.getName());
   private static final Map<String, String> EMPTY_CONFIG = Collections.emptyMap();
-  enum ErrorMessages{CONNECTOR_INSTANTIATION_FAILED,
-      MISSING_FIELDS, READ_START_PATH_FAILED, PATTERNS_ELIMINATED_START_PATH,
-      ADD_ANOTHER_ROW_BUTTON, CANNOT_ADD_ANOTHER_ROW,
-      ACCESS_DENIED, WRONG_SMB_TYPE, UNC_NEEDS_TRANSLATION }
-
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
      * Our field values come from HTML input boxes which get maped to
@@ -318,7 +313,7 @@ public class FileConnectorType implements ConnectorType {
      */
     String getJavascriptToCreateMoreFields(String tableName, ResourceBundle bundle) {
       // TODO: escape HTML characters
-      String cannotAddStr = bundle.getString(ErrorMessages.CANNOT_ADD_ANOTHER_ROW.name());
+      String cannotAddStr = bundle.getString(FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name());
       StringBuilder buf = new StringBuilder();
       buf.append(SCRIPT_START);
       buf.append("function addMoreRowsToTable_" + tableName + "() { \n");
@@ -353,7 +348,7 @@ public class FileConnectorType implements ConnectorType {
 
     String getJavaScriptInitiatingButton(String htmlTableName, ResourceBundle bundle) {
       // TODO: escape HTML characters
-      String buttonStr = bundle.getString(ErrorMessages.ADD_ANOTHER_ROW_BUTTON.name());
+      String buttonStr = bundle.getString(FileSystemConnectorErrorMessages.ADD_ANOTHER_ROW_BUTTON.name());
       return String.format("<tr><td> </td><td> "
           + "<button id=\"more_%s_button\" type=\"button\" "
           + "onclick=\"addMoreRowsToTable_%s()\">" + buttonStr + "</button>"
@@ -421,7 +416,7 @@ public class FileConnectorType implements ConnectorType {
 
       Collection<String> errorKeys = assureAllMandatoryFieldsPresent();
       if (errorKeys.size() != 0) {
-        return new ConfigureResponse(bundle.getString(ErrorMessages.MISSING_FIELDS.name()),
+        return new ConfigureResponse(bundle.getString(FileSystemConnectorErrorMessages.MISSING_FIELDS.name()),
             getFormRows(errorKeys));
       }
 
@@ -456,7 +451,7 @@ public class FileConnectorType implements ConnectorType {
       } catch (RepositoryException e) {
         // We should perform sufficient validation so instantiation succeeds.
         LOG.severe("failed to instantiate File Connector " + e.getMessage());
-        return new ConfigureResponse(bundle.getString(ErrorMessages.CONNECTOR_INSTANTIATION_FAILED
+        return new ConfigureResponse(bundle.getString(FileSystemConnectorErrorMessages.CONNECTOR_INSTANTIATION_FAILED
             .name()), getFormRows(null));
       }
     }
@@ -509,7 +504,7 @@ public class FileConnectorType implements ConnectorType {
           String translatedPath = makeSmbPathFromUncPath(path);
           LOG.info("UNC need to be translated to SMB URL: " + path);
           buf.append(String.format(bundle.getLocale(),
-              bundle.getString(ErrorMessages.UNC_NEEDS_TRANSLATION.name()),
+              bundle.getString(FileSystemConnectorErrorMessages.UNC_NEEDS_TRANSLATION.name()),
               path, translatedPath));
           buf.append("\n");
         }
@@ -542,16 +537,14 @@ public class FileConnectorType implements ConnectorType {
             }
           }
           LOG.info("successfully read " + path);
-        } catch (WrongSmbTypeException e3) {
-          addErrorToBuffer(buf, "Wrong SmbFile.getType(): ", path, e3, ErrorMessages.WRONG_SMB_TYPE);
-        } catch (RepositoryDocumentException e1) {
-          addErrorToBuffer(buf, "failed to list start path: ", path, e1, ErrorMessages.READ_START_PATH_FAILED);
+        } catch (FilesystemRepositoryDocumentException e) {
+          addErrorToBuffer(buf, e.getMessage(), path, e, e.getErrorMessage());
+        } catch (RepositoryDocumentException e) {
+          addErrorToBuffer(buf, "failed to list start path: ", path, e, FileSystemConnectorErrorMessages.READ_START_PATH_FAILED);
         } catch (IOException e) {
-          addErrorToBuffer(buf, "failed to list start path: ", path, e, ErrorMessages.READ_START_PATH_FAILED);
+          addErrorToBuffer(buf, "failed to list start path: ", path, e, FileSystemConnectorErrorMessages.READ_START_PATH_FAILED);
         } catch (DirectoryListingException e) {
-          addErrorToBuffer(buf, "failed to list start path: ", path, e, ErrorMessages.READ_START_PATH_FAILED);
-        } catch (InsufficientAccessException e) {
-          addErrorToBuffer(buf, "Crawler user does not have enough privileges for path: ", path, e, ErrorMessages.ACCESS_DENIED);
+          addErrorToBuffer(buf, "Cannot fetch list of files from start path: ", path, e, FileSystemConnectorErrorMessages.LISTING_FAILED);
         }
       }
       return XML.escape(buf.toString());
@@ -564,7 +557,7 @@ public class FileConnectorType implements ConnectorType {
      * @param path path of the file for which the error occured
      * @param e Exception with which the error occured
      */
-    private void addErrorToBuffer(StringBuilder buf, String loggerMessage, String path, Exception e, ErrorMessages errorMessage) {
+    private void addErrorToBuffer(StringBuilder buf, String loggerMessage, String path, Exception e, FileSystemConnectorErrorMessages errorMessage) {
       LOG.info(loggerMessage + path + "; " + e);
       buf.append(String.format(bundle.getLocale(),
             bundle.getString(errorMessage.name()),
@@ -590,7 +583,7 @@ public class FileConnectorType implements ConnectorType {
           } else {
             LOG.info("start path excluded: " + path);
             buf.append(String.format(bundle.getLocale(),
-                bundle.getString(ErrorMessages.PATTERNS_ELIMINATED_START_PATH.name()),
+                bundle.getString(FileSystemConnectorErrorMessages.PATTERNS_ELIMINATED_START_PATH.name()),
                 path));
             buf.append("\n");
           }

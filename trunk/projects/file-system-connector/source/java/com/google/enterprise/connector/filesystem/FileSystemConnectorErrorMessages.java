@@ -3,7 +3,7 @@
 package com.google.enterprise.connector.filesystem;
 
 
-/**Enum of error messages that are shown back to the user on admin console
+/**Enum of error messages that are displayed to the user on admin console
  *
  */
 enum FileSystemConnectorErrorMessages {
@@ -15,7 +15,8 @@ enum FileSystemConnectorErrorMessages {
   CANNOT_ADD_ANOTHER_ROW,
   ACCESS_DENIED,
   WRONG_SMB_TYPE,
-  UNABLE_TO_ACCESS,
+  LISTING_FAILED,
   UNKNOWN_FILE_SYSTEM,
+  INCORRECT_URL,
   UNC_NEEDS_TRANSLATION;
 }

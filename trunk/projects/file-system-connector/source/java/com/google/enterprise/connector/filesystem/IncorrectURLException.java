@@ -15,7 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 /**
- * Should be thrown in cases where the start path URL is not correct
+ * Should be thrown in cases where the start path URL is not correctly formed.
  */
 public class IncorrectURLException extends FilesystemRepositoryDocumentException {
 

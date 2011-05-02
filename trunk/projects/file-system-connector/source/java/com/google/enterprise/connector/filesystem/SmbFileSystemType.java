@@ -146,7 +146,7 @@ public class SmbFileSystemType implements FileSystemType {
     if (null == result) {
       throw new RepositoryDocumentException("failed to open file: " + smbStylePath);
     } else if (!result.isTraversable()) {
-      throw new WrongSmbTypeException();
+      throw new WrongSmbTypeException("Wrong smb type", null);
     } else {
       return result;
     }

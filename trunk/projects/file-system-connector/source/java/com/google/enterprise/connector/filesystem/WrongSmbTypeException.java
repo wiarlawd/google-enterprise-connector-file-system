@@ -16,5 +16,14 @@ package com.google.enterprise.connector.filesystem;
 
 /** Signals that a start path is neither TYPE_SHARE nor TYPE_FILESYSTEM. */
 public class WrongSmbTypeException
-    extends com.google.enterprise.connector.spi.RepositoryDocumentException {
+    extends FilesystemRepositoryDocumentException {
+
+  /**
+   * @param message
+   * @param cause
+   */
+  public WrongSmbTypeException(
+      String message, Throwable cause) {
+    super(message, FileSystemConnectorErrorMessages.WRONG_SMB_TYPE, cause);
+  }
 }
