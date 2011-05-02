@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.util.BasicChecksumGenerator;
 import com.google.enterprise.connector.util.diffing.ChangeQueue;
+import com.google.enterprise.connector.util.diffing.ChangeQueue.DefaultCrawlActivityLogger;
 import com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue;
 import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
 import com.google.enterprise.connector.util.diffing.DiffingConnector;
@@ -96,7 +97,7 @@ public class FileConnectorTest extends TestCase {
     DocumentContext context = new DocumentContext(fileSystemTypeRegistry, false,
         true, null, null, null, new MimeTypeFinder(), tcm);
     FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(context);
-    changeQueue = new ChangeQueue(100, 10000);
+    changeQueue = new ChangeQueue(100, 10000, new DefaultCrawlActivityLogger());
     checksumGenerator = new BasicChecksumGenerator("SHA1");
     TestDirectoryManager testDirectoryManager  = new TestDirectoryManager(this);
     List<String> startPaths = createFiles(testDirectoryManager);

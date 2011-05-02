@@ -19,6 +19,7 @@ import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Session;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.diffing.ChangeQueue;
+import com.google.enterprise.connector.util.diffing.ChangeQueue.DefaultCrawlActivityLogger;
 import com.google.enterprise.connector.util.diffing.ChangeSource;
 import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
 import com.google.enterprise.connector.util.diffing.DiffingConnector;
@@ -41,7 +42,7 @@ public class FileSessionTest extends TestCase {
 
   @Override
   public void setUp() throws IOException {
-    changes = new ChangeQueue(100, 10);
+    changes = new ChangeQueue(100, 10, new DefaultCrawlActivityLogger());
     FileSystemTypeRegistry fileSystemTypeRegistry =
       new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
           new SmbFileSystemType(false,false)));

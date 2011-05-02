@@ -21,6 +21,7 @@ import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.BasicChecksumGenerator;
 import com.google.enterprise.connector.util.diffing.ChangeQueue;
+import com.google.enterprise.connector.util.diffing.ChangeQueue.DefaultCrawlActivityLogger;
 import com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue;
 import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
 import com.google.enterprise.connector.util.diffing.DiffingConnector;
@@ -66,7 +67,7 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         false, true, null, null, null,
         new MimeTypeFinder(), tcm);
     FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(context);
-    changeQueue = new ChangeQueue(100, 10000);
+    changeQueue = new ChangeQueue(100, 10000, new DefaultCrawlActivityLogger());
     checksumGenerator = new BasicChecksumGenerator("SHA1");
     List<String> startPaths = readAllStartPaths(config);
 
