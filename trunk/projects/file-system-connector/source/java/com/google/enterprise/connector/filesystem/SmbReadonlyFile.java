@@ -348,4 +348,12 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       throw new RepositoryDocumentException(e);
     }
   }
+  
+  public boolean exists() throws RepositoryDocumentException {
+    try {
+      return delegate.exists();
+    } catch (SmbException e) {
+      throw new RepositoryDocumentException(e);
+    }
+  }
 }

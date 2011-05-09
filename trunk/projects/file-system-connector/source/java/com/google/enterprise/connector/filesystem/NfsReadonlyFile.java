@@ -129,4 +129,9 @@ public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
   public boolean supportsAuthn() {
     return false;
   }
+
+  /* @Override */
+  public boolean exists() {
+    return delegate.exists();
+  }
 }

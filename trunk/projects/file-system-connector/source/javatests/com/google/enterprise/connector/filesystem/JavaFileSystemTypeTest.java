@@ -65,9 +65,11 @@ public class JavaFileSystemTypeTest extends TestCase {
     try {
       f = fst.getReadableFile(dir.getAbsolutePath() + "/missing", null);
       fail("getReadbale should throw an Exception here");
-    } catch  (RepositoryDocumentException rde){
+    } catch  (NonExistentResourceException rde){
       // Expected.
-      assertTrue(rde.getMessage().contains("failed to open file:"));
+      assertTrue(rde.getMessage().contains("Path doesn't exist: " + dir.getAbsolutePath() + "/missing"));
+    } catch (Exception e) {
+      fail("Expecting NonExistentResourceException but got a different one");
     }
     try {
       f = fst.getReadableFile("NotASlash/foo/bar.txt", null);

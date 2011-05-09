@@ -39,10 +39,16 @@ public class PathParser {
       throws UnknownFileSystemException, RepositoryDocumentException {
     for (FileSystemType fileSystemType : fileSystemTypeRegisty) {
       if (fileSystemType.isPath(path)) {
-        return fileSystemType.getReadableFile(path, credentials);
+        ReadonlyFile<?> file = fileSystemType.getReadableFile(path, credentials);
+        if(!file.exists()) {
+          throw new NonExistentResourceException("Path does not exist: " + path);
+        } else if (!file.canRead()) {
+          throw new InsufficientAccessException("User doesn't have access to : " + path);
+        }
+        return file;
       }
     }
     // Cannot find anything.
-    throw new UnknownFileSystemException("path does not match known file system: " + path, null);
+    throw new UnknownFileSystemException("path does not match known file system: " + path);
   }
 }

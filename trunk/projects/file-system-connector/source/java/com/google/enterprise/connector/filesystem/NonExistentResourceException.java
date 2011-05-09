@@ -9,7 +9,7 @@ package com.google.enterprise.connector.filesystem;
 
 public class NonExistentResourceException extends FilesystemRepositoryDocumentException {
 
-  /** Constructs a new NonExistentResourceException
+  /** Constructs a new NonExistentResourceException with the wrapped exception
    * @param message message
    * @param cause Wrapped exception
    */
@@ -21,8 +21,7 @@ public class NonExistentResourceException extends FilesystemRepositoryDocumentEx
   /** Constructs a new NonExistentResourceException
    * @param message message
    */
-  public NonExistentResourceException(
-      String message) {
-    super(message, FileSystemConnectorErrorMessages.NONEXISTENT_RESOURCE, null);
+  public NonExistentResourceException(String message) {
+    super(message, FileSystemConnectorErrorMessages.NONEXISTENT_RESOURCE);
   }
 }

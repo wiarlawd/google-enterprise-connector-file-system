@@ -16,5 +16,13 @@ public class UnknownFileSystemException extends FilesystemRepositoryDocumentExce
       String message, Throwable cause) {
     super(message, FileSystemConnectorErrorMessages.UNKNOWN_FILE_SYSTEM, cause);
   }
+  
+  /**
+   * @param message Error message
+   */
+  public UnknownFileSystemException(String message) {
+    super(message, FileSystemConnectorErrorMessages.UNKNOWN_FILE_SYSTEM);
+  }
+
 
 }

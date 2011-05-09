@@ -26,4 +26,12 @@ public class WrongSmbTypeException
       String message, Throwable cause) {
     super(message, FileSystemConnectorErrorMessages.WRONG_SMB_TYPE, cause);
   }
+  
+  /**
+   * @param message error message
+   */
+  public WrongSmbTypeException(String message) {
+    super(message, FileSystemConnectorErrorMessages.WRONG_SMB_TYPE);
+  }
+
 }

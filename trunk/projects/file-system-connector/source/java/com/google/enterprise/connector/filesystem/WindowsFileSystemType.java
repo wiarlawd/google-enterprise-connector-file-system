@@ -89,8 +89,13 @@ public class WindowsFileSystemType implements FileSystemType {
       throw new IllegalArgumentException("Invalid path : " + path);
     }
     WindowsReadonlyFile result = getFile(path, credentials);
+    //TODO: lot of implementation of java and windows file system is similar, 
+    //may be extract common code in the base class ?
+    if (!result.exists()) {
+      throw new NonExistentResourceException("Path doesn't exist: " + path);
+    }
     if (!result.canRead()) {
-      throw new RepositoryDocumentException("Failed to open file : " + path);
+      throw new InsufficientAccessException("User doesn't have access to : " + path);
     }
     return result;
   }

@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -76,4 +78,9 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>> extends FileInfo {
    * based on a specific associated {@link Credentials}.
    */
   public boolean supportsAuthn();
+  
+  /** Returns true if the file actually exists in the file system false otherwise
+   * @return true / false depending on whether the file exists or not.
+   */
+  public boolean exists() throws RepositoryDocumentException;
 }

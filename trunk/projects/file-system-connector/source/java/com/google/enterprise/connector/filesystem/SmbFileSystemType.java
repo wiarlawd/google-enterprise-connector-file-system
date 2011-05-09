@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import jcifs.Config;
+import jcifs.smb.SmbException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -140,9 +141,7 @@ public class SmbFileSystemType implements FileSystemType {
     if (!isPath(smbStylePath)) {
       throw new IllegalArgumentException("Invalid path " + smbStylePath);
     }
-
     SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials);
-
     if (null == result) {
       throw new RepositoryDocumentException("failed to open file: " + smbStylePath);
     } else if (!result.isTraversable()) {
@@ -152,16 +151,25 @@ public class SmbFileSystemType implements FileSystemType {
     }
   }
 
-  private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials) {
+  private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials) throws FilesystemRepositoryDocumentException {
     SmbReadonlyFile result = null;
     try {
       result = new SmbReadonlyFile(path, credentials, stripDomainFromAces,
           lastAccessTimeResetFlag);
-      if (!result.canRead()) {
-        result = null;
+      if (!result.exists()) {
+        throw new NonExistentResourceException("This resource path does not exist: " + path);
       }
+    } catch (FilesystemRepositoryDocumentException e) {
+      LOG.info("Validation error occured: " + e.getMessage());
+      throw e;
     } catch(RepositoryDocumentException rde) {
       result = null;
+      if (rde.getCause() instanceof SmbException) {
+        SmbException smbe = (SmbException)rde.getCause();
+        if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
+          throw new InsufficientAccessException("access denied", smbe); 
+        }
+      }
     }
     return result;
   }

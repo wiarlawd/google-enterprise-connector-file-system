@@ -30,4 +30,13 @@ public class InsufficientAccessException extends FilesystemRepositoryDocumentExc
     public InsufficientAccessException(String message, Throwable cause) {
       super(message, FileSystemConnectorErrorMessages.ACCESS_DENIED, cause);
     }
+    
+    /**
+     * Constructs a new InsufficientAccessException with exception message 
+     * @param message the message
+     */
+    public InsufficientAccessException(String message) {
+      super(message, FileSystemConnectorErrorMessages.ACCESS_DENIED);
+    }
+
 }

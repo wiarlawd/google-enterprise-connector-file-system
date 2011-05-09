@@ -43,6 +43,17 @@ public class FilesystemRepositoryDocumentException extends RepositoryDocumentExc
     }
 
     /**
+     * Constructs a new DirectoryListingException with message and cause.
+     *
+     * @param message the message to be logged
+     * @param error Error message to show to the user
+     */
+    public FilesystemRepositoryDocumentException(String message, FileSystemConnectorErrorMessages error) {
+      super(message);
+      this.errorMessage = error;
+    }
+
+    /**
      * @return the errorMessage
      */
     public FileSystemConnectorErrorMessages getErrorMessage() {

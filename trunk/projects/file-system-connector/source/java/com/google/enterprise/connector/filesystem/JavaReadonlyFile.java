@@ -161,4 +161,9 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
   public boolean acceptedBy(FilePatternMatcher matcher) {
     return matcher.acceptName(getPath());
   }
+
+  /* @Override */
+  public boolean exists() {
+    return delegate.exists();
+  }
 }

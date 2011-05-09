@@ -197,4 +197,9 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
     }
     return ts;
   }
+
+  /* @Override */
+  public boolean exists() {
+    return delegate.exists();
+  }
 }

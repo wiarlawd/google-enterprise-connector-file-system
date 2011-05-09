@@ -114,6 +114,10 @@ public class FileInfoCacheTest extends TestCase {
     public boolean supportsAuthn() {
       return false;
     }
+
+    public boolean exists() {
+      return true;
+    }
   }
 
   public void testChecksum() throws Exception {

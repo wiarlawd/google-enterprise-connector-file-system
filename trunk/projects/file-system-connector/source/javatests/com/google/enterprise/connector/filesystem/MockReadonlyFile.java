@@ -43,7 +43,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private String fileContents;
   private IOException exception;
   private IOException lengthException;
-
+  private boolean exists = true;
   /**
    * Create a file or directory under {@code parent} with the specified {@code name}.
    * @param parent
@@ -308,5 +308,17 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   @Override
   public String toString() {
     return getPath();
+  }
+
+  @Override
+  public boolean exists() {
+    return this.exists;
+  }
+  
+  /**Sets the boolean that decides whether the file should exist or not.
+   * @param exists
+   */
+  public void setExists(boolean exists) {
+    this.exists = exists;
   }
 }
