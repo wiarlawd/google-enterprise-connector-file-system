@@ -52,4 +52,9 @@ public class NfsFileSystemType implements FileSystemType {
   public String getName() {
     return NfsReadonlyFile.FILE_SYSTEM_TYPE;
   }
+  
+  /* @Override */
+  public boolean isUserPasswordRequired() {
+    return true;
+  }
 }

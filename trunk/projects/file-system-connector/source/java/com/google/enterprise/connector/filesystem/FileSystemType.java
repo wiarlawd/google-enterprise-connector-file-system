@@ -55,4 +55,10 @@ public interface FileSystemType {
    */
   public ReadonlyFile<?> getReadableFile(String path, Credentials credentials)
       throws RepositoryDocumentException;
+
+  /**
+   * Returns whether this file system requires user name and password.
+   * @return true / false depending on whether credentials are required or not.
+   */
+  public boolean isUserPasswordRequired();
 }

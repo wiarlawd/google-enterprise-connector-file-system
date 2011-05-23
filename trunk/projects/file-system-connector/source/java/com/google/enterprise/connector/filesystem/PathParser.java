@@ -51,4 +51,20 @@ public class PathParser {
     // Cannot find anything.
     throw new UnknownFileSystemException("path does not match known file system: " + path);
   }
+  
+  /**
+   * Returns whether the credentials are required to crawl the given start path.
+   * @param path path to crawl
+   * @return true / false depending on whether the credentials are required or not.
+   */
+  public boolean isUserNamePasswordNeeded(String path) {
+    for (FileSystemType fileSystemType : fileSystemTypeRegisty) {
+      if (fileSystemType.isPath(path)) {
+        if (fileSystemType.isUserPasswordRequired()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 }

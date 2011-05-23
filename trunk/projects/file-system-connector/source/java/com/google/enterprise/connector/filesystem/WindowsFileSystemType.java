@@ -99,4 +99,9 @@ public class WindowsFileSystemType implements FileSystemType {
     }
     return result;
   }
+  
+  /* @Override */
+  public boolean isUserPasswordRequired() {
+    return false;
+  }
 }

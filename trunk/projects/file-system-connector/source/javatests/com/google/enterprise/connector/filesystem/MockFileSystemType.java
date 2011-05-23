@@ -20,11 +20,17 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
  */
 public class MockFileSystemType implements FileSystemType {
   private final MockReadonlyFile root;
-
+  private final boolean isUserPasswordRequired;
+  
   public MockFileSystemType(MockReadonlyFile root) {
-    this.root = root;
+    this(root, false);
   }
 
+  public MockFileSystemType(MockReadonlyFile root, boolean isUserPasswordRequired) {
+    this.root = root;
+    this.isUserPasswordRequired = isUserPasswordRequired;
+  }
+  
   /* @Override */
   public boolean isPath(String path) {
     return path.startsWith(root.getPath());
@@ -68,5 +74,10 @@ public class MockFileSystemType implements FileSystemType {
       throw new RepositoryDocumentException("failed to open file: " + path);
     }
     return result;
+  }
+
+  /* @Override */
+  public boolean isUserPasswordRequired() {
+    return isUserPasswordRequired;
   }
 }

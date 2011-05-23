@@ -51,4 +51,9 @@ public class JavaFileSystemType implements FileSystemType {
     return result;
   }
 
+  /* @Override */
+  public boolean isUserPasswordRequired() {
+    return false;
+  }
+
 }

@@ -14,9 +14,15 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+
 import com.google.common.collect.ImmutableList;
-import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 import com.google.enterprise.connector.spi.ConfigureResponse;
+import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
 import junit.framework.TestCase;
 
@@ -348,4 +354,28 @@ public class FileConnectorTypeTest extends TestCase {
         "<input name=\"exclude_3\" id=\"exclude_3\" "
             + "size=\"80\" value=\"&amp;&lt;>.\">"));
     }
+  
+  public void testNoCredentialswhereRequired() {
+    FileSystemType mockFileType = createMock(FileSystemType.class);
+    expect(mockFileType.getName()).andReturn("mock");
+    expect(mockFileType.isPath(anyObject(String.class))).andReturn(true);
+    expect(mockFileType.isUserPasswordRequired()).andReturn(true);
+    replay(mockFileType);
+
+    FileSystemTypeRegistry fileSystemTypeRegistry = 
+        new FileSystemTypeRegistry(Arrays.asList(mockFileType));
+    PathParser pathParser = new PathParser(fileSystemTypeRegistry);
+
+    type = new FileConnectorType(pathParser);
+
+    ConfigureResponse response = type.getPopulatedConfigForm(config,
+        Locale.getDefault());
+    assertEquals("", response.getMessage());
+    assertBalancedTags(response.getFormSnippet());
+    
+    response = type.validateConfig(config, Locale.getDefault(), new MockFileConnectorFactory(snapshotDir, persistDir));
+    
+    assertTrue(response.getMessage().contains("missing fields"));
+    verify(mockFileType);
+  }
 }

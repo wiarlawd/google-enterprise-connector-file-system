@@ -178,4 +178,9 @@ public class SmbFileSystemType implements FileSystemType {
   public String getName() {
     return SmbReadonlyFile.FILE_SYSTEM_TYPE;
   }
+  
+  /* @Override */
+  public boolean isUserPasswordRequired() {
+    return true;
+  }
 }

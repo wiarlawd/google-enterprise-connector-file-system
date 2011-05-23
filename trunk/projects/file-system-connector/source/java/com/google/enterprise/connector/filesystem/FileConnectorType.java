@@ -14,15 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.ConfigureResponse;
-import com.google.enterprise.connector.spi.ConnectorFactory;
-import com.google.enterprise.connector.spi.ConnectorType;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.XmlUtils;
-
-import org.json.XML;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,6 +24,15 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.json.XML;
+
+import com.google.enterprise.connector.spi.ConfigureResponse;
+import com.google.enterprise.connector.spi.ConnectorFactory;
+import com.google.enterprise.connector.spi.ConnectorType;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.XmlUtils;
 
 /**
  * Facilitates creating a FileConnector by providing an HTML web form
@@ -457,6 +457,31 @@ public class FileConnectorType implements ConnectorType {
     }
 
     /**
+     * Checks to see if the given start paths require user name and password fields
+     * and if the user hasn't given them, then returns names of the missing fields.
+     * @return List containing names of the user name and password fields if the
+     * user hasn't specified values and they are required. Empty list otherwise.
+     */
+    private Collection<String> assureProperUserCredentials() {
+      List<String> credentialList = new ArrayList<String>();
+      if (!userField.hasValue() || !passwordField.hasValue()) {
+        MultiLineField startPaths = startField;
+        for (String startPath : startPaths.lines) {
+          if (pathParser.isUserNamePasswordNeeded(startPath)) {
+            if (!userField.hasValue()) {
+              credentialList.add(userField.getName());
+            }
+            if (!passwordField.hasValue()) {
+              credentialList.add(passwordField.getName());
+            }
+            break;
+          }
+        }
+      }
+      return credentialList;
+    }
+
+    /**
      * Checks to make sure all required fields are set.
      *
      * @return a collection of missing field names.
@@ -469,7 +494,7 @@ public class FileConnectorType implements ConnectorType {
           missing.add(field.getName());
         }
       }
-
+      missing.addAll(assureProperUserCredentials());
       return missing;
     }
 
