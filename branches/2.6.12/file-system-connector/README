@@ -3,7 +3,7 @@ Welcome to the Google Enterprise Connector for File Systems
 Steps to build Google Enterprise Connector for File Systems 2011
 ================================================================================
 
-1. Ensure you have Java 6.
+1. Ensure you have Java 5.
    You can get it from http://java.sun.com/javase/downloads/index.jsp
 
 2. Ensure that you have Apache Ant installed on your system.
