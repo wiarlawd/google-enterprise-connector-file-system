@@ -38,7 +38,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>> extends FileInfo {
    * @return files and directories within this directory in sorted order.
    * @throws IOException if this is not a directory, or if it can't be read
    */
-  public List<T> listFiles() throws IOException;
+  public List<T> listFiles() throws InsufficientAccessException, IOException;
 
   /**
    * @return an input stream that reads this file.

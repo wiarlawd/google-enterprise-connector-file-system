@@ -526,9 +526,12 @@ public class FileConnectorType implements ConnectorType {
         try {
           ReadonlyFile<?> file = pathParser.getFile(path, credentials);
           if (file.isDirectory()) {
+            long count = 0;
             for (ReadonlyFile<?> sub : file.listFiles()) {
-              LOG.finest("list: " + sub.getPath());
+              ++count;
+              LOG.finest("list: "+ count + " " + sub.getPath());
             }
+            LOG.fine("Total # of files returned is : " + count);
           }
           LOG.info("successfully read " + path);
         } catch (WrongSmbTypeException e3) {
@@ -549,6 +552,12 @@ public class FileConnectorType implements ConnectorType {
               bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
               path));
           buf.append("\n");
+        } catch (InsufficientAccessException e) {
+            LOG.info("Inaccessible Directory: " + path + "; " + e);
+            buf.append(String.format(bundle.getLocale(),
+                bundle.getString(ErrorMessages.READ_START_PATH_FAILED.name()),
+                path));
+            buf.append("\n");
         }
       }
       return XML.escape(buf.toString());

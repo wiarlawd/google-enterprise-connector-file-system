@@ -14,11 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-
-import jcifs.smb.SmbException;
-import jcifs.smb.SmbFile;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +26,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
+
+import jcifs.smb.SmbException;
+import jcifs.smb.SmbFile;
+
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.util.IOExceptionHelper;
 
 /**
  * Implementation of ReadonlyFile that delegates to {@code jcifs.smb.SmbFile}.
@@ -165,25 +166,43 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
-  public List<SmbReadonlyFile> listFiles() throws IOException {
-    SmbFile[] files;
-    try {
-      files = delegate.listFiles();
-    } catch (SmbException e) {
-      throw IOExceptionHelper.newIOException(
-          "failed to list files in " + getPath(), e);
-    }
-    List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
-    for (int k = 0; k < files.length; ++k) {
-      result.add(new SmbReadonlyFile(files[k], stripDomainFromAces));
-    }
-    Collections.sort(result, new Comparator<SmbReadonlyFile>() {
-      /* @Override */
-      public int compare(SmbReadonlyFile o1, SmbReadonlyFile o2) {
-        return o1.getPath().compareTo(o2.getPath());
+  public List<SmbReadonlyFile> listFiles() throws IOException, InsufficientAccessException {
+	List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>();
+	try {
+      SmbFile[] files = delegate.listFiles();
+      result = new ArrayList<SmbReadonlyFile>(files.length);
+      LOG.fine("Got " + files.length + " number of files in "+ this.getPath());
+      for (int k = 0; k < files.length; ++k) {
+        result.add(new SmbReadonlyFile(files[k], stripDomainFromAces));
       }
-    });
+      Collections.sort(result, new Comparator<SmbReadonlyFile>() {
+        /* @Override */
+        public int compare(SmbReadonlyFile o1, SmbReadonlyFile o2) {
+          return o1.getPath().compareTo(o2.getPath());
+        }
+      });
+    }catch (SmbException e) {
+	  handleException(e);
+    }
     return result;
+  }
+  
+  /**
+   * Checks the nature of the exception and throws the proper 
+   * exception accordingly.
+   * @param e SmbException 
+   * @throws InsufficientAccessException if the user doesn't have enough
+   * privileges to perform required operation
+   * @throws IOException in all other cases
+   */
+  private void handleException(SmbException e)
+	  throws InsufficientAccessException, IOException {
+	if (e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
+	  throw new InsufficientAccessException("failed to list files in " + getPath(), e);
+	} else {
+	  throw IOExceptionHelper.newIOException(
+	  "IOException while processing the directory " + getPath(), e);
+	}
   }
 
   /* @Override */
@@ -243,6 +262,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   boolean isTraversable() throws RepositoryDocumentException {
     try {
       int type = delegate.getType();
+      LOG.fine("The type of SMB share is : " + type);
       return type == SmbFile.TYPE_SHARE || type == SmbFile.TYPE_FILESYSTEM;
     } catch (SmbException e) {
       throw new RepositoryDocumentException(e);

@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.spi.TraversalContext;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -253,8 +254,9 @@ public class FileSystemMonitor implements Runnable {
         // This TODO would be mitigated by a reconciliation with GSA.
         performExceptionRecovery();
       }
-    } catch (InterruptedException ie) {
-      LOG.log(Level.INFO, "FileSystemMonitor " + name + " received stop signal.");
+    } catch (Exception ie) {
+      LOG.log(Level.INFO, "FileSystemMonitor " + name + " got an exception.");
+      LOG.log(Level.INFO,"Thread is dying because of : " + ie);
     }
   }
 
@@ -389,8 +391,14 @@ public class FileSystemMonitor implements Runnable {
     if (fileOrDir.isDirectory()) {
       processDirectory(fileOrDir);
     } else if (fileOrDir.acceptedBy(matcher)) {
+      LOG.finest("File " + fileOrDir.getPath() + " matched by the pattern");
+      if (fileOrDir.isRegularFile()) {
       safelyProcessFile(fileOrDir);
+      } else {
+        fileSink.add(fileOrDir, FileFilterReason.IO_EXCEPTION);  
+      }
     } else {
+      LOG.finest("File " + fileOrDir.getPath() + " not matched by the pattern");
       fileSink.add(fileOrDir, FileFilterReason.PATTERN_MISMATCH);
     }
   }
@@ -406,6 +414,7 @@ public class FileSystemMonitor implements Runnable {
   private void processDeletes(ReadonlyFile<?> file) throws SnapshotReaderException,
       InterruptedException {
     while (current != null && (file == null || pathCompare(file, current) > 0)) {
+      LOG.fine("Deleted file or directory : " + current.getPath());
       if (current.getFileType() == SnapshotRecord.Type.DIR) {
         callback.deletedDirectory(current, getCheckpoint());
       } else {
@@ -418,6 +427,7 @@ public class FileSystemMonitor implements Runnable {
   private void safelyProcessFile(ReadonlyFile<?> file) throws  InterruptedException,
       SnapshotReaderException, SnapshotWriterException {
     try {
+      LOG.fine("In the safelyProcessFile for " + file.getPath());
       processFile(file);
     } catch (IOException e) {
       fileSink.add(file, FileFilterReason.IO_EXCEPTION);
@@ -436,23 +446,27 @@ public class FileSystemMonitor implements Runnable {
   private void processFile(ReadonlyFile<?> file) throws  InterruptedException,
       IOException, SnapshotReaderException, SnapshotWriterException {
     processDeletes(file);
-
-    if ((traversalContext != null) && (traversalContext.maxDocumentSize() < file.length())) {
-      fileSink.add(file, FileFilterReason.TOO_BIG);
-      return;
-    }
-
-    // At this point 'current' >= 'file', or possibly current == null if
-    // we've processed the previous snapshot entirely.
-    if (current != null && (pathCompare(current, file) == 0)) {
-      processPossibleFileChange(file);
-    } else {
-      // This file didn't exist during the previous scan.
-      FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
-      writeFileSnapshot(file.getFileSystemType(), file.getPath(),
-          file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
-          false);
-      callback.newFile(file, getCheckpoint(-1));
+    try {
+	  LOG.fine("In the processFile for " + file.getPath());
+	  if ((traversalContext != null) && (traversalContext.maxDocumentSize() < file.length())) {
+	    fileSink.add(file, FileFilterReason.TOO_BIG);
+	    return;
+	  }
+	  // At this point 'current' >= 'file', or possibly current == null if
+      // we've processed the previous snapshot entirely.
+	  if (current != null && (pathCompare(current, file) == 0)) {
+		processPossibleFileChange(file);
+	  } else {
+		// This file didn't exist during the previous scan.
+		LOG.fine("Adding a new file to the callBack for " + file.getPath());
+		FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
+		writeFileSnapshot(file.getFileSystemType(), file.getPath(),
+		    file.getLastModified(), infoCache.getAcl(), infoCache.getChecksum(),
+		    false);
+		callback.newFile(file, getCheckpoint(-1));
+	  }
+    } catch (UnsupportedOperationException e) {
+      throw new IOException("Couldn't perform some operation (possibly getting the input stream) on the file for " + file.getPath(), e);
     }
   }
 
@@ -469,6 +483,7 @@ public class FileSystemMonitor implements Runnable {
    */
   private void processPossibleFileChange(ReadonlyFile<?> file) throws
       IOException, InterruptedException, SnapshotWriterException, SnapshotReaderException {
+    LOG.fine("In the processPossibleFileChange for "  + file.getPath());
     FileInfoCache infoCache = new FileInfoCache(file, checksumGenerator);
     if (current.getFileType() == SnapshotRecord.Type.DIR) {
       writeFileSnapshot(file.getFileSystemType(), file.getPath(),
@@ -558,12 +573,18 @@ public class FileSystemMonitor implements Runnable {
 
     java.util.List<? extends ReadonlyFile<?>> filesListing = null;
     try {
-      filesListing = dir.listFiles();
+	  filesListing = dir.listFiles();
+	} catch (InsufficientAccessException e) {
+	  LOG.log(Level.SEVERE,"User does not have enough privileges to list files for start path: " + dir.getPath(), e);	
+	  filesListing = new ArrayList<ReadonlyFile<?>>();
     } catch (IOException e) {
       LOG.log(Level.SEVERE, "Failed listing " + dir.getPath() + ".", e);
-      throw new DirListingFailedException();
+      filesListing = new ArrayList<ReadonlyFile<?>>();
     }
+    long count = 0;
     for (ReadonlyFile<?> f: filesListing) {
+      ++count;
+      LOG.fine("File Number : " + count + " file Name : " + f.getPath());
       processFileOrDir(f);
     }
   }
