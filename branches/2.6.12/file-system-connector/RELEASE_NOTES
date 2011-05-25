@@ -10,6 +10,31 @@ issues and workarounds.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
+Release 2.6.12, May 25, 2011
+================================
+
+Introduction
+------------
+This is a patch release for 2.6.10 build of file system connector.
+
+Summary of Changes
+------------------
+Issues fixed from last release:
+---------------------------------
+Bug 3122061 File System Connector goes into infinite loop when trying to do directory listing where it doesn't have permission to view directory
+Bug 4062256 FS connector should handle the case when it is not able to delete snapshot files.
+Bug 4295447 If the connector can't crawl a file, it should handle it well rather than killing the crawling thread.
+Bug 4175439 FS connector fails to crawl if the start path contains even one directory where the crawler user doesn't have permission.
+
+
+Version Compatibility
+---------------------
+* This version works with Connector Manager version 2.4.0 or later. Earlier versions of
+the Connector Manager will not work correctly with this version of the connector.
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
 
 Release 2.6.0, May 24, 2010
 ================================

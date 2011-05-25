@@ -1,6 +1,6 @@
 Welcome to the Google Enterprise Connector for File Systems
 
-Steps to build Google Enterprise Connector for File Systems 2009
+Steps to build Google Enterprise Connector for File Systems 2011
 ================================================================================
 
 1. Ensure you have Java 6.
@@ -11,13 +11,13 @@ Steps to build Google Enterprise Connector for File Systems 2009
 
 3. Ensure you have Connector Manager on your system. From
    http://code.google.com/p/google-enterprise-connector-manager/downloads/list
-   choose connector-manager-2.0.2-src.zip.  
-   3b) Unpack the zip file. (unzip connector-manager-2.0.2-src.zip). The contents
+   choose connector-manager-2.4.0-src.zip or later  
+   3b) Unpack the zip file. (unzip connector-manager-2.4.0-src.zip). The contents
        will go into a new sub directory of your current directory called 
-       connector-manager-2.0.2-src.
-   3c) Change directory to connector-manager-2.0.2-src.
+       connector-manager-2.4.0-src.
+   3c) Change directory to connector-manager-2.4.0-src.
    3d) Build the connector manager (ant connector-manager).
-   3e) While still in the connector-manager-2.0.2-src directory create a
+   3e) While still in the connector-manager-2.4.0-src directory create a
        google-enterprise-connector-filesystem.properties file in your home directory.  
    
        For Unix enter
