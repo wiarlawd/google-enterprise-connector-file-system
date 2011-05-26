@@ -43,7 +43,7 @@ public class FileDocumentSnapshotFactoryTest extends TestCase {
       assertTrue(iae.getMessage().contains(
           "Unable to parse serialized JSON Object"));
       assertTrue(iae.getCause().getMessage().contains(
-          "JSONObject[\"MODTIME\"] is not a number."));
+          "JSONObject[\"MODTIME\"] is not a long."));
     }
   }
 

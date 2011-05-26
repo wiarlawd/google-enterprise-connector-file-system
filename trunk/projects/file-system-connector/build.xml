@@ -169,6 +169,10 @@
       <classpath>
         <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+        <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
+          <include name="**/guava*.jar" />
+          <include name="**/json.jar" />
+        </fileset>
       </classpath>
     </javac>
   </target>
@@ -182,6 +186,8 @@
       <classpath>
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
           <include name="**/spring.jar" />
+          <include name="**/guava*.jar" />
+          <include name="**/json.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
           <include name="**/junit.jar" />
@@ -207,6 +213,8 @@
         <pathelement location="${classes-tests.dir}" />
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
           <include name="**/spring.jar" />
+          <include name="**/guava*.jar" />
+      	  <include name="**/json.jar" />
           <include name="**/commons-logging.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
