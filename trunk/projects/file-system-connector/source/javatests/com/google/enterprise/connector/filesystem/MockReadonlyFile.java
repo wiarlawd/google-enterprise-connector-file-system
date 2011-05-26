@@ -310,7 +310,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     return getPath();
   }
 
-  @Override
+  /* @Override */
   public boolean exists() {
     return this.exists;
   }
