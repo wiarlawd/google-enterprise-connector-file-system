@@ -107,7 +107,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
    * if it is not password and not blank or null then returns the input as it is.
    */
   private String getShowString(String arg, boolean isPassword) {
-    if (arg == null || arg.isEmpty() || arg.trim().length() < 1) {
+    if (arg == null || arg.trim().length() < 1) {
       return "blank or null";
     } else if (isPassword){
       return "is not blank or null";
