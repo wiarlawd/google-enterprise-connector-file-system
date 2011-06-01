@@ -31,7 +31,7 @@ import java.util.Properties;
  */
 public class ConfigTest extends TestCase {
   private static final String CONFIG_DIR = "config/";
-  private static final String INSTANCE_CONFIG_FILE = CONFIG_DIR + "connectorInstance.xml";
+  private static final String INSTANCE_CONFIG_FILE = CONFIG_DIR + "connectorDefaults.xml";
   private HashMap<String, String> goodConfig;
 
   @Override
