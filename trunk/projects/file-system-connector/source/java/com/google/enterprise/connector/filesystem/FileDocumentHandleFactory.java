@@ -31,18 +31,77 @@ public class FileDocumentHandleFactory implements DocumentHandleFactory {
 
   public DocumentHandle fromString(String stringForm)
       throws IllegalArgumentException {
+    FileDocumentHandle handle = null;
     try {
       JSONObject json = new JSONObject(stringForm);
-      checkForMissingRequiredFields(json);
-      return new FileDocumentHandle(json.getString(Field.FILESYS.name()),
-          json.getString(Field.PATH.name()),
-          json.getBoolean(Field.IS_DELETE.name()), context);
+      if (isNewVersionOfStringRepresentation(json)) {
+        checkForMissingRequiredFields(json);
+        handle = new FileDocumentHandle(json.getString(Field.FILESYS.name()),
+            json.getString(Field.PATH.name()),
+            json.getBoolean(Field.IS_DELETE.name()), context);
+      } else if (isOldVersionOfRepresentation(json)){
+        //This is implemented for backward compatibility where the JSON tags were completely
+        //different in 2.6.0 FS connector.
+        checkMissingFieldsForPreviousVersion(json);
+        boolean isDelete = false;
+        if (json.getString(FileDocumentHandle.ACTION_JSON_TAG).equals(
+        		FileDocumentHandle.DELETE_FILE_ACTION) ||
+                    json.getString(FileDocumentHandle.ACTION_JSON_TAG).equals(
+                    	FileDocumentHandle.DELETE_DIR_ACTION)) {
+          isDelete = true;
+        }
+        handle = new FileDocumentHandle(json.getString(
+        		     FileDocumentHandle.FILESYSTEM_TYPE_JSON_TAG),
+            json.getString(FileDocumentHandle.PATH_JSON_TAG), isDelete, context);
+      }
+      return handle;
     } catch (JSONException je) {
       throw new IllegalArgumentException(
           "Unable to parse serialized JSON Object " + stringForm, je);
     }
   }
 
+  /**
+   * Checks to see if the Change is represented in old format by checking existence of 'action' json tag.
+   * 
+   * @param json Json representation of the change.
+   * @return true / false depending on the version of representation
+   */
+  private boolean isOldVersionOfRepresentation(JSONObject json) {
+    return json.has(FileDocumentHandle.ACTION_JSON_TAG);
+  }
+
+  /**
+   * Checks to see if the Change is represented in new format by
+   * checking existence of 'FILESYS' json tag.
+   * @param json Json representation of the change
+   * @return true / false
+   */
+  private boolean isNewVersionOfStringRepresentation(JSONObject json) {
+    return json.has(Field.FILESYS.name());
+  }
+  
+  /**
+   * Checks to see if all the required fields are present in the change
+   * representation for the old format.
+   * @param json Json representation of the change
+   * @throws IllegalArgumentException if all the fields are not present.
+   */
+  private void checkMissingFieldsForPreviousVersion(JSONObject json) throws IllegalArgumentException {
+    if (!json.has(FileDocumentHandle.FILESYSTEM_TYPE_JSON_TAG) ||
+    		!json.has(FileDocumentHandle.PATH_JSON_TAG) ||
+                !json.has(FileDocumentHandle.ACTION_JSON_TAG)) {
+      throw new IllegalArgumentException("Missing fields in JSON object");
+    } else {
+      return;        
+    }
+  }
+  
+  /**
+   * Checks to see if all the required fields are present in the change representation for the new format.
+   * @param json
+   * @throws IllegalArgumentException if all the fields are not present.
+   */
   private static void checkForMissingRequiredFields(JSONObject o)
       throws IllegalArgumentException {
     StringBuilder buf = new StringBuilder();

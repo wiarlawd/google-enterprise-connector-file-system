@@ -39,6 +39,12 @@ public class FileDocumentHandle implements DocumentHandle {
   static enum Field {
     FILESYS, PATH, IS_DELETE
   }
+  
+  static final String FILESYSTEM_TYPE_JSON_TAG = "fstype";
+  static final String PATH_JSON_TAG = "path";
+  static final String ACTION_JSON_TAG = "action";
+  static final String DELETE_FILE_ACTION = "DELETE_FILE";
+  static final String DELETE_DIR_ACTION = "DELETE_DIR";
 
   private static final Logger LOG =
       Logger.getLogger(FileDocumentHandle.class.getName());
