@@ -18,7 +18,7 @@
   <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
   <property name="license-zip.dir" value  = "${zip.dir}/License" />
   <property name="file-connector-jar-zip.file"
-	    value = "${zip.dir}/connector-filesystem.jar" />
+        value = "${zip.dir}/connector-filesystem.jar" />
   <property name="file-connector-copying-zip.file" value="${zip.dir}/COPYING" />
 
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
@@ -40,6 +40,7 @@
   <property name="config.dir" value="config" />
   <property name="logging-properties.file" value="${config.dir}/logging.properties" />
   <property name="thirdparty-prod-jar.dir" location="third_party/prod" />
+    <property name="thirdparty-tests-jar.dir" location="third_party/tests" />
 
   <property name="copying.file" value="COPYING" />
   <property name="readme.file" value="README" />
@@ -48,7 +49,7 @@
 
   <property name="zip-src.dir" value="${build.dir}/file-src" />
   <property name="release-notes-zip-src.file"
-	    value="${zip-src.dir}/${release-notes.file}" />
+        value="${zip-src.dir}/${release-notes.file}" />
 
   <property name="tests_out.dir" value="tests_outdir" />
   <property name="tests.logging.properties"
@@ -67,18 +68,18 @@
   <property name="spi.jar.dir" value="${connector-manager.dir}/dist/jarfile" />
 
   <property name="connector-filesystem-src.zip"
-	    value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
+        value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
 
-	<!--Cobertura properties -->
+    <!--Cobertura properties -->
 
-	<property file="${config.dir}/build_code_coverage.properties" />
-		<path id="cobertura.classpath">
+    <property file="${config.dir}/build_code_coverage.properties" />
+        <path id="cobertura.classpath">
 
-		                       <fileset dir="${thirdparty-prod-jar.dir}">
-		                               <include name="**/*.jar" />
-		                       </fileset>
+                               <fileset dir="${thirdparty-tests-jar.dir}">
+                                       <include name="**/*.jar" />
+                               </fileset>
 
-		               </path>
+                       </path>
   <!-- =========================== TASKS =============================== -->
   <target name="build" depends="init,compile_prod,run_tests,jar_prod">
   </target>
@@ -86,8 +87,8 @@
   <target name="init">
     <tstamp />
     <exec executable="svn"
-	  failifexecutionfails="false"
-	  resultproperty="svn-status-result">
+      failifexecutionfails="false"
+      resultproperty="svn-status-result">
       <arg line="status"/>
       <redirector outputproperty="svn-status"
                   logError="true">
@@ -125,30 +126,30 @@
     <mkdir dir="${tests_out.dir}" />
 
     <exec executable="svn"
-	  failifexecutionfails="false"
-	  resultproperty="svn-url-result" >
+      failifexecutionfails="false"
+      resultproperty="svn-url-result" >
       <arg line="info" />
       <redirector outputproperty="svn-url"
                   logError="true" >
         <outputfilterchain>
-	  <linecontains>
-	    <contains value="URL: "/>
-	  </linecontains>
+      <linecontains>
+        <contains value="URL: "/>
+      </linecontains>
           <replacestring from="URL: "/>
         </outputfilterchain>
       </redirector>
     </exec>
 
     <exec executable="svn"
-	  failifexecutionfails="false"
-	  resultproperty="svn-revision-result" >
+      failifexecutionfails="false"
+      resultproperty="svn-revision-result" >
       <arg line="info"/>
       <redirector outputproperty="svn-revision"
                   logError="true">
         <outputfilterchain>
-	  <linecontains>
-	    <contains value="Revision: " />
-	  </linecontains>
+      <linecontains>
+        <contains value="Revision: " />
+      </linecontains>
           <replacestring from="Revision: " />
           <trim/>
         </outputfilterchain>
@@ -156,13 +157,13 @@
     </exec>
 
     <condition property="svn-version"
-	       value="${svn-revision} (${svn-url})"
-	       else="?? Unknown svn version">
+           value="${svn-revision} (${svn-url})"
+           else="?? Unknown svn version">
       <and>
          <equals arg1="0" arg2="${svn-url-result}" />
          <equals arg1="0" arg2="${svn-revision-result}" />
          <equals arg1="0" arg2="${svn-status-result}" />
-	 <length string="${svn-status}" trim="true" length="0" />
+     <length string="${svn-status}" trim="true" length="0" />
       </and>
     </condition>
 
@@ -212,13 +213,13 @@
 
     <junit printsummary="yes" haltonfailure="yes">
       <assertions><enable/></assertions>
-    	   <!--
-    		                      The instrumented classes reference classes used by the
-    		                      Cobertura runtime, so Cobertura and its dependencies
-    		                      must be on your classpath.
-    		        -->
-    	   <classpath location="${instrumented.dir}" />
-    	   <classpath refid="cobertura.classpath" />
+           <!--
+                                  The instrumented classes reference classes used by the
+                                  Cobertura runtime, so Cobertura and its dependencies
+                                  must be on your classpath.
+                    -->
+           <classpath location="${instrumented.dir}" />
+           <classpath refid="cobertura.classpath" />
       <classpath>
         <pathelement location="${classes-tests.dir}" />
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
@@ -235,8 +236,8 @@
       <formatter type="xml" />
       <test name="${testcase}" todir="${reports.xml.dir}" if="testcase" />
       <batchtest todir="${reports.xml.dir}" unless="testcase">
-    	<fileset dir="${test.dir}">
-    	  <include name="**/*Test.java" />
+        <fileset dir="${test.dir}">
+          <include name="**/*Test.java" />
         </fileset>
       </batchtest>
       <formatter type="brief" usefile="no"/>
@@ -248,10 +249,10 @@
       </batchtest>
     </junit>
 
-  	<junitreport todir="${reports.xml.dir}">
-  	  <fileset dir="${reports.xml.dir}">
-  		  <include name="TEST-*.xml" />
-  	</fileset>
+      <junitreport todir="${reports.xml.dir}">
+        <fileset dir="${reports.xml.dir}">
+            <include name="TEST-*.xml" />
+      </fileset>
     <report format="frames" todir="${reports.html.dir}" />
    </junitreport>
 
@@ -340,93 +341,93 @@
     <delete dir="${tests_out.dir}" />
   </target>
 
-	<!-- Cobertura Tasks -->
+    <!-- Cobertura Tasks -->
 
-		<taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+        <taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
 
-		    <target name="init_code_coverage">
-		        <mkdir dir="${classes.dir}" />
-		        <mkdir dir="${instrumented.dir}" />
-		        <mkdir dir="${reports.xml.dir}" />
-		        <mkdir dir="${reports.html.dir}" />
-		        <mkdir dir="${coverage.xml.dir}" />
-		        <mkdir dir="${coverage.summaryxml.dir}" />
-		        <mkdir dir="${coverage.html.dir}" />
-		    </target>
-
-
-		    <target name="compile_code_coverage" depends="init_code_coverage">
-		          <javac srcdir="${src.dir}" destdir="${classes.dir}" debug="true">
-		            <classpath>
-		                <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
-		                <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-		             </classpath>
-		        </javac>
-		        <javac srcdir="${test.dir}" destdir="${classes.dir}" debug="true">
-		             <classpath>
-		                <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
-		                <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-		             </classpath>
-		        </javac>
-		    </target>
-
-		    <target name="instrument" depends="compile_code_coverage">
-		                <!--
-		                    Remove the coverage data file and any old instrumentation.
-		                -->
-		                <delete file="cobertura.ser"/>
-		                <!-- <delete dir="${instrumented.dir}" /> -->
-
-		                <cobertura-instrument todir="${instrumented.dir}">
-		                    <!--
-		                        The following line causes instrument to ignore any
-		                        source line containing a reference to log4j, for the
-		                        purposes of coverage reporting.
-		                    -->
-		                    <ignore regex="org.apache.log4j.*" />
-
-		                    <fileset dir="${classes.dir}">
-		                        <!--
-		                            Instrument all the application classes, but
-		                            don't instrument the test classes.
-		                        -->
-		                        <include name="**/*.class" />
-		                        <exclude name="**/*Test.class" />
-		                    </fileset>
-		                </cobertura-instrument>
-		            </target>
-
-		    <target name="coverage-report">
-		                    <!--
-		                        Generate an XML file containing the coverage data using
-		                        the "srcdir" attribute.
-		                    -->
-		                    <cobertura-report srcdir="${src.dir}" destdir="${coverage.xml.dir}" format="xml" />
-		    </target>
-
-		     <target name="alternate-coverage-report">
-		                    <!--
-		                        Generate a series of HTML files containing the coverage
-		                        data in a user-readable form using nested source filesets.
-		                    -->
-		                    <cobertura-report destdir="${coverage.html.dir}">
-		                        <fileset dir="${src.dir}">
-		                            <include name="**/*.java"/>
-		                        </fileset>
-		                    </cobertura-report>
-		    </target>
+            <target name="init_code_coverage">
+                <mkdir dir="${classes.dir}" />
+                <mkdir dir="${instrumented.dir}" />
+                <mkdir dir="${reports.xml.dir}" />
+                <mkdir dir="${reports.html.dir}" />
+                <mkdir dir="${coverage.xml.dir}" />
+                <mkdir dir="${coverage.summaryxml.dir}" />
+                <mkdir dir="${coverage.html.dir}" />
+            </target>
 
 
-		    <target name="clean_code_coverage" description="Remove all files created by the build/test process.">
-		                    <delete dir="${classes.dir}" />
-		                    <delete dir="${instrumented.dir}" />
-		                    <delete dir="${reports.dir}" />
-		                    <delete file="cobertura.log" />
-		                    <delete file="cobertura.ser" />
-		    </target>
+            <target name="compile_code_coverage" depends="init_code_coverage">
+                  <javac srcdir="${src.dir}" destdir="${classes.dir}" debug="true">
+                    <classpath>
+                        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+                        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+                     </classpath>
+                </javac>
+                <javac srcdir="${test.dir}" destdir="${classes.dir}" debug="true">
+                     <classpath>
+                        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+                        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+                     </classpath>
+                </javac>
+            </target>
+
+            <target name="instrument" depends="compile_code_coverage">
+                        <!--
+                            Remove the coverage data file and any old instrumentation.
+                        -->
+                        <delete file="cobertura.ser"/>
+                        <!-- <delete dir="${instrumented.dir}" /> -->
+
+                        <cobertura-instrument todir="${instrumented.dir}">
+                            <!--
+                                The following line causes instrument to ignore any
+                                source line containing a reference to log4j, for the
+                                purposes of coverage reporting.
+                            -->
+                            <ignore regex="org.apache.log4j.*" />
+
+                            <fileset dir="${classes.dir}">
+                                <!--
+                                    Instrument all the application classes, but
+                                    don't instrument the test classes.
+                                -->
+                                <include name="**/*.class" />
+                                <exclude name="**/*Test.class" />
+                            </fileset>
+                        </cobertura-instrument>
+                    </target>
+
+            <target name="coverage-report">
+                            <!--
+                                Generate an XML file containing the coverage data using
+                                the "srcdir" attribute.
+                            -->
+                            <cobertura-report srcdir="${src.dir}" destdir="${coverage.xml.dir}" format="xml" />
+            </target>
+
+             <target name="alternate-coverage-report">
+                            <!--
+                                Generate a series of HTML files containing the coverage
+                                data in a user-readable form using nested source filesets.
+                            -->
+                            <cobertura-report destdir="${coverage.html.dir}">
+                                <fileset dir="${src.dir}">
+                                    <include name="**/*.java"/>
+                                </fileset>
+                            </cobertura-report>
+            </target>
 
 
-		   <target name="run_code_coverage" depends="run_tests,coverage-report,alternate-coverage-report" description="Compile, instrument ourself, run the tests and generate JUnit and coverage reports."/>
+            <target name="clean_code_coverage" description="Remove all files created by the build/test process.">
+                            <delete dir="${classes.dir}" />
+                            <delete dir="${instrumented.dir}" />
+                            <delete dir="${reports.dir}" />
+                            <delete file="cobertura.log" />
+                            <delete file="cobertura.ser" />
+            </target>
+
+
+           <target name="run_code_coverage" depends="run_tests,coverage-report,alternate-coverage-report" description="Compile, instrument ourself, run the tests and generate JUnit and coverage reports."/>
 
 
 </project>
