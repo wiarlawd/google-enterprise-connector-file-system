@@ -23,6 +23,18 @@
       Flag to turn on/ off the last access time reset feature
     -->
     <constructor-arg value="true"/>
+    <!--
+      Security level to be considered for fetching ACL for a file
+      There are 4 possible values for this parameter. These are in the order of
+      Stronger to weaker security levels.
+      FILEANDSHARE
+      SHARE
+      FILE
+      FILEORSHARE 
+      Default value is 'FILEANDSHARE'  since it is the most restrictive of all 4 scenarios. 
+    -->
+    <constructor-arg value="FILEANDSHARE"/>
+    
   </bean>
   
   <bean id = "nfs-file-system-type"

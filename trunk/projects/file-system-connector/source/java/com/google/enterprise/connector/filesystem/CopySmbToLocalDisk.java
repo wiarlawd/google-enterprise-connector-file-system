@@ -14,10 +14,14 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
 
 /** Performs copies of SMB content directories to local disk.
     This class is a utility; it is not necessary for a File System
@@ -64,7 +68,7 @@ class CopySmbToLocalDisk {
     String startPath = a[0];
     String endPath = a[1];
     Credentials creds = new Credentials("", "admin", "test");
-    SmbReadonlyFile start = new SmbReadonlyFile(startPath, creds, false, false);
+    SmbReadonlyFile start = new SmbReadonlyFile(startPath, creds, false, false, AceSecurityLevel.FILEANDSHARE.name());
     CopySmbToLocalDisk copier = new CopySmbToLocalDisk(start, new File(endPath));
     long startTimeMillis = System.currentTimeMillis();
     copier.copy();

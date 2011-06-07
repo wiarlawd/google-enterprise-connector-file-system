@@ -54,6 +54,10 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * Flag to turn on /off the last access time reset flag
    */
   private boolean lastAccessTimeResetFlag = false;
+  /**
+   * Security level to be considered for fetching ACL
+   */
+  private final String securityLevel;
 
   private static Hashtable<String, List<SmbInputStream>> map =
       new Hashtable<String, List<SmbInputStream>>();
@@ -71,16 +75,18 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    *
    * @throws RepositoryDocumentException if the path is malformed
    */
-  public SmbReadonlyFile(String path, Credentials credentials, boolean stripDomainFromAces,
-      boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
-    try {
+  public SmbReadonlyFile(String path, Credentials credentials, 
+      boolean stripDomainFromAces, boolean lastAccessTimeResetFlag,
+          String securityLevel) throws RepositoryDocumentException {
+	try {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
       setProperties(path, stripDomainFromAces, lastAccessTimeResetFlag);
+      this.securityLevel = securityLevel;
     } catch (MalformedURLException e) {
       throw new IncorrectURLException("malformed SMB path: " + path, e);
     }
   }
-
+  
   /**
    * @param path
    * @param stripDomainFromAces
@@ -88,18 +94,21 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws RepositoryDocumentException 
    */
   private void setProperties(
-      String path, boolean stripDomainFromAces, boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
+      String path, boolean stripDomainFromAces,
+          boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
     this.stripDomainFromAces = stripDomainFromAces;
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     try {
       if (this.lastAccessTimeResetFlag && this.delegate.isFile()) {
          this.lastAccessTime = this.getLastAccessTime();
-        LOG.finest("Got the last access time for " + path + " as : " + new Date(this.lastAccessTime));
+        LOG.finest("Got the last access time for " + path + " as : " 
+            + new Date(this.lastAccessTime));
       }
     } catch (SmbException e) {
         throw new RepositoryDocumentException("Cannot access path: " + path, e);
      }
   }
+  
   /**
    * @return long last access time for the file
    * @throws SmbException 
@@ -108,7 +117,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     synchronized (map) {
       List<SmbInputStream> list = map.get(this.delegate.getPath());
       if (list != null && !list.isEmpty()) {
-        LOG.info("Got the live stream so getting the last access time from there for" + this.delegate.getPath());
+        LOG.info("Got the live stream so getting the last access time from there for" 
+            + this.delegate.getPath());
         return list.get(0).getLastAccessTime();
       } else {
       return this.delegate.lastAccess();
@@ -127,10 +137,12 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws RepositoryDocumentException
    */
   private SmbReadonlyFile(
-      SmbFile smbFile, boolean stripDomainFromAces, boolean lastAccessTimeResetFlag)
-      throws RepositoryDocumentException {
+      SmbFile smbFile, boolean stripDomainFromAces, 
+          boolean lastAccessTimeResetFlag, String securityLevel)
+              throws RepositoryDocumentException {
     this.delegate = smbFile;
     setProperties(smbFile.getPath(), stripDomainFromAces, lastAccessTimeResetFlag);
+    this.securityLevel = securityLevel;
   }
 
   /* @Override */
@@ -172,7 +184,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
 
   /* @Override */
   public Acl getAcl() throws IOException {
-    SmbAclBuilder builder = new SmbAclBuilder(delegate, stripDomainFromAces);
+    SmbAclBuilder builder = new SmbAclBuilder(delegate, stripDomainFromAces, securityLevel);
     try {
       return builder.build();
     } catch (SmbException e) {
@@ -269,7 +281,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {
       try {
-        result.add(new SmbReadonlyFile(files[k], stripDomainFromAces, lastAccessTimeResetFlag));
+        result.add(new SmbReadonlyFile(files[k], stripDomainFromAces,
+            lastAccessTimeResetFlag, securityLevel));
       } catch (RepositoryDocumentException e) {
         //TODO: This seems wrong. If we are not able to process a file 
         //while listing the directory, may be we should skip it? 

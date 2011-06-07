@@ -54,6 +54,11 @@ public class SmbFileSystemType implements FileSystemType {
   private final boolean lastAccessTimeResetFlag;
 
   /**
+   * Security level to be considered for fetching the ACL for files.
+   */
+  private final String securityLevel;
+
+  /**
    * Configures the jcifs library by loading configuration properties from the
    * properties file with resource name
    * {@link #JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME}. Note that this must
@@ -97,19 +102,22 @@ public class SmbFileSystemType implements FileSystemType {
    *        {@link SmbReadonlyFile#getAcl()} {@link SmbReadonlyFile} objects
    *        this creates and if false domains will be included in the form
    *        {@literal domainName\\userOrGroupName}.
-   * @param lastAccessTimeResetFlag if true the application will try to reset the 
-   *        last access time of the file it crawled; if false the last access time 
-   *        will not be reset and will change after the file crawl.       
+   * @param lastAccessTimeResetFlag if true the application will try to reset  
+   *        the last access time of the file it crawled; if false the last 
+   *        access time will not be reset and will change after the file crawl.       
    */
-  public SmbFileSystemType(boolean stripDomainFromAces, boolean lastAccessTimeResetFlag) {
+  public SmbFileSystemType(boolean stripDomainFromAces, 
+      boolean lastAccessTimeResetFlag, String securityLevel) {
     this.stripDomainFromAces = stripDomainFromAces;
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
+    this.securityLevel = securityLevel;
   }
 
   /* @Override */
   public SmbReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryDocumentException {
-    return new SmbReadonlyFile(path, credentials, stripDomainFromAces, lastAccessTimeResetFlag);
+    return new SmbReadonlyFile(path, credentials, stripDomainFromAces,
+        lastAccessTimeResetFlag, securityLevel);
   }
 
   /* @Override */
@@ -128,22 +136,25 @@ public class SmbFileSystemType implements FileSystemType {
    *   smb://host/path
    * </pre>
    *
-   * The CIFS library is very picky about trailing slashes: directories must end
-   * in slash and regular files must not. This parser is much less picky: it
-   * tries both and uses whichever yields a readable file.
+   * The CIFS library is very picky about trailing slashes: directories must
+   * end in slash and regular files must not. This parser is much less picky:
+   * it tries both and uses whichever yields a readable file.
    *
    * @throws RepositoryDocumentException if {@code path} is valid.
-   * @throws IllegalArgumentException if {@link #isPath} returns false for path.
+   * @throws IllegalArgumentException if {@link #isPath} returns false for
+   * path.
    */
   /* @Override */
-  public SmbReadonlyFile getReadableFile(final String smbStylePath, final Credentials credentials)
-      throws RepositoryDocumentException, WrongSmbTypeException {
+  public SmbReadonlyFile getReadableFile(final String smbStylePath,
+      final Credentials credentials)
+          throws RepositoryDocumentException, WrongSmbTypeException {
     if (!isPath(smbStylePath)) {
       throw new IllegalArgumentException("Invalid path " + smbStylePath);
     }
     SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials);
     if (null == result) {
-      throw new RepositoryDocumentException("failed to open file: " + smbStylePath);
+      throw new RepositoryDocumentException("failed to open file: " 
+          + smbStylePath);
     } else if (!result.isTraversable()) {
       throw new WrongSmbTypeException("Wrong smb type", null);
     } else {
@@ -151,13 +162,15 @@ public class SmbFileSystemType implements FileSystemType {
     }
   }
 
-  private SmbReadonlyFile getReadableFileHelper(String path, Credentials credentials) throws FilesystemRepositoryDocumentException {
+  private SmbReadonlyFile getReadableFileHelper(String path,
+      Credentials credentials) throws FilesystemRepositoryDocumentException {
     SmbReadonlyFile result = null;
     try {
       result = new SmbReadonlyFile(path, credentials, stripDomainFromAces,
-          lastAccessTimeResetFlag);
+          lastAccessTimeResetFlag, securityLevel);
       if (!result.exists()) {
-        throw new NonExistentResourceException("This resource path does not exist: " + path);
+        throw new NonExistentResourceException(
+            "This resource path does not exist: " + path);
       }
     } catch (FilesystemRepositoryDocumentException e) {
       LOG.info("Validation error occured: " + e.getMessage());

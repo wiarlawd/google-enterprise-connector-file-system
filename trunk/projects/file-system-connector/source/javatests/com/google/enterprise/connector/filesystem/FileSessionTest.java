@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Session;
 import com.google.enterprise.connector.spi.TraversalContext;
@@ -45,7 +46,7 @@ public class FileSessionTest extends TestCase {
     changes = new ChangeQueue(100, 10, new DefaultCrawlActivityLogger());
     FileSystemTypeRegistry fileSystemTypeRegistry =
       new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
-          new SmbFileSystemType(false,false)));
+          new SmbFileSystemType(false,false, AceSecurityLevel.FILEANDSHARE.name())));
     authz = new FileAuthorizationManager(new PathParser(
         fileSystemTypeRegistry));
     TraversalContext traversalContext = new FakeTraversalContext();
