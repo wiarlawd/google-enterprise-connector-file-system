@@ -33,9 +33,14 @@ public class WindowsFileSystemType implements FileSystemType {
    */
   private final boolean accessTimeResetFlag;
 
+  /* @VisibleForTesting */
   public WindowsFileSystemType(boolean accessTimeResetFlag) {
     super();
     this.accessTimeResetFlag = accessTimeResetFlag;
+  }
+  
+  public WindowsFileSystemType(WindowsFilePropertyFetcher propertyFetcher) {
+    this(propertyFetcher.isLastAccessResetFlagForLocalWindows());
   }
 
   /* @Override */
@@ -103,5 +108,19 @@ public class WindowsFileSystemType implements FileSystemType {
   /* @Override */
   public boolean isUserPasswordRequired() {
     return false;
+  }
+  
+  /**
+   * Interface to retrieve properties required for crawling local 
+   * windows files.
+   */
+  public static interface WindowsFilePropertyFetcher {
+    
+    /**
+     * Gets the accessTimeResetFlag
+     * @return Flag to decide whether or not to reset the last access time
+     * of the file.
+     */
+    boolean isLastAccessResetFlagForLocalWindows();
   }
 }

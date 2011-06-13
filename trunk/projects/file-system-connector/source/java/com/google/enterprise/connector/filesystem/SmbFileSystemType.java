@@ -106,11 +106,18 @@ public class SmbFileSystemType implements FileSystemType {
    *        the last access time of the file it crawled; if false the last 
    *        access time will not be reset and will change after the file crawl.       
    */
+  /* @VisibleForTesting */ 
   public SmbFileSystemType(boolean stripDomainFromAces, 
       boolean lastAccessTimeResetFlag, String securityLevel) {
     this.stripDomainFromAces = stripDomainFromAces;
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     this.securityLevel = securityLevel;
+  }
+  
+  public SmbFileSystemType(SmbFilePropertyFetcher propertyFetcher) {
+    this(propertyFetcher.isStripDomainOfAcesFlag(),
+        propertyFetcher.isLastAccessResetFlagForSmb(),
+            propertyFetcher.getAceSecurityLevel());
   }
 
   /* @Override */
@@ -196,4 +203,34 @@ public class SmbFileSystemType implements FileSystemType {
   public boolean isUserPasswordRequired() {
     return true;
   }
+  
+  /**
+   * Interface to retrieve the properties required for Smb crawling. 
+   */
+  public static interface SmbFilePropertyFetcher {
+    /**
+     * Gets the AceSecurityLevel
+     * @return Security level to be used for fetching ACL.
+     */
+    String getAceSecurityLevel();
+    
+    /**
+     * Gets the stripDomainOfACes
+     * @return Flag to decide whether or not to strip the domain off of ACE.
+     */
+    boolean isStripDomainOfAcesFlag();
+    
+    /**
+     * Gets the markAllDocumentsPublic
+     * @return Flag to decided whether or not to mark all documents as public.
+     */
+    boolean isMarkDocumentPublicFlag();
+      
+    /**
+     * Gets the lastAccessTimeResetFlag
+     * @return Flag to decide whether or not to reset the last access time of file.
+     */
+    boolean isLastAccessResetFlagForSmb();
+  }
+  
 }
