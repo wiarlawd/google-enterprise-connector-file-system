@@ -126,7 +126,7 @@ public class MimeTypeFinder {
   }
 
   private static byte[] getBytes(InputStream is) throws IOException {
-    byte[] result = new byte[2056];
+    byte[] result = new byte[2560];
     int bytesRead = 0;
     int bytesThisTime = 0;
     while ((bytesThisTime = is.read(result, bytesRead, result.length - bytesRead)) > 0) {
