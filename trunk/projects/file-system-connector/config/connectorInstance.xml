@@ -7,7 +7,8 @@
         class = "com.google.enterprise.connector.filesystem.FileSystemPropertyManager"
         parent = "filesystem-property-manager-defaults"
         singleton = "false">
-  <!--   
+        
+    <!--   
     Security level to be considered for fetching ACL for a file
     There are 4 possible values for this parameter. These are in the order of
     Stronger to weaker security levels.
@@ -17,45 +18,67 @@
     FILEORSHARE
     Default value is 'FILEANDSHARE'  since it is the most restrictive of all
     4 scenarios.
-  -->
-  <!--
-    <property name="aceSecurityLevel" value="FILEANDSHARE"/>
-  -->
-  <!-- 
+    -->
+    <!--
+      <property name="aceSecurityLevel" value="FILEANDSHARE"/>
+    -->
+    
+    <!-- 
     Flag to strip domains from ACE users and groups to match GSA.
-  -->
-  <!--
+    -->
+    <!--
     <property name="stripDomainOfAcesFlag" value="true"/>
-  -->
-  <!-- 
+    -->
+    
+    <!-- 
     Flag to mark all crawled documents as 'public'.
-  -->
-  <!--
+    -->
+    <!--
     <property name="markDocumentPublicFlag" value="false"/>
-  -->
-  <!-- 
+    -->
+    
+    <!-- 
     Flag to reset the last access time of a SMB file after crawling.
     This should be used when the start path of the url starts with "smb://".
-  -->
-  <!--  
+    -->
+    <!--  
     <property name="lastAccessResetFlagForSmb" value="false"/>
-  -->
-  <!-- 
+    -->
+    
+    <!-- 
     Flag to reset the last access time of a local windows file after crawling.
     This should be used when the start path of the url is a windows 
     style file path. E.g. "c://share/data"
-  -->
-  <!-- 
+    -->
+    <!-- 
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
-  -->
-  <!-- 
+    -->
+    
+    <!-- 
     Flag to reset the last access time of a local windows file after crawling.
     This should be used when the start path of the url is a windows style 
     file path. E.g. "c://share/data"
-  -->
-  <!--
+    -->
+    <!--
     <property name="pushAclFlag" value="true"/>
-  -->
+    -->
+  
+    <!-- 
+    Delay that will be added after every scan that does not produce even one
+    change in the file system.
+    -->
+    <!--
+    <property name="delayBetweenTwoScans" value="60000"/>
+    -->
+  
+    <!-- 
+    Size of the queue that holds the changes detected by the file system
+    connector. 
+    -->
+    <!--
+    <property name="queueSize" value="1000"/>
+    -->
+  
   </bean>
 
 </beans>

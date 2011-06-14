@@ -5,13 +5,14 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentSecurityPropertyFetcher;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFilePropertyFetcher;
 import com.google.enterprise.connector.filesystem.WindowsFileSystemType.WindowsFilePropertyFetcher;
+import com.google.enterprise.connector.util.diffing.ChangeQueue.QueuePropertyFetcher;
 
 /**
  * Represents all the configurable properties for filesystem connector. 
  * Individual components can fetch the required properties from this class.
  */
 public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
-    WindowsFilePropertyFetcher, DocumentSecurityPropertyFetcher {
+    WindowsFilePropertyFetcher, DocumentSecurityPropertyFetcher, QueuePropertyFetcher {
  
   /**
    * Represents security level while getting the final ACL for a file.
@@ -56,7 +57,7 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
   /**
    * Represents the ChangeQueue size.
    */
-  private long queueSize;
+  private int queueSize;
 
   /**
    * @return the stripDomainOfAcesFlag
@@ -103,14 +104,14 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
   /**
    * @return the queueSize
    */
-  public long getQueueSize() {
+  public int getQueueSize() {
     return queueSize;
   }
 
   /**
    * @param queueSize the queueSize to set
    */
-  public void setQueueSize(long queueSize) {
+  public void setQueueSize(int queueSize) {
     this.queueSize = queueSize;
   }
   

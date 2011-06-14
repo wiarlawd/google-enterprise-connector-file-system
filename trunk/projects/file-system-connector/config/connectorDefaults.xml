@@ -47,9 +47,8 @@
 
   <bean id = "change-queue"
         class = "com.google.enterprise.connector.util.diffing.ChangeQueue">
-    <constructor-arg index="0" value="1000"/>
-    <constructor-arg index="1" value="10000"/>
-    <constructor-arg index="2" ref="activity-logger"/>
+    <constructor-arg ref="filesystem-property-manager"/>
+    <constructor-arg ref="activity-logger"/>
   </bean>
 
   <bean id = "activity-logger"
@@ -237,6 +236,8 @@
     <property name="lastAccessResetFlagForSmb" value="false"/>
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
     <property name="pushAclFlag" value="true"/>
+    <property name="delayBetweenTwoScans" value="60000"/>
+    <property name="queueSize" value="1000"/>
   </bean>
 
 
