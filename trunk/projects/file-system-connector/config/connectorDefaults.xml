@@ -236,8 +236,9 @@
     <property name="lastAccessResetFlagForSmb" value="false"/>
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
     <property name="pushAclFlag" value="true"/>
-    <property name="delayBetweenTwoScans" value="60000"/>
+    <property name="delayBetweenTwoScansInMillis" value="60000"/>
     <property name="queueSize" value="1000"/>
+    <property name="introduceDelayAfterEveryScan" value="false"/>
   </bean>
 
 

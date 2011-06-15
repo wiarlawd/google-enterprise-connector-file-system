@@ -52,12 +52,18 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
    * Represents the delay that should be added after each scan
    * that resulted into 0 changes.
    */
-  private long delayBetweenTwoScans;
+  private long delayBetweenTwoScansInMillis;
   
   /**
    * Represents the ChangeQueue size.
    */
   private int queueSize;
+  
+  /**
+   * Represents the flag that decides whether to introduce delay
+   * after every scan or only after scans with no changes found.
+   */
+  private boolean introduceDelayAfterEveryScan;
 
   /**
    * @return the stripDomainOfAcesFlag
@@ -90,15 +96,15 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
   /**
    * @return the delayBetweenTwoScans
    */
-  public long getDelayBetweenTwoScans() {
-    return delayBetweenTwoScans;
+  public long getDelayBetweenTwoScansInMillis() {
+    return delayBetweenTwoScansInMillis;
   }
 
   /**
    * @param delayBetweenTwoScans the delayBetweenTwoScans to set
    */
-  public void setDelayBetweenTwoScans(long delayBetweenTwoScans) {
-    this.delayBetweenTwoScans = delayBetweenTwoScans;
+  public void setDelayBetweenTwoScansInMillis(long delayBetweenTwoScans) {
+    this.delayBetweenTwoScansInMillis = delayBetweenTwoScans;
   }
 
   /**
@@ -170,6 +176,22 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
    */
   public void setPushAclFlag(boolean pushAclFlag) {
 	this.pushAclFlag = pushAclFlag;
+  }
+
+  /**
+   * @return the introduceDelayAfterEveryScan
+   */
+  public boolean isIntroduceDelayAfterEveryScan() {
+  	return introduceDelayAfterEveryScan;
+  }
+
+  /**
+   * @param introduceDelayAfterEveryScan the introduceDelayAfterEveryScan to
+   * set
+   */
+  public void setIntroduceDelayAfterEveryScan(
+  		boolean introduceDelayAfterEveryScan) {
+  	this.introduceDelayAfterEveryScan = introduceDelayAfterEveryScan;
   }
 
 }

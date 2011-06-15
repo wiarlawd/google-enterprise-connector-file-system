@@ -64,11 +64,12 @@
     -->
   
     <!-- 
-    Delay that will be added after every scan that does not produce even one
-    change in the file system.
+    No. of milliseconds to sleep after a scan
+    When this delay is applied depends on the 'introduceDelayAfterEveryScan'
+    parameter described below.
     -->
     <!--
-    <property name="delayBetweenTwoScans" value="60000"/>
+    <property name="delayBetweenTwoScansInMillis" value="60000"/>
     -->
   
     <!-- 
@@ -77,6 +78,14 @@
     -->
     <!--
     <property name="queueSize" value="1000"/>
+    -->
+
+    <!-- 
+    Flag that decides whether to add delay after every scan or only after scan
+    that results in no changes. 
+    -->
+    <!--
+    <property name="introduceDelayAfterEveryScan" value="false"/>
     -->
   
   </bean>
