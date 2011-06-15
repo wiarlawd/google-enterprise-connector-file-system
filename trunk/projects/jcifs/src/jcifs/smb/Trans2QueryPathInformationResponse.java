@@ -46,6 +46,9 @@ class Trans2QueryPathInformationResponse extends SmbComTransactionResponse {
         public long getSize() {
             return 0L;
         }
+        public long getLastAccessTime() {
+            return lastAccessTime;
+        }
         public String toString() {
             return new String( "SmbQueryFileBasicInfo[" +
                 "createTime=" + new Date( createTime ) +
@@ -69,6 +72,9 @@ class Trans2QueryPathInformationResponse extends SmbComTransactionResponse {
             return 0L;
         }
         public long getLastWriteTime() {
+            return 0L;
+        }
+        public long getLastAccessTime() {
             return 0L;
         }
         public long getSize() {

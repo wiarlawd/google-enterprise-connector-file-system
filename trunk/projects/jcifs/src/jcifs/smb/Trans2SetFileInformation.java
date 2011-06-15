@@ -24,18 +24,20 @@ class Trans2SetFileInformation extends SmbComTransaction {
 
     private int fid;
     private int attributes;
-    private long createTime, lastWriteTime;
+    private long createTime, lastWriteTime, lastAccessTime;
 
-    Trans2SetFileInformation( int fid, int attributes, long createTime, long lastWriteTime ) {
+    Trans2SetFileInformation( int fid, int attributes, long createTime, long lastWriteTime, long lastAccessTime ) {
         this.fid = fid;
         this.attributes = attributes;
         this.createTime = createTime;
         this.lastWriteTime = lastWriteTime;
+        this.lastAccessTime = lastAccessTime;
         command = SMB_COM_TRANSACTION2;
         subCommand = TRANS2_SET_FILE_INFORMATION;
         maxParameterCount = 6;
         maxDataCount = 0;
         maxSetupCount = (byte)0x00;
+        
     }
 
     int writeSetupWireFormat( byte[] dst, int dstIndex ) {
@@ -59,7 +61,7 @@ class Trans2SetFileInformation extends SmbComTransaction {
         int start = dstIndex;
 
         writeTime( createTime, dst, dstIndex ); dstIndex += 8;
-        writeInt8( 0L, dst, dstIndex ); dstIndex += 8;
+        writeTime( lastAccessTime, dst, dstIndex ); dstIndex += 8;
         writeTime( lastWriteTime, dst, dstIndex ); dstIndex += 8;
         writeInt8( 0L, dst, dstIndex ); dstIndex += 8;
 /* Samba 2.2.7 needs ATTR_NORMAL

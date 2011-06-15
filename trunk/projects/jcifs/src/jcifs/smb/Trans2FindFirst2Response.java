@@ -61,6 +61,9 @@ class Trans2FindFirst2Response extends SmbComTransactionResponse {
         public long createTime() {
             return creationTime;
         }
+        public long lastAccess() {
+            return lastAccessTime;
+        }
         public long lastModified() {
             return lastWriteTime;
         }
@@ -174,7 +177,7 @@ class Trans2FindFirst2Response extends SmbComTransactionResponse {
             e.nextEntryOffset = readInt4( buffer, bufferIndex );
             e.fileIndex = readInt4( buffer, bufferIndex + 4 );
             e.creationTime = readTime( buffer, bufferIndex + 8 );
-    //      e.lastAccessTime = readTime( buffer, bufferIndex + 16 );
+            e.lastAccessTime = readTime( buffer, bufferIndex + 16 );
             e.lastWriteTime = readTime( buffer, bufferIndex + 24 );
     //      e.changeTime = readTime( buffer, bufferIndex + 32 );
             e.endOfFile = readInt8( buffer, bufferIndex + 40 );

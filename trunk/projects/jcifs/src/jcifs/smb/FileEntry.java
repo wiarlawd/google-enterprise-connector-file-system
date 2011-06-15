@@ -8,4 +8,5 @@ public interface FileEntry {
     long createTime();
     long lastModified();
     long length();
+    long lastAccess();
 }

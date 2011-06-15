@@ -411,6 +411,7 @@ public class SmbFile extends URLConnection implements SmbConstants {
     private String share;            // Can be null
     private long createTime;
     private long lastModified;
+    private long lastAccess;
     private int attributes;
     private long attrExpiration;
     private long size;
@@ -615,7 +616,7 @@ public class SmbFile extends URLConnection implements SmbConstants {
         getUncPath0();
     }
     SmbFile( SmbFile context, String name, int type,
-                int attributes, long createTime, long lastModified, long size )
+                int attributes, long createTime, long lastModified, long size, long lastAccess )
                 throws MalformedURLException, UnknownHostException {
         this( context.isWorkgroup0() ?
             new URL( null, "smb://" + name + "/", Handler.SMB_HANDLER ) :
@@ -648,6 +649,7 @@ public class SmbFile extends URLConnection implements SmbConstants {
         this.createTime = createTime;
         this.lastModified = lastModified;
         this.size = size;
+        this.lastAccess = lastAccess;
         isExists = true;
 
         attrExpiration = sizeExpiration =
@@ -1350,7 +1352,7 @@ if (this instanceof SmbNamedPipe) {
             /*
              * Trans2 Query Path Information Request / Response
              */
-
+            
             Trans2QueryPathInformationResponse response =
                     new Trans2QueryPathInformationResponse( infoLevel );
             send( new Trans2QueryPathInformation( path, infoLevel ), response );
@@ -1392,6 +1394,7 @@ if (this instanceof SmbNamedPipe) {
 
         attributes = ATTR_READONLY | ATTR_DIRECTORY;
         createTime = 0L;
+        lastAccess = 0L;
         lastModified = 0L;
         isExists = false;
 
@@ -1411,6 +1414,7 @@ if (this instanceof SmbNamedPipe) {
                     Trans2QueryPathInformationResponse.SMB_QUERY_FILE_BASIC_INFO );
                 attributes = info.getAttributes();
                 createTime = info.getCreateTime();
+                lastAccess = info.getLastAccessTime();
                 lastModified = info.getLastWriteTime();
             }
 
@@ -1550,6 +1554,7 @@ if (this instanceof SmbNamedPipe) {
  * @return The number of milliseconds since the 00:00:00 GMT, January 1,
  *         1970 as a <code>long</code> value
  */
+
     public long createTime() throws SmbException {
         if( getUncPath0().length() > 1 ) {
             exists();
@@ -1557,6 +1562,15 @@ if (this instanceof SmbNamedPipe) {
         }
         return 0L;
     }
+    
+    public long lastAccess() throws SmbException {
+        if( getUncPath0().length() > 1 ) {
+            exists();
+            return lastAccess;
+        }
+        return 0L;
+    }
+    
 /**
  * Retrieve the last time the file represented by this
  * <code>SmbFile</code> was modified. The value returned is suitable for
@@ -1815,7 +1829,7 @@ if (this instanceof SmbNamedPipe) {
             if (name.length() > 0) {
                 // if !files we don't need to create SmbFiles here
                 SmbFile f = new SmbFile(this, name, e.getType(),
-                            ATTR_READONLY | ATTR_DIRECTORY, 0L, 0L, 0L );
+                            ATTR_READONLY | ATTR_DIRECTORY, 0L, 0L, 0L, 0L );
                 if (ff != null && ff.accept(f) == false)
                     continue;
                 if (files) {
@@ -1936,7 +1950,7 @@ if (this instanceof SmbNamedPipe) {
                 if (name.length() > 0) {
                     // if !files we don't need to create SmbFiles here
                     SmbFile f = new SmbFile(this, name, e.getType(),
-                                ATTR_READONLY | ATTR_DIRECTORY, 0L, 0L, 0L );
+                                ATTR_READONLY | ATTR_DIRECTORY, 0L, 0L, 0L, 0L );
                     if (ff != null && ff.accept(f) == false)
                         continue;
                     if (files) {
@@ -2002,7 +2016,7 @@ if (this instanceof SmbNamedPipe) {
                 }
                 if( name.length() > 0 ) {
                     SmbFile f = new SmbFile( this, name, TYPE_FILESYSTEM,
-                            e.getAttributes(), e.createTime(), e.lastModified(), e.length() );
+                            e.getAttributes(), e.createTime(), e.lastModified(), e.length(), e.lastAccess() );
                     if( ff != null && ff.accept( f ) == false ) {
                         continue;
                     }
@@ -2140,12 +2154,14 @@ if (this instanceof SmbNamedPipe) {
             attributes = ATTR_READONLY | ATTR_DIRECTORY;
             createTime = 0L;
             lastModified = 0L;
+            lastAccess = 0L;
             isExists = false;
 
             Info info = queryPath( getUncPath0(),
                     Trans2QueryPathInformationResponse.SMB_QUERY_FILE_BASIC_INFO );
             attributes = info.getAttributes();
             createTime = info.getCreateTime();
+            lastAccess = info.getLastAccessTime();
             lastModified = info.getLastWriteTime();
 
             /* If any of the above fails, isExists will not be set true
@@ -2163,7 +2179,7 @@ if (this instanceof SmbNamedPipe) {
             if( path.length() > 1 ) {
                 try {
                     dest.mkdir();
-                    dest.setPathInformation( attributes, createTime, lastModified );
+                    dest.setPathInformation( attributes, createTime, lastModified, lastAccess);
                 } catch( SmbException se ) {
                     if( se.getNtStatus() != NtStatus.NT_STATUS_ACCESS_DENIED &&
                             se.getNtStatus() != NtStatus.NT_STATUS_OBJECT_NAME_COLLISION ) {
@@ -2181,7 +2197,8 @@ if (this instanceof SmbNamedPipe) {
                                     files[i].attributes,
                                     files[i].createTime,
                                     files[i].lastModified,
-                                    files[i].size );
+                                    files[i].size,
+                                    files[i].lastAccess );
                     files[i].copyTo0( ndest, b, bsize, w, req, resp );
                 }
             } catch( UnknownHostException uhe ) {
@@ -2202,7 +2219,7 @@ if (this instanceof SmbNamedPipe) {
                     if(( dest.attributes & ATTR_READONLY ) != 0 ) {
                                                 /* Remove READONLY and try again
                                                  */
-                        dest.setPathInformation( dest.attributes & ~ATTR_READONLY, 0L, 0L );
+                        dest.setPathInformation( dest.attributes & ~ATTR_READONLY, 0L, 0L, 0L );
                         dest.open( SmbFile.O_CREAT | SmbFile.O_WRONLY | SmbFile.O_TRUNC,
                                 FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
                                 attributes, 0 );
@@ -2243,7 +2260,7 @@ if (this instanceof SmbNamedPipe) {
                 }
     
                 dest.send( new Trans2SetFileInformation(
-                        dest.fid, attributes, createTime, lastModified ),
+                        dest.fid, attributes, createTime, lastModified, lastAccess),
                         new Trans2SetFileInformationResponse() );
                 dest.close( 0L );
             } catch( Exception ex ) {
@@ -2361,6 +2378,7 @@ if (this instanceof SmbNamedPipe) {
         if( System.currentTimeMillis() > attrExpiration ) {
             attributes = ATTR_READONLY | ATTR_DIRECTORY;
             createTime = 0L;
+            lastAccess = 0L;
             lastModified = 0L;
             isExists = false;
 
@@ -2368,6 +2386,7 @@ if (this instanceof SmbNamedPipe) {
                     Trans2QueryPathInformationResponse.SMB_QUERY_FILE_BASIC_INFO );
             attributes = info.getAttributes();
             createTime = info.getCreateTime();
+            lastAccess = info.getLastAccessTime();
             lastModified = info.getLastWriteTime();
 
             attrExpiration = System.currentTimeMillis() + attrExpirationPeriod;
@@ -2556,7 +2575,7 @@ if (this instanceof SmbNamedPipe) {
         close( open0( O_RDWR | O_CREAT | O_EXCL, 0, ATTR_NORMAL, 0 ), 0L );
     }
 
-    void setPathInformation( int attrs, long ctime, long mtime ) throws SmbException {
+    void setPathInformation( int attrs, long ctime, long mtime, long latime ) throws SmbException {
         int f, dir;
 
         exists();
@@ -2564,7 +2583,7 @@ if (this instanceof SmbNamedPipe) {
 
         f = open0( O_RDONLY, FILE_WRITE_ATTRIBUTES,
                 dir, dir != 0 ? 0x0001 : 0x0040 );
-        send( new Trans2SetFileInformation( f, attrs | dir, ctime, mtime ),
+        send( new Trans2SetFileInformation( f, attrs | dir, ctime, mtime, latime ),
                 new Trans2SetFileInformationResponse() );
         close( f, 0L );
 
@@ -2585,7 +2604,7 @@ if (this instanceof SmbNamedPipe) {
             throw new SmbException( "Invalid operation for workgroups, servers, or shares" );
         }
 
-        setPathInformation( 0, time, 0L );
+        setPathInformation( 0, time, 0L, 0L );
     }
 /**
  * Set the last modified time of the file. The time is specified as milliseconds
@@ -2601,7 +2620,14 @@ if (this instanceof SmbNamedPipe) {
             throw new SmbException( "Invalid operation for workgroups, servers, or shares" );
         }
 
-        setPathInformation( 0, 0L, time );
+        setPathInformation( 0, 0L, time, 0L );
+    }
+    public void setLastAccess( long time ) throws SmbException {
+        if( getUncPath0().length() == 1 ) {
+            throw new SmbException( "Invalid operation for workgroups, servers, or shares" );
+        }
+
+        setPathInformation( 0, 0L, 0L, time );
     }
 
 /**
@@ -2632,7 +2658,7 @@ if (this instanceof SmbNamedPipe) {
         if( getUncPath0().length() == 1 ) {
             throw new SmbException( "Invalid operation for workgroups, servers, or shares" );
         }
-        setPathInformation( attrs & ATTR_SET_MASK, 0L, 0L );
+        setPathInformation( attrs & ATTR_SET_MASK, 0L, 0L, 0L );
     }
 
 /**

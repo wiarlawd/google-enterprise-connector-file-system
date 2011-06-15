@@ -179,6 +179,7 @@ public class UniAddress {
         } catch( InterruptedException ie ) {
             throw new UnknownHostException( name );
         }
+        waitForQueryThreads(q1x, q20);
         if( q1x.ans != null ) {
             return q1x.ans;
         } else if( q20.ans != null ) {
@@ -188,6 +189,39 @@ public class UniAddress {
         }
     }
 
+    private static void waitForQueryThreads(QueryThread q1x, QueryThread q20)
+    {
+        interruptThreadSafely(q1x);
+        joinThread(q1x);
+        interruptThreadSafely(q20);
+        joinThread(q20);
+    }
+
+    private static void interruptThreadSafely(QueryThread thread)
+    {
+        try
+        {
+            thread.interrupt();
+        }
+        catch(SecurityException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private static void joinThread(Thread thread)
+    {
+        try
+        {
+            thread.join();
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    
     /** 
      * Determines the address of a host given it's host name. The name can be a
      * machine name like "jcifs.samba.org",  or an IP address like "192.168.1.15".

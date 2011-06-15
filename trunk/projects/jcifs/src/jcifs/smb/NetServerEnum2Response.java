@@ -47,6 +47,9 @@ class NetServerEnum2Response extends SmbComTransactionResponse {
         public long lastModified() {
             return 0L;
         }
+        public long lastAccess() {
+            return 0L;
+        }
         public long length() {
             return 0L;
         }
