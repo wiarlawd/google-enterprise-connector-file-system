@@ -259,15 +259,7 @@ class SmbAclBuilder {
         // allowed access at SHARE level. This is because we cannot resolve
         // groups to see if a user is part of the group. This might potentially
         // deny a user access to a document.
-        LOGGER.fine("Performing INTERSECTION of ACL for: " + file.getURL());         
-        for (ACE fileAce : fileAces) {
-          for (ACE shareAce : shareAces) {
-            if (shareAce.getSID().equals(fileAce.getSID())) {
-              finalAceList.add(fileAce);
-              break;
-            }
-          }
-        }
+        getFinalAcesForIntersection(fileAces, shareAces, finalAceList);
     }
     LOGGER.finer("FINAL ACL for file: " + file.getURL() + " is: "
         + finalAceList);
@@ -275,6 +267,50 @@ class SmbAclBuilder {
   }
 
   /**
+   * Gets the final list of ACEs for intersection scenario.
+   * @param fileAces List of ACEs at file level.
+   * @param shareAces List of ACEs at share level.
+   * @param finalAceList final list of ACEs
+   */
+  private void getFinalAcesForIntersection(
+      List<ACE> fileAces, List<ACE> shareAces, List<ACE> finalAceList) {
+    LOGGER.fine("Performing INTERSECTION of ACL for: " + file.getURL());
+    boolean accessToEveryoneAtShare = containsEveryone(shareAces);
+    boolean accessToEveryoneAtFile = containsEveryone(fileAces);
+    if (accessToEveryoneAtShare || accessToEveryoneAtFile) {
+      if (accessToEveryoneAtShare) {
+        finalAceList.addAll(fileAces);
+      }
+      if (accessToEveryoneAtFile) {
+        finalAceList.addAll(shareAces);
+      }
+    } else {
+      for (ACE fileAce : fileAces) {
+        for (ACE shareAce : shareAces) {
+          if (shareAce.getSID().equals(fileAce.getSID())) {
+            finalAceList.add(fileAce);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Checks the presence ACE for Windows Group "Everyone" in given ACE list.
+   * @param aceList List of ACEs
+   * @return true / false depending on the presence of Everyone group
+   */
+  private boolean containsEveryone(List<ACE> aceList) {
+    for (ACE ace: aceList) {
+      if (ace.getSID().toString().equals(EVERYONE_SID)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+/**
    * Checks to see if the ACE is a DENY entry.
    * @param ace ACE being checked for DENY entry.
    * @return true/ false depending on whether ACE is ALLOW or DENY
@@ -394,6 +430,9 @@ class SmbAclBuilder {
     }
     return false;
   }
+  
+  /* @VisibleForTesting */
+  static final String EVERYONE_SID = "S-1-1-0"; 
 
   /**
    * {@link String} representations of {@link SID} objects that qualify for
@@ -404,7 +443,7 @@ class SmbAclBuilder {
   private static final Set<String> SUPPORTED_WINDOWS_SIDS =
       new HashSet<String>(Arrays.asList(
           "S-1-5-32-544",  // Administrators
-          "S-1-1-0",       // Everyone
+          EVERYONE_SID,       // Everyone
           "S-1-5-32-545",  // Users
           "S-1-5-32-546"   // Guests
       ));
