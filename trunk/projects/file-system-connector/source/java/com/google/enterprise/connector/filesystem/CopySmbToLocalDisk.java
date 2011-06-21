@@ -13,8 +13,10 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
+import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -68,7 +70,8 @@ class CopySmbToLocalDisk {
     String startPath = a[0];
     String endPath = a[1];
     Credentials creds = new Credentials("", "admin", "test");
-    SmbReadonlyFile start = new SmbReadonlyFile(startPath, creds, false, false, AceSecurityLevel.FILEANDSHARE.name());
+    SmbFileProperties smbProperties = new SmbProperties();
+    SmbReadonlyFile start = new SmbReadonlyFile(startPath, creds, smbProperties);
     CopySmbToLocalDisk copier = new CopySmbToLocalDisk(start, new File(endPath));
     long startTimeMillis = System.currentTimeMillis();
     copier.copy();
@@ -86,7 +89,7 @@ class CopySmbToLocalDisk {
     System.out.println("file/s  " + fileRateSecs);
     System.out.println("byte/s  " + byteRateSecs);
   }
-
+  
   private void copy() throws IOException, DirectoryListingException, InsufficientAccessException {
     processDirectory(src);
   }
@@ -149,6 +152,25 @@ class CopySmbToLocalDisk {
           throw new IllegalStateException("failed to make dir: " + relativeDir);
         }
         return new File(relativeDir, baseName);
+    }
+  }
+  
+  private static class SmbProperties implements SmbFileProperties {
+
+    public String getAceSecurityLevel() {
+      return AceSecurityLevel.FILEANDSHARE.name();
+    }
+
+    public String getGroupAclFormat() {
+      return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+    }
+
+    public String getUserAclFormat() {
+      return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+    }
+
+    public boolean isLastAccessResetFlagForSmb() {
+      return false;
     }
   }
 }

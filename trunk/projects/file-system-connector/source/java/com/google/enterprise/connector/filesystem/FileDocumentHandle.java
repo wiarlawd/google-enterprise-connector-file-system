@@ -260,7 +260,7 @@ public class FileDocumentHandle implements DocumentHandle {
         String domain, String userName, String password,
             MimeTypeFinder mimeTypeFinder,
                 TraversalContextManager traversalContextManager,
-                    DocumentSecurityPropertyFetcher propertyFetcher) {
+                    DocumentSecurityProperties propertyFetcher) {
       this(fileSystemTypeRegistry, propertyFetcher.isPushAclFlag(),
           propertyFetcher.isMarkDocumentPublicFlag(),
               new Credentials(domain, userName, password),
@@ -297,7 +297,7 @@ public class FileDocumentHandle implements DocumentHandle {
   /**
    * Interface to retrieve the properties required by DocumentContext
    */
-  static interface DocumentSecurityPropertyFetcher {
+  static interface DocumentSecurityProperties {
     
     /**
      * Returns the markAllDocumentsPublic.

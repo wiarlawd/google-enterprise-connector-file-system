@@ -14,7 +14,10 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import static com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.SmbAclProperties;
+
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
@@ -33,6 +36,9 @@ import junit.framework.TestCase;
  * Tests for the {@link Acl} class.
  */
 public class SmbAclBuilderTest extends TestCase {
+
+  private final String defaultAceFormat =
+      AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
   
   public void testACLForFileAndShareAndIntersection () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
@@ -48,7 +54,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.FILEANDSHARE.name());
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.FILEANDSHARE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
@@ -75,7 +84,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.FILEORSHARE.name()/*File_union_Share*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.FILEORSHARE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
@@ -97,7 +109,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.FILE.name()/*File level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.FILE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
@@ -116,7 +131,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.SHARE.name()/*Share level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
@@ -135,7 +153,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.SHARE.name()/*Share level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
@@ -157,7 +178,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, "Incorrect rule"/*incorrect value*/);
+    AclProperties fetcher = new AclProperties(
+        "Incorrect Rule",
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
@@ -179,7 +203,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.FILE.name()/*File level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.FILE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertEquals(Acl.USE_HEAD_REQUEST, acl);
     verify(smbFile);
@@ -191,7 +218,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.SHARE.name()/*Share level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertEquals(Acl.USE_HEAD_REQUEST, acl);
     verify(smbFile);
@@ -207,7 +237,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, true, AceSecurityLevel.SHARE.name()/*Share level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        AclFormat.USER_OR_GROUP.getFormat(),AclFormat.USER_OR_GROUP.getFormat());
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
@@ -224,7 +257,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.SHARE.name()/*Share level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     //Once DENY ACE is found, code should return ACL with null user and group ACE list
     assertEquals(Acl.USE_HEAD_REQUEST, acl);
@@ -239,7 +275,10 @@ public class SmbAclBuilderTest extends TestCase {
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
     replay(smbFile);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.FILE.name()/*File level only*/);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.FILE.name(),
+        defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     //Once DENY ACE is found, code should return ACL with null user and group ACE list
     assertEquals(Acl.USE_HEAD_REQUEST, acl);
@@ -253,7 +292,10 @@ public class SmbAclBuilderTest extends TestCase {
     expectLastCall().anyTimes();
     replay(smbFile);
     try {
-      SmbAclBuilder builder = new SmbAclBuilder(smbFile, false, AceSecurityLevel.FILE.name()/*File level only*/);
+      AclProperties fetcher = new AclProperties(
+          AceSecurityLevel.FILE.name(),
+          defaultAceFormat, defaultAceFormat);
+      SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
       builder.build();
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
@@ -261,6 +303,81 @@ public class SmbAclBuilderTest extends TestCase {
       verify(smbFile);
     }
   }
+
+  public void testACLForSAMLTypeACL () throws IOException {
+    SmbFile smbFile = createMock(SmbFile.class);
+    String samlAceFormat = AclFormat.USER_OR_GROUP_AT_DOMAIN.getFormat();
+    ACE shareAce = createACE("google\\accountants", false /* this will create a group ACE*/);
+    ACE [] shareAces = {shareAce};
+    expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
+    expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        samlAceFormat, samlAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+
+    Acl acl = builder.build();
+    assertNotNull(acl);
+    assertNotNull(acl.getGroups());
+    assertTrue((acl.getGroups()).contains("accountants@google"));
+    assertTrue(acl.getUsers().isEmpty());
+    verify(smbFile);
+  }
+
+  public void testACLForHTTPBasicTypeACL () throws IOException {
+    SmbFile smbFile = createMock(SmbFile.class);
+    String httpAceFormat = AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+    ACE shareAce = createACE("google\\accountants", false /* this will create a group ACE*/);
+    ACE [] shareAces = {shareAce};
+    expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
+    expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.SHARE.name(),
+        httpAceFormat, httpAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    Acl acl = builder.build();
+    assertNotNull(acl);
+    assertNotNull(acl.getGroups());
+    assertTrue((acl.getGroups()).contains("google\\accountants"));
+    assertTrue(acl.getUsers().isEmpty());
+    verify(smbFile);
+  }
+  
+  public void testACLForHTTPBasicUserAceAndSAMLGroupAce () throws IOException {
+    SmbFile smbFile = createMock(SmbFile.class);
+    ACE fileAce = createACE("google\\superUser", true);
+    ACE fileAce1 = createACE("user2", true);
+    ACE [] fileAces = {fileAce, fileAce1};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    //To ensure that we get same SID for checking equality
+    ACE shareAce = fileAce; 
+    ACE shareAce1 = createACE("google\\employees", false);
+    ACE [] shareAces = {shareAce, shareAce1};
+    expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
+    expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+    AclProperties fetcher = new AclProperties(
+        AceSecurityLevel.FILEORSHARE.name(),
+        AclFormat.USER_OR_GROUP_AT_DOMAIN.getFormat(),
+        defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    Acl acl = builder.build();
+    assertNotNull(acl);
+    assertNotNull(acl.getUsers());
+    assertTrue(((String) acl.getUsers().get(0)).equals("google\\superUser"));
+    assertTrue(((String) acl.getGroups().get(0)).equals("employees@google"));
+    verify(smbFile);
+    verify(fileAce);
+    verify(fileAce1);
+    verify(shareAce);
+    verify(shareAce1);
+  }
+
 
   
   /**
@@ -311,6 +428,29 @@ public class SmbAclBuilderTest extends TestCase {
     replay(ace);
     return ace;
   }
+  
+  private static class AclProperties implements SmbAclProperties {
+      
+    private final String aceLevel, groupAclFormat, userAclFormat;
+    
+    private AclProperties(String aceLevel, String groupAclFormat,
+            String userAclFormat) {
+        this.aceLevel = aceLevel;
+        this.groupAclFormat = groupAclFormat;
+        this.userAclFormat = userAclFormat;
+    }
 
+    public String getAceSecurityLevel() {
+        return aceLevel;
+    }
+
+    public String getGroupAclFormat() {
+        return groupAclFormat;
+    }
+
+    public String getUserAclFormat() {
+        return userAclFormat;
+    }
+  }
   
 }

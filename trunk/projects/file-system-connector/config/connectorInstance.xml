@@ -24,13 +24,6 @@
     -->
     
     <!-- 
-    Flag to strip domains from ACE users and groups to match GSA.
-    -->
-    <!--
-    <property name="stripDomainOfAcesFlag" value="true"/>
-    -->
-    
-    <!-- 
     Flag to mark all crawled documents as 'public'.
     -->
     <!--
@@ -88,6 +81,28 @@
     <property name="introduceDelayAfterEveryScan" value="false"/>
     -->
   
+    <!-- 
+    Represents the format in which ACE entries should be fed to GSA for groups
+    Possible values are 
+    1.userOrGroup@domain
+    2.domain\userOrGroup
+    3.userOrGroup   (only user or group name without domain information)
+    -->
+    <!--
+    <property name="groupAclFormat" value="userOrGroup"/>
+    -->
+
+    <!-- 
+    Represents the format in which ACE entries should be fed to GSA for users
+    Possible values are 
+    1.userOrGroup@domain
+    2.domain\userOrGroup
+    3.userOrGroup   (only user or group name without domain information)
+    -->
+    <!--
+    <property name="userAclFormat" value="userOrGroup"/>
+    -->
+
   </bean>
 
 </beans>

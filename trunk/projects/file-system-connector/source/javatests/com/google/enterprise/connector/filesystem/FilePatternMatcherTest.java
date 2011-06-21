@@ -16,6 +16,9 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
+import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+
 import junit.framework.TestCase;
 
 import java.io.File;
@@ -28,21 +31,41 @@ public class FilePatternMatcherTest extends TestCase {
   Credentials credentials = new Credentials(null, "testUser", "foobar");
 
   public void testBasics() throws RepositoryDocumentException {
-	String securityLevel = AceSecurityLevel.FILEANDSHARE.name();
     List<String> include = Arrays.asList("smb://foo.com/", "/foo/bar/");
     List<String> exclude = Arrays.asList("smb://foo.com/secret/", "/foo/bar/hidden/");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
-    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, false,false, securityLevel)
+    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, getFetcher())
         .acceptedBy(matcher));
     assertTrue(new JavaReadonlyFile(new File("/foo/bar/baz.txt"))
         .acceptedBy(matcher));
-    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, false,false, securityLevel)
+    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, getFetcher())
         .acceptedBy(matcher));
     assertFalse(new SmbReadonlyFile("smb://foo.com/secret/private_key",
-        credentials, false,false, securityLevel).acceptedBy(matcher));
+        credentials, getFetcher()).acceptedBy(matcher));
     assertFalse(new JavaReadonlyFile(new File("/foo/bar/hidden/porn.png"))
         .acceptedBy(matcher));
     assertFalse(new JavaReadonlyFile(new File("/bar/foo/public/knowledge"))
         .acceptedBy(matcher));
   }
+  
+  private SmbFileProperties getFetcher() {
+    return new SmbFileProperties() {
+      public String getUserAclFormat() {
+        return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      }
+        
+      public String getGroupAclFormat() {
+        return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      }
+      
+      public String getAceSecurityLevel() {
+        return AceSecurityLevel.FILEANDSHARE.name();
+      }
+      
+      public boolean isLastAccessResetFlagForSmb() {
+        return false;
+      }
+    };
+  }
+
 }

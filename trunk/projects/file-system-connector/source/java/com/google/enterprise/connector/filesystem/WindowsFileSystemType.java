@@ -39,7 +39,7 @@ public class WindowsFileSystemType implements FileSystemType {
     this.accessTimeResetFlag = accessTimeResetFlag;
   }
   
-  public WindowsFileSystemType(WindowsFilePropertyFetcher propertyFetcher) {
+  public WindowsFileSystemType(WindowsFileProperties propertyFetcher) {
     this(propertyFetcher.isLastAccessResetFlagForLocalWindows());
   }
 
@@ -114,7 +114,7 @@ public class WindowsFileSystemType implements FileSystemType {
    * Interface to retrieve properties required for crawling local 
    * windows files.
    */
-  public static interface WindowsFilePropertyFetcher {
+  public static interface WindowsFileProperties {
     
     /**
      * Gets the accessTimeResetFlag

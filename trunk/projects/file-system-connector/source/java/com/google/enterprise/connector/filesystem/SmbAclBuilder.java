@@ -34,7 +34,6 @@ class SmbAclBuilder {
   private static final Logger LOGGER = Logger.getLogger(
       SmbAclBuilder.class.getName());
   private final SmbFile file;
-  private final boolean stripDomainFromAces;
   
   /**
    * Represents the security level of fetching ACL
@@ -56,6 +55,79 @@ class SmbAclBuilder {
       return null;
     }
   }
+  
+  /**
+   * Represents the ACL format 
+   */
+  static enum AclFormat {
+    USER_OR_GROUP_AT_DOMAIN("userOrGroup@domain"),
+    DOMAIN_BACKSLASH_USER_OR_GROUP("domain\\userOrGroup"),
+    USER_OR_GROUP("userOrGroup"),; 
+    
+    /**
+     * Stores the format
+     */
+    private final String format;
+    
+    /**
+     * Returns the AclFormat enum based on the format string
+     * if none are found, null is returned. 
+     */
+    private static AclFormat getAclFormat(String format) {
+      for (AclFormat tempFormat: AclFormat.values()) {
+        if (tempFormat.getFormat().equalsIgnoreCase(format)) {
+          return tempFormat;
+        }
+      }
+      return null;
+    }
+    
+    /**
+     * Returns the format. 
+     */
+    String getFormat() {
+      return this.format;
+    }
+    
+    /**
+     * Constructs the enum with the format 
+     */
+    private AclFormat(String format) {
+      this.format = format;
+    }
+
+    /**
+     * Formats the ACE string based on the passed
+     * AclFormat enum, user or group name and the domain string.
+     * @param aclFormat Enum with the ACL format to use.
+     * @param userOrGroup String representing user or group name.
+     * @param domain String representing domain name.
+     * @return Formatted ACE string.
+     */
+    static String formatString(
+        AclFormat aclFormat, String userOrGroup, String domain) {
+      switch (aclFormat) {
+        case USER_OR_GROUP_AT_DOMAIN:
+          return userOrGroup + "@" + domain;
+        case USER_OR_GROUP:
+          return userOrGroup;
+        case DOMAIN_BACKSLASH_USER_OR_GROUP:
+          return domain + "\\" + userOrGroup;
+        default:
+          return null;
+      }
+    }
+  }
+  
+  /**
+   * Represents the format in which the ACEs are to be returned for users.
+   */
+  private final AclFormat userAclFormat;
+  
+  /**
+   * Represents the format in which the ACEs are to be returned for groups.
+   */
+  private final AclFormat groupAclFormat;
 
   /**
    * Represents the security level for fetching ACL
@@ -71,17 +143,36 @@ class SmbAclBuilder {
    *        be included in the form {@literal domainName\\userOrGroupName}.
    * @param aceSecurityLevel Security level to be considered while fetching ACL
    */
-  SmbAclBuilder(SmbFile file, boolean stripDomainFromAces,
-      String aceSecurityLevel) {
+  SmbAclBuilder(SmbFile file, SmbAclProperties propertyFetcher) {
     this.file = file;
-    this.stripDomainFromAces = stripDomainFromAces;
-    AceSecurityLevel securityLevel = getSecurityLevel(aceSecurityLevel);  
+    AceSecurityLevel securityLevel = getSecurityLevel(
+        propertyFetcher.getAceSecurityLevel());  
     if (securityLevel == null) {
-      LOGGER.info("Incorrect value specified for aceSecurityLevel parameter; "
+      LOGGER.warning("Incorrect value specified for aceSecurityLevel parameter; "
           + "Setting default value " + AceSecurityLevel.FILEANDSHARE);
       this.securityLevel = AceSecurityLevel.FILEANDSHARE;
     } else {
       this.securityLevel = securityLevel;    
+    }
+    AclFormat tempFormat = AclFormat.getAclFormat(
+        propertyFetcher.getUserAclFormat());
+    if (tempFormat == null) {
+      LOGGER.warning("Incorrect value specified for user AclFormat parameter; "
+          + "Setting default value " 
+          + AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat());
+      this.userAclFormat = AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP;
+    } else {
+      this.userAclFormat = tempFormat;
+    }
+    tempFormat = AclFormat.getAclFormat(
+        propertyFetcher.getGroupAclFormat());
+    if (tempFormat == null) {
+      LOGGER.warning("Incorrect value specified for group AclFormat parameter; "
+            + "Setting default value " 
+            + AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat());
+      this.groupAclFormat = AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP;
+    } else {
+      this.groupAclFormat = tempFormat;
     }
   }
 
@@ -169,17 +260,25 @@ class SmbAclBuilder {
    * it is a user ACE or group ACE.
    * @param users Container for User ACEs
    * @param groups Container for Group ACEs
-   * @param finalAce Source for all ACEs
+   * @param finalAce ACE that needs to be added to the ACL
    */
   private void addAceToSet(Set<String> users, Set<String> groups,
       ACE finalAce) {
     SID sid = finalAce.getSID();
     String aclEntry = sid.toDisplayString();
-    if (stripDomainFromAces) {
-      int ix = aclEntry.indexOf('\\');
-      aclEntry = (ix < 0) ? aclEntry : aclEntry.substring(ix + 1);
+    int sidType = finalAce.getSID().getType();
+    int ix = aclEntry.indexOf('\\');
+    String userOrGroup, domain;
+    if (ix > 0) {
+      domain = aclEntry.substring(0, ix);
+      userOrGroup = aclEntry.substring(ix + 1);
+      if (sidType == SID.SID_TYPE_USER) {
+        aclEntry = AclFormat.formatString(userAclFormat, userOrGroup, domain);
+      } else {
+        aclEntry = AclFormat.formatString(groupAclFormat, userOrGroup, domain);
+      }
     }
-    if (finalAce.getSID().getType() == SID.SID_TYPE_USER) {
+    if (sidType == SID.SID_TYPE_USER) {
       users.add(aclEntry);
     } else {
       groups.add(aclEntry);
@@ -310,7 +409,7 @@ class SmbAclBuilder {
     return false;
   }
 
-/**
+  /**
    * Checks to see if the ACE is a DENY entry.
    * @param ace ACE being checked for DENY entry.
    * @return true/ false depending on whether ACE is ALLOW or DENY
@@ -430,7 +529,7 @@ class SmbAclBuilder {
     }
     return false;
   }
-  
+
   /* @VisibleForTesting */
   static final String EVERYONE_SID = "S-1-1-0"; 
 
@@ -477,5 +576,23 @@ class SmbAclBuilder {
     } else {
       return false;
     }
+  }
+  
+  public static interface SmbAclProperties {
+
+	/**
+     * Gets the AceSecurityLevel
+     */
+    String getAceSecurityLevel();
+    
+    /**
+     * Gets the format for group ACEs
+     */
+    String getGroupAclFormat();
+    
+    /**
+     * Gets the format for user ACEs 
+     */
+    String getUserAclFormat();
   }
 }

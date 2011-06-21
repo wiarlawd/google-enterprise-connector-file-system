@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.util.IOExceptionHelper;
 
@@ -44,7 +45,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   public static final String FILE_SYSTEM_TYPE = "smb";
 
   private SmbFile delegate;
-  private boolean stripDomainFromAces;
+
   private static final Logger LOG = Logger.getLogger(SmbReadonlyFile.class.getName());
   /**
    * It stores the last access time for the underlying file.
@@ -54,34 +55,29 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * Flag to turn on /off the last access time reset flag
    */
   private boolean lastAccessTimeResetFlag = false;
-  /**
-   * Security level to be considered for fetching ACL
-   */
-  private final String securityLevel;
 
   private static Hashtable<String, List<SmbInputStream>> map =
       new Hashtable<String, List<SmbInputStream>>();
+  
+  /**
+   * Implementation of {@link SmbFileProperties} that gives the 
+   * required properties for SMB crawling.
+   */
+  private final SmbFileProperties smbPropertyFetcher;
 
   /**
    * @param path see {@code jcifs.org.SmbFile} for path syntax.
    * @param credentials
-   * @param stripDomainFromAces if true domains will be stripped from user and
-   *        group names in the {@link Acl} returned by {@link #getAcl()} and if
-   *        false domains will be included in the form {@literal
-   *        domainName\\userOrGroupName}.
-   * @param lastAccessTimeResetFlag if true the application will try to reset
-   *        the last access time of the file it crawled; if false the last
-   *        access time will not be reset and will change after the file crawl.
-   *
+   * @param propertyFetcher Fetcher object that gives the required properties
+   * for Smb crawling.
    * @throws RepositoryDocumentException if the path is malformed
    */
-  public SmbReadonlyFile(String path, Credentials credentials, 
-      boolean stripDomainFromAces, boolean lastAccessTimeResetFlag,
-          String securityLevel) throws RepositoryDocumentException {
+  public SmbReadonlyFile(String path, Credentials credentials,
+      SmbFileProperties propertyFetcher) throws RepositoryDocumentException {
 	try {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
-      setProperties(path, stripDomainFromAces, lastAccessTimeResetFlag);
-      this.securityLevel = securityLevel;
+      this.smbPropertyFetcher = propertyFetcher;
+      setProperties(path, propertyFetcher.isLastAccessResetFlagForSmb());
     } catch (MalformedURLException e) {
       throw new IncorrectURLException("malformed SMB path: " + path, e);
     }
@@ -89,14 +85,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   
   /**
    * @param path
-   * @param stripDomainFromAces
    * @param lastAccessTimeResetFlag
    * @throws RepositoryDocumentException 
    */
   private void setProperties(
-      String path, boolean stripDomainFromAces,
-          boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
-    this.stripDomainFromAces = stripDomainFromAces;
+      String path, boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     try {
       if (this.lastAccessTimeResetFlag && this.delegate.isFile()) {
@@ -137,12 +130,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws RepositoryDocumentException
    */
   private SmbReadonlyFile(
-      SmbFile smbFile, boolean stripDomainFromAces, 
-          boolean lastAccessTimeResetFlag, String securityLevel)
+      SmbFile smbFile, SmbFileProperties propertyFetcher)
               throws RepositoryDocumentException {
     this.delegate = smbFile;
-    setProperties(smbFile.getPath(), stripDomainFromAces, lastAccessTimeResetFlag);
-    this.securityLevel = securityLevel;
+    this.smbPropertyFetcher = propertyFetcher;
+    setProperties(smbFile.getPath(), propertyFetcher.isLastAccessResetFlagForSmb());
   }
 
   /* @Override */
@@ -184,7 +176,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
 
   /* @Override */
   public Acl getAcl() throws IOException {
-    SmbAclBuilder builder = new SmbAclBuilder(delegate, stripDomainFromAces, securityLevel);
+    SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
     try {
       return builder.build();
     } catch (SmbException e) {
@@ -281,8 +273,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     List<SmbReadonlyFile> result = new ArrayList<SmbReadonlyFile>(files.length);
     for (int k = 0; k < files.length; ++k) {
       try {
-        result.add(new SmbReadonlyFile(files[k], stripDomainFromAces,
-            lastAccessTimeResetFlag, securityLevel));
+        result.add(new SmbReadonlyFile(files[k], smbPropertyFetcher));
       } catch (RepositoryDocumentException e) {
         //TODO: This seems wrong. If we are not able to process a file 
         //while listing the directory, may be we should skip it? 

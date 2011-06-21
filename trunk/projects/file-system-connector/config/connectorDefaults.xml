@@ -231,7 +231,6 @@
   <bean id = "filesystem-property-manager-defaults"
         singleton = "false">
     <property name="aceSecurityLevel" value="FILEANDSHARE"/>
-    <property name="stripDomainOfAcesFlag" value="true"/>
     <property name="markDocumentPublicFlag" value="false"/>
     <property name="lastAccessResetFlagForSmb" value="false"/>
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
@@ -239,6 +238,8 @@
     <property name="delayBetweenTwoScansInMillis" value="60000"/>
     <property name="queueSize" value="1000"/>
     <property name="introduceDelayAfterEveryScan" value="false"/>
+    <property name="groupAclFormat" value="userOrGroup"/>
+    <property name="userAclFormat" value="userOrGroup"/>
   </bean>
 
 

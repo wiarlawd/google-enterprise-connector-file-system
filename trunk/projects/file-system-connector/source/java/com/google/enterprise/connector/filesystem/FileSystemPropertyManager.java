@@ -2,28 +2,22 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentSecurityPropertyFetcher;
-import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFilePropertyFetcher;
-import com.google.enterprise.connector.filesystem.WindowsFileSystemType.WindowsFilePropertyFetcher;
+import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentSecurityProperties;
+import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.filesystem.WindowsFileSystemType.WindowsFileProperties;
 import com.google.enterprise.connector.util.diffing.ChangeQueue.QueuePropertyFetcher;
 
 /**
- * Represents all the configurable properties for filesystem connector. 
+ * Represents all the configurable properties for filesystem connector.
  * Individual components can fetch the required properties from this class.
  */
-public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
-    WindowsFilePropertyFetcher, DocumentSecurityPropertyFetcher, QueuePropertyFetcher {
+public class FileSystemPropertyManager implements SmbFileProperties,
+    WindowsFileProperties, DocumentSecurityProperties, QueuePropertyFetcher {
  
   /**
    * Represents security level while getting the final ACL for a file.
    */
   private String aceSecurityLevel;
-  
-  /**
-   * Represents the flag  to strip the domain off of
-   * ACEs while returning ACL.
-   */
-  private boolean stripDomainOfAcesFlag;
   
   /**
    * Represents the flag to mark all crawled documents
@@ -66,19 +60,15 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
   private boolean introduceDelayAfterEveryScan;
 
   /**
-   * @return the stripDomainOfAcesFlag
+   * Represents the ACLformat for the group ACEs.
    */
-  public boolean isStripDomainOfAcesFlag() {
-  	return stripDomainOfAcesFlag;
-  }
+  private String groupAclFormat;
 
   /**
-   * @param stripDomainOfAcesFlag the stripDomainOfAcesFlag to set
+   * Represents user ACL format for the user ACEs.
    */
-  public void setStripDomainOfAcesFlag(boolean stripDomainOfAcesFlag) {
-  	this.stripDomainOfAcesFlag = stripDomainOfAcesFlag;
-  }
-  
+  private String userAclFormat;
+
   /**
    * @return the aceSecurityLevel
    */
@@ -90,7 +80,7 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
    * @param aceSecurityLevel the aceSecurityLevel to set
    */
   public void setAceSecurityLevel(String aceSecurityLevel) {
-	this.aceSecurityLevel = aceSecurityLevel;
+    this.aceSecurityLevel = aceSecurityLevel;
   }
 
   /**
@@ -125,64 +115,64 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
    * @return the lastAccessResetFlagForSmb
    */
   public boolean isLastAccessResetFlagForSmb() {
-  	return lastAccessResetFlagForSmb;
+    return lastAccessResetFlagForSmb;
   }
 
   /**
    * @param lastAccessResetFlagForSmb the lastAccessResetFlagForSmb to set
    */
   public void setLastAccessResetFlagForSmb(boolean lastAccessResetFlagForSmb) {
-  	this.lastAccessResetFlagForSmb = lastAccessResetFlagForSmb;
+    this.lastAccessResetFlagForSmb = lastAccessResetFlagForSmb;
   }
 
   /**
    * @return the lastAccessResetFlagForLocalWindows
    */
   public boolean isLastAccessResetFlagForLocalWindows() {
-  	return lastAccessResetFlagForLocalWindows;
+    return lastAccessResetFlagForLocalWindows;
   }
 
   /**
    * @param lastAccessResetFlagForLocalWindows the lastAccessResetFlagForLocalWindows to set
    */
   public void setLastAccessResetFlagForLocalWindows(
-  		boolean lastAccessResetFlagForLocalWindows) {
-  	this.lastAccessResetFlagForLocalWindows = lastAccessResetFlagForLocalWindows;
+      boolean lastAccessResetFlagForLocalWindows) {
+    this.lastAccessResetFlagForLocalWindows = lastAccessResetFlagForLocalWindows;
   }
   
   /**
    * @return the markDocumentPublicFlag
    */
   public boolean isMarkDocumentPublicFlag() {
-  	return markDocumentPublicFlag;
+    return markDocumentPublicFlag;
   }
 
   /**
    * @param markDocumentPublicFlag the markDocumentPublicFlag to set
    */
   public void setMarkDocumentPublicFlag(boolean markDocumentPublicFlag) {
-  	this.markDocumentPublicFlag = markDocumentPublicFlag;
+    this.markDocumentPublicFlag = markDocumentPublicFlag;
   }
 
   /**
    * @return the pushAclFlag
    */
   public boolean isPushAclFlag() {
-	return pushAclFlag;
+    return pushAclFlag;
   }
 
   /**
    * @param pushAclFlag the pushAclFlag to set
    */
   public void setPushAclFlag(boolean pushAclFlag) {
-	this.pushAclFlag = pushAclFlag;
+    this.pushAclFlag = pushAclFlag;
   }
 
   /**
    * @return the introduceDelayAfterEveryScan
    */
   public boolean isIntroduceDelayAfterEveryScan() {
-  	return introduceDelayAfterEveryScan;
+      return introduceDelayAfterEveryScan;
   }
 
   /**
@@ -190,8 +180,36 @@ public class FileSystemPropertyManager implements SmbFilePropertyFetcher,
    * set
    */
   public void setIntroduceDelayAfterEveryScan(
-  		boolean introduceDelayAfterEveryScan) {
-  	this.introduceDelayAfterEveryScan = introduceDelayAfterEveryScan;
+      boolean introduceDelayAfterEveryScan) {
+    this.introduceDelayAfterEveryScan = introduceDelayAfterEveryScan;
+  }
+
+  /**
+   * Returns the ACE format for groups
+   */
+  public String getGroupAclFormat() {
+    return groupAclFormat;
+  }
+
+  /**
+   * Returns the ACE format for users.
+   */
+  public String getUserAclFormat() {
+    return userAclFormat;
+  }
+
+  /**
+   * @param groupAclFormat the groupAclFormat to set
+   */
+  public void setGroupAclFormat(String groupAclFormat) {
+    this.groupAclFormat = groupAclFormat;
+  }
+
+  /**
+   * @param userAclFormat the userAclFormat to set
+   */
+  public void setUserAclFormat(String userAclFormat) {
+    this.userAclFormat = userAclFormat;
   }
 
 }

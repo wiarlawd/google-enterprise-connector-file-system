@@ -16,6 +16,8 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
+import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Session;
 import com.google.enterprise.connector.spi.TraversalContext;
@@ -44,9 +46,10 @@ public class FileSessionTest extends TestCase {
   @Override
   public void setUp() throws IOException {
     changes = new ChangeQueue(100, 10, new DefaultCrawlActivityLogger());
+    SmbFileProperties fetcher = getFetcher();
     FileSystemTypeRegistry fileSystemTypeRegistry =
       new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
-          new SmbFileSystemType(false,false, AceSecurityLevel.FILEANDSHARE.name())));
+          new SmbFileSystemType(fetcher)));
     authz = new FileAuthorizationManager(new PathParser(
         fileSystemTypeRegistry));
     TraversalContext traversalContext = new FakeTraversalContext();
@@ -61,7 +64,27 @@ public class FileSessionTest extends TestCase {
     session = new DiffingConnector(authz, monitorManager, tcm);
   }
 
-  public void testAuthn() throws RepositoryException {
+  private SmbFileProperties getFetcher() {
+    return new SmbFileProperties() {
+      public String getUserAclFormat() {
+        return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      }
+        
+      public String getGroupAclFormat() {
+        return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      }
+      
+      public String getAceSecurityLevel() {
+        return AceSecurityLevel.FILEORSHARE.name();
+      }
+      
+      public boolean isLastAccessResetFlagForSmb() {
+        return false;
+      }
+    };
+  }
+
+public void testAuthn() throws RepositoryException {
     assertNull(session.getAuthenticationManager());
     assertEquals(0, monitorManager.getStartCount());
     assertEquals(0, monitorManager.getStopCount());
