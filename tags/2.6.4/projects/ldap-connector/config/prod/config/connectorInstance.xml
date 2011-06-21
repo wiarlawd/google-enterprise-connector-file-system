@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+  <bean id="ldap-connector-config" class="com.google.enterprise.connector.ldap.LdapConnectorConfig"
+    singleton="false">
+    <constructor-arg>
+      <map>
+        <entry key="hostname" value="${hostname}" />
+        <entry key="port" value="${port}" />
+        <entry key="authtype" value="${authtype}" />
+        <entry key="username" value="${username}" />
+        <entry key="password" value="${password}" />
+        <entry key="method" value="${method}" />
+        <entry key="basedn" value="${basedn}" />
+        <entry key="filter" value="${filter}" />
+        <entry key="schema_key" value="${schema_key}" />
+        <entry key="schema_0" value="${schema_0}" />
+        <entry key="schema_1" value="${schema_1}" />
+        <entry key="schema_2" value="${schema_2}" />
+        <entry key="schema_3" value="${schema_3}" />
+        <entry key="schema_4" value="${schema_4}" />
+        <entry key="schema_5" value="${schema_5}" />
+        <entry key="schema_6" value="${schema_6}" />
+        <entry key="schema_7" value="${schema_7}" />
+        <entry key="schema_8" value="${schema_8}" />
+        <entry key="schema_9" value="${schema_9}" />
+        <entry key="schema_10" value="${schema_10}" />
+        <entry key="schema_11" value="${schema_11}" />
+        <entry key="schema_12" value="${schema_12}" />
+        <entry key="schema_13" value="${schema_13}" />
+        <entry key="schema_14" value="${schema_14}" />
+        <entry key="schema_15" value="${schema_15}" />
+        <entry key="schema_16" value="${schema_16}" />
+        <entry key="schema_17" value="${schema_17}" />
+        <entry key="schema_18" value="${schema_18}" />
+        <entry key="schema_19" value="${schema_19}" />
+        <entry key="schema_20" value="${schema_20}" />
+        <entry key="schema_21" value="${schema_21}" />
+        <entry key="schema_22" value="${schema_22}" />
+        <entry key="schema_23" value="${schema_23}" />
+        <entry key="schema_24" value="${schema_24}" />
+        <entry key="schema_25" value="${schema_25}" />
+        <entry key="schema_26" value="${schema_26}" />
+        <entry key="schema_27" value="${schema_27}" />
+        <entry key="schema_28" value="${schema_28}" />
+        <entry key="schema_29" value="${schema_29}" />
+        <entry key="schema_30" value="${schema_30}" />
+        <entry key="schema_31" value="${schema_31}" />
+        <entry key="schema_32" value="${schema_32}" />
+        <entry key="schema_33" value="${schema_33}" />
+        <entry key="schema_34" value="${schema_34}" />
+        <entry key="schema_35" value="${schema_35}" />
+        <entry key="schema_36" value="${schema_36}" />
+        <entry key="schema_37" value="${schema_37}" />
+        <entry key="schema_38" value="${schema_38}" />
+        <entry key="schema_39" value="${schema_39}" />
+        <entry key="schema_40" value="${schema_40}" />
+        <entry key="schema_41" value="${schema_41}" />
+        <entry key="schema_42" value="${schema_42}" />
+        <entry key="schema_43" value="${schema_43}" />
+        <entry key="schema_44" value="${schema_44}" />
+        <entry key="schema_45" value="${schema_45}" />
+        <entry key="schema_46" value="${schema_46}" />
+        <entry key="schema_47" value="${schema_47}" />
+        <entry key="schema_48" value="${schema_48}" />
+        <entry key="schema_49" value="${schema_49}" />
+        <entry key="schema_50" value="${schema_50}" />
+        <entry key="schema_51" value="${schema_51}" />
+        <entry key="schema_52" value="${schema_52}" />
+        <entry key="schema_53" value="${schema_53}" />
+        <entry key="schema_54" value="${schema_54}" />
+        <entry key="schema_55" value="${schema_55}" />
+        <entry key="schema_56" value="${schema_56}" />
+        <entry key="schema_57" value="${schema_57}" />
+        <entry key="schema_58" value="${schema_58}" />
+        <entry key="schema_59" value="${schema_59}" />
+        <entry key="schema_60" value="${schema_60}" />
+        <entry key="schema_61" value="${schema_61}" />
+        <entry key="schema_62" value="${schema_62}" />
+        <entry key="schema_63" value="${schema_63}" />
+        <entry key="schema_64" value="${schema_64}" />
+        <entry key="schema_65" value="${schema_65}" />
+        <entry key="schema_66" value="${schema_66}" />
+        <entry key="schema_67" value="${schema_67}" />
+        <entry key="schema_68" value="${schema_68}" />
+        <entry key="schema_69" value="${schema_69}" />
+        <entry key="schema_70" value="${schema_70}" />
+        <entry key="schema_71" value="${schema_71}" />
+        <entry key="schema_72" value="${schema_72}" />
+        <entry key="schema_73" value="${schema_73}" />
+        <entry key="schema_74" value="${schema_74}" />
+        <entry key="schema_75" value="${schema_75}" />
+        <entry key="schema_76" value="${schema_76}" />
+        <entry key="schema_77" value="${schema_77}" />
+        <entry key="schema_78" value="${schema_78}" />
+        <entry key="schema_79" value="${schema_79}" />
+        <entry key="schema_80" value="${schema_80}" />
+        <entry key="schema_81" value="${schema_81}" />
+        <entry key="schema_82" value="${schema_82}" />
+        <entry key="schema_83" value="${schema_83}" />
+        <entry key="schema_84" value="${schema_84}" />
+        <entry key="schema_85" value="${schema_85}" />
+        <entry key="schema_86" value="${schema_86}" />
+        <entry key="schema_87" value="${schema_87}" />
+        <entry key="schema_88" value="${schema_88}" />
+        <entry key="schema_89" value="${schema_89}" />
+        <entry key="schema_90" value="${schema_90}" />
+        <entry key="schema_91" value="${schema_91}" />
+        <entry key="schema_92" value="${schema_92}" />
+        <entry key="schema_93" value="${schema_93}" />
+        <entry key="schema_94" value="${schema_94}" />
+        <entry key="schema_95" value="${schema_95}" />
+        <entry key="schema_96" value="${schema_96}" />
+        <entry key="schema_97" value="${schema_97}" />
+        <entry key="schema_98" value="${schema_98}" />
+        <entry key="schema_99" value="${schema_99}" />
+      </map>
+    </constructor-arg>
+  </bean>
+
+  <bean id="ldap-handler"
+    class="com.google.enterprise.connector.ldap.LdapHandler"
+    factory-method="makeLdapHandlerFromConfig">
+    <constructor-arg ref="ldap-connector-config" />
+  </bean>
+
+  <bean id="ldap-document-snapshot-repository-list"
+    class="com.google.enterprise.connector.ldap.LdapDocumentSnapshotRepositoryList"
+    singleton="true">
+    <constructor-arg ref="ldap-handler" />
+  </bean>
+
+  <bean id="change-queue" class="com.google.enterprise.connector.diffing.ChangeQueue">
+    <constructor-arg index="0" value="100" />
+    <constructor-arg index="1" value="10000" />
+  </bean>
+
+  <bean id="queue-dir" class="java.io.File" singleton="false">
+    <constructor-arg index="0" value="${googleConnectorWorkDir}/queue" />
+  </bean>
+
+  <bean id="snapshot-dir" class="java.io.File" singleton="false">
+    <constructor-arg index="0" value="${googleConnectorWorkDir}/snapshots" />
+  </bean>
+
+  <bean id="internal-document-handle-factory"
+    class="com.google.enterprise.connector.diffing.DeleteDocumentHandleFactory"
+    singleton="true">
+  </bean>
+
+  <bean id="traversal-context-manager"
+    class="com.google.enterprise.connector.diffing.TraversalContextManager"
+    singleton="true">
+  </bean>
+
+  <bean id="ldap-person-factory" class="com.google.enterprise.connector.ldap.LdapPersonFactory"
+    singleton="true">
+  </bean>
+
+  <bean id="checkpoint-and-change-queue"
+    class="com.google.enterprise.connector.diffing.CheckpointAndChangeQueue">
+    <constructor-arg ref="change-queue" />
+    <constructor-arg ref="queue-dir" />
+    <constructor-arg ref="internal-document-handle-factory" />
+    <constructor-arg ref="ldap-person-factory" />
+  </bean>
+
+  <bean id="checksum-generator" class="com.google.enterprise.connector.diffing.BasicChecksumGenerator">
+    <constructor-arg index="0" value="SHA1" />
+  </bean>
+
+  <bean id="authz" class="com.google.enterprise.connector.ldap.LdapAuthorizationManager"
+    singleton="false">
+  </bean>
+
+  <bean id="monitor-manager"
+    class="com.google.enterprise.connector.diffing.DocumentSnapshotRepositoryMonitorManagerImpl"
+    singleton="true">
+    <constructor-arg ref="ldap-document-snapshot-repository-list" />
+    <constructor-arg ref="ldap-person-factory" />
+    <constructor-arg ref="snapshot-dir" />
+    <constructor-arg ref="checksum-generator" />
+    <constructor-arg ref="change-queue" />
+    <constructor-arg ref="checkpoint-and-change-queue" />
+  </bean>
+
+  <bean id="ldap-connector" class="com.google.enterprise.connector.diffing.DiffingConnector"
+    singleton="false">
+    <constructor-arg ref="authz" />
+    <constructor-arg ref="monitor-manager" />
+    <constructor-arg ref="traversal-context-manager" />
+  </bean>
+</beans>

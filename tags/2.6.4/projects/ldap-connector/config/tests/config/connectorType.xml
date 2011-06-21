@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+  <bean id="LdapHandler" class="com.google.enterprise.connector.ldap.MockLdapHandlers"
+    factory-method="makeLdapHandlerFromConfig">
+    <constructor-arg>
+      <null />
+    </constructor-arg>
+  </bean>
+
+  <bean id="LDAPConnectorTestType" class="com.google.enterprise.connector.ldap.LdapConnectorType">
+    <constructor-arg ref="LdapHandler" />
+  </bean>
+</beans>
