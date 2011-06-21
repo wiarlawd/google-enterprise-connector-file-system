@@ -466,7 +466,7 @@ public class FileSystemMonitor implements Runnable {
 		callback.newFile(file, getCheckpoint(-1));
 	  }
     } catch (UnsupportedOperationException e) {
-      throw new IOException("Couldn't perform some operation (possibly getting the input stream) on the file for " + file.getPath(), e);
+      throw new IOException("Couldn't perform some operation (possibly getting the input stream) on the file for " + file.getPath());
     }
   }
 
