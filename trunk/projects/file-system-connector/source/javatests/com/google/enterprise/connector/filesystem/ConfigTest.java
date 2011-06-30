@@ -14,14 +14,15 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.Connector;
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
-import junit.framework.TestCase;
-
 import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
-import org.springframework.beans.factory.xml.XmlBeanFactory;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
+
+import junit.framework.TestCase;
 
 import java.io.File;
 import java.util.HashMap;
@@ -31,7 +32,10 @@ import java.util.Properties;
  */
 public class ConfigTest extends TestCase {
   private static final String CONFIG_DIR = "config/";
-  private static final String INSTANCE_CONFIG_FILE = CONFIG_DIR + "connectorDefaults.xml";
+  private static final String DEFAULTS_CONFIG_FILE = CONFIG_DIR 
+      + "connectorDefaults.xml";
+  private static final String INSTANCE_CONFIG_FILE = CONFIG_DIR 
+      + "connectorInstance.xml";
   private HashMap<String, String> goodConfig;
 
   @Override
@@ -59,15 +63,22 @@ public class ConfigTest extends TestCase {
   public void testInstantiation() {
     Properties props = new Properties();
     props.putAll(goodConfig);
-
-    Resource res = new ClassPathResource(INSTANCE_CONFIG_FILE, ConfigTest.class);
-    XmlBeanFactory factory = new XmlBeanFactory(res);
+    DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+    XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+    // Refer to InstanceInfo.makeConnectorWithSpring 
+    //(com.google.enterprise.connector.instantiator) for more info on how
+    // these files are loaded to instantiate connector.
+    reader.loadBeanDefinitions(new ClassPathResource(
+        DEFAULTS_CONFIG_FILE, ConfigTest.class));
+    reader.loadBeanDefinitions(new ClassPathResource(
+        INSTANCE_CONFIG_FILE, ConfigTest.class));
     PropertyPlaceholderConfigurer cfg = new PropertyPlaceholderConfigurer();
     cfg.setProperties(props);
-    cfg.postProcessBeanFactory(factory);
-    String[] beans =
-        factory.getBeanNamesForType(com.google.enterprise.connector.spi.Connector.class);
+    cfg.postProcessBeanFactory(beanFactory);
+    String[] beans = beanFactory.getBeanNamesForType(Connector.class);
     assertEquals(1, beans.length);
-    factory.getBean(beans[0]);
+    Object obj = beanFactory.getBean(beans[0]);
+    assertTrue("Expecting instance of Connector interface but the actual "
+        + "instance: " + obj.getClass().toString(), obj instanceof Connector);
   }
 }
