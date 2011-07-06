@@ -232,8 +232,8 @@
         singleton = "false">
     <property name="aceSecurityLevel" value="FILEANDSHARE"/>
     <property name="markDocumentPublicFlag" value="false"/>
-    <property name="lastAccessResetFlagForSmb" value="false"/>
-    <property name="lastAccessResetFlagForLocalWindows" value="false"/>
+    <property name="lastAccessResetFlagForSmb" value="true"/>
+    <property name="lastAccessResetFlagForLocalWindows" value="true"/>
     <property name="pushAclFlag" value="true"/>
     <property name="delayBetweenTwoScansInMillis" value="60000"/>
     <property name="queueSize" value="1000"/>
