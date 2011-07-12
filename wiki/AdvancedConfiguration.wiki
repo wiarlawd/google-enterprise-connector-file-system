@@ -1,9 +1,10 @@
-#summary This page explains all the advanced properties and their possible values.
+#summary This page explains all the advanced properties in FS connector 2.8 and their possible values.
 #labels Phase-Deploy
 
 = Introduction =
 There are certain advanced properties that can change connector's behaviour. These propperties are not available on the configuration UI but they can be changed by editing connectorInstance.xml file which gets copied to every new connector that gets created. 
 Following section explains purpose of each of these properties and enlists all the possible values along with default value for each of them.
+Please note that these advanced properties in this form are available only in FS connector version 2.8 and above.
 
 = Details =
 <p>
