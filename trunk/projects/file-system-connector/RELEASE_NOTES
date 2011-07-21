@@ -1,42 +1,64 @@
 Release Notes:
 ===============
 
-Google Enterprise Connector for File Systems
+Google Search Appliance Connector for File Systems
 
-This document contains the release notes for Google Enterprise Connector for File Systems
+This document contains the release notes for Google Search Appliance Connector for File Systems
 The following sections describe the release in detail and provide information that supplements
 the main documentation.  See the Issues Tab on the Code Site for the current list of known
 issues and workarounds.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
-Release 2.6.8, December 15, 2010
+Release 2.8.0, July 22, 2011
 ================================
 Introduction
 ------------
-This is a maintenance release that improves quality, reliability, and performance with new functionality.  All users of
-previous 2.6.0 releases should upgrade to this release.
+This is a maintenance release that improves quality, reliability, and performance along with new functionality.  
+All users of previous 2.6.0 releases should upgrade to this release.
 
 Summary of Changes / New Features
 ---------------------------------
-This release focuses primarily on improving the performance of File System connector and supporting NFS v3.
+ *  Added support for NFS v3
+ *  Added enhancements for better performance.
+ *  Added better and more secure ACL support
+ *  Added enhancements for better error reporting, validation messages and better log messages  
+
+Following is the list of new features and fixed issues in this release.
 
 Features:
 Issue 3175810: File System Connector Needs to Support NFS v3
+Issue 4289099: ACE format can be configured to work with any of the AuthN mechanism.
+Issue 3175866: File System Connector Should Not Modify Last Access Time.
 
 Issues fixed from last release:
 -------------------------------
-Issue 3122061: File System Connector goes into infinite loop when trying to do directory listing where it doesn't have permission to view directory.
+Issue 3122061: File System Connector goes into infinite loop when trying to do 
+               directory listing where it doesn't have permission to view directory.
 Issue 3206057: File system connector performance problems.
 Issue 3612041: Indicate HEAD_REQUEST when connector has trouble getting ACLs.
-Issue 3175866: File System Connector Should Not Modify Last Access Time.
+Issue 3454790: File-system connector should not use union of share & file permissions
+Issue 4276129: File connector should record more crawl activities.
+Issue 4175439: FS connector fails to crawl if the start path contains even one 
+               directory where the crawler user doesn't have permission.
+Issue 4062256: FS connector should handle the case when it is not able to delete snapshot files.
+               
+Advanced Configuration Properties
+---------------------------------
+For more details on the advanced properties, see 
+http://code.google.com/p/google-enterprise-connector-file-system/wiki/AdvancedConfiguration
+
+Manual upgrade instructions
+---------------------------
+For detailed steps to upgrade file system connector from 2.6.0 to 2.8.0 version 
+Please see http://sites.google.com/a/google.com/google-persistent-team-site/file-connector/upgrade-instructions
 
 Version Compatibility
 ---------------------
-* This version works with Connector Manager Version 2.4.0 and above.It is recommended to upgrade to the latest
-Connector Manager version which is 2.6.6.
+* This version works with Connector Manager Version 2.8.0 and above.It is recommended to upgrade to the latest
+Connector Manager version which is 2.8.0.
 * Users of previous release should upgrade to this release.
-* Content indexed with earlier version of the connector will have to be re-indexed.
+* This version is certified against GSA 6.8.0.G.30 and 6.10.4.G.22.
 
 
 Release 2.6.0, May 24, 2010
