@@ -154,6 +154,8 @@ public class SmbFileSystemType implements FileSystemType {
         SmbException smbe = (SmbException)rde.getCause();
         if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
           throw new InsufficientAccessException("access denied", smbe); 
+        } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
+          throw new NonExistentResourceException("Path does not exist", smbe);                    
         }
       }
     }

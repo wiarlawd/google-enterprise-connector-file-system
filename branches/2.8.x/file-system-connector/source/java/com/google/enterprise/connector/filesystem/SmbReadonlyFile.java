@@ -74,7 +74,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    */
   public SmbReadonlyFile(String path, Credentials credentials,
       SmbFileProperties propertyFetcher) throws RepositoryDocumentException {
-	try {
+    try {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
       this.smbPropertyFetcher = propertyFetcher;
       setProperties(path, propertyFetcher.isLastAccessResetFlagForSmb());
@@ -357,7 +357,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.exists();
     } catch (SmbException e) {
-      throw new RepositoryDocumentException(e);
+      if (e.getNtStatus() == SmbException.NT_STATUS_LOGON_FAILURE) {
+        throw new InvalidUserException("Please specify correct user name and password" + getPath(), e);
+      } else {
+        throw new RepositoryDocumentException(e);
+      }
     }
   }
 }
