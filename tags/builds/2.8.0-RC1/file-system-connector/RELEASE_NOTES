@@ -1,0 +1,104 @@
+Release Notes:
+===============
+
+Google Search Appliance Connector for File Systems
+
+This document contains the release notes for Google Search Appliance Connector for File Systems
+The following sections describe the release in detail and provide information that supplements
+the main documentation.  See the Issues Tab on the Code Site for the current list of known
+issues and workarounds.
+
+Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
+
+Release 2.8.0, July 22, 2011
+================================
+Introduction
+------------
+This is a maintenance release that improves quality, reliability, and performance along with new functionality.  
+All users of previous 2.6.0 releases should upgrade to this release.
+
+Summary of Changes / New Features
+---------------------------------
+ *  Added support for NFS v3
+ *  Added enhancements for better performance.
+ *  Added better and more secure ACL support
+ *  Added enhancements for better error reporting, validation messages and better log messages  
+
+Following is the list of new features and fixed issues in this release.
+
+Features:
+Issue 3175810: File System Connector Needs to Support NFS v3
+Issue 4289099: ACE format can be configured to work with any of the AuthN mechanism.
+Issue 3175866: File System Connector Should Not Modify Last Access Time.
+
+Issues fixed from last release:
+-------------------------------
+Issue 3122061: File System Connector goes into infinite loop when trying to do 
+               directory listing where it doesn't have permission to view directory.
+Issue 3206057: File system connector performance problems.
+Issue 3612041: Indicate HEAD_REQUEST when connector has trouble getting ACLs.
+Issue 3454790: File-system connector should not use union of share & file permissions
+Issue 4276129: File connector should record more crawl activities.
+Issue 4175439: FS connector fails to crawl if the start path contains even one 
+               directory where the crawler user doesn't have permission.
+Issue 4062256: FS connector should handle the case when it is not able to delete snapshot files.
+               
+Advanced Configuration Properties
+---------------------------------
+For more details on the advanced properties, see 
+http://code.google.com/p/google-enterprise-connector-file-system/wiki/AdvancedConfiguration
+
+Manual upgrade instructions
+---------------------------
+For detailed steps to upgrade file system connector from 2.6.0 to 2.8.0 version 
+Please see http://sites.google.com/a/google.com/google-persistent-team-site/file-connector/upgrade-instructions
+
+Version Compatibility
+---------------------
+* This version works with Connector Manager Version 2.8.0 and above.It is recommended to upgrade to the latest
+Connector Manager version which is 2.8.0.
+* Users of previous release should upgrade to this release.
+* This version is certified against GSA 6.8.0.G.30 and 6.10.4.G.22.
+
+
+Release 2.6.0, May 24, 2010
+================================
+
+Introduction
+------------
+This is the first full release of this product. See the product website for a complete description.
+Users of previous releases should check the "Version Compatibility" section below for instructions on how to use existing data with this new release.
+
+Summary of Changes
+------------------
+Issues fixed from last release:
+---------------------------------
+Issue 2: Add folder on host in URL requirement to FileConnectorType validation
+Issue 4: Validate SMBFile.getSecurity and SMBFile.getShareSecurity in FileConnectorType
+Issue 7: Connector configuration is not saved if the Start path points to the DFS root
+Issue 8: MIME type-file extension error?
+Issue 10: Change detection does not work when permissions,ACLs of files/folders are modified
+Issue 15: Connection time out while calling an smb URL
+Issue 17: jcifs.smb.SmbException: directory must end with '/'
+Issue 20: Connector does not recover from the unexpected failure of JCIFS calls and hence the crawl does not proceed. On restarting the connector, documents get recralwed.
+Issue 24: File System Connector does not correctly support configuration values such as start paths that contain XML special characters.
+
+Version Compatibility
+---------------------
+* This version works with Connector Manager version 2.4.0 or later. Earlier versions of
+the Connector Manager will not work correctly with this version of the connector.
+* Users of previous release should upgrade to this release. Connectors created with earlier versions of the connector will not work with this version.
+* Content indexed with earlier version of the connector will have to be re-indexed
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Release 1.0.2_ALPHA, Dec 7, 2009
+================================
+
+Introduction
+------------
+This is an early access release for evaluation and usage. Your feedback is important to us.
+
+Version Compatibility
+---------------------
+This version works with Connector Manager version 2.0.0 or later. Earlier versions of
+the Connector Manager will not work correctly with this version of the connector.
