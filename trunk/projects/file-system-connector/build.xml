@@ -298,6 +298,10 @@
     <copy file="${jar-prod.file}" tofile="${file-connector-jar-zip.file}"/>
     <copy file="${copying.file}" tofile="${file-connector-copying-zip.file}"/>
     <copy file="${logging-properties.file}" todir="${config-zip.dir}" />
+    <!-- Add connector instance xml files for manual upgrade process -->
+    <copy todir="${config-zip.dir}">
+      <fileset dir="./config" includes="connectorInstance.xml"></fileset>
+    </copy>
     <copy todir="${lib-zip.dir}">
       <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
     </copy>
