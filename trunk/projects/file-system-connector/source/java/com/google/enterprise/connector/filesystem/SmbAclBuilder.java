@@ -60,9 +60,12 @@ class SmbAclBuilder {
    * Represents the ACL format 
    */
   static enum AclFormat {
-    USER_OR_GROUP_AT_DOMAIN("userOrGroup@domain"),
-    DOMAIN_BACKSLASH_USER_OR_GROUP("domain\\userOrGroup"),
-    USER_OR_GROUP("userOrGroup"),; 
+    USER_AT_DOMAIN("user@domain"),
+    DOMAIN_BACKSLASH_USER("domain\\user"),
+    USER("user"),
+    GROUP_AT_DOMAIN("group@domain"),
+    DOMAIN_BACKSLASH_GROUP("domain\\group"),
+    GROUP("group"); 
     
     /**
      * Stores the format
@@ -107,11 +110,14 @@ class SmbAclBuilder {
     static String formatString(
         AclFormat aclFormat, String userOrGroup, String domain) {
       switch (aclFormat) {
-        case USER_OR_GROUP_AT_DOMAIN:
+        case USER_AT_DOMAIN:
+        case GROUP_AT_DOMAIN:
           return userOrGroup + "@" + domain;
-        case USER_OR_GROUP:
+        case USER:
+        case GROUP:
           return userOrGroup;
-        case DOMAIN_BACKSLASH_USER_OR_GROUP:
+        case DOMAIN_BACKSLASH_USER:
+        case DOMAIN_BACKSLASH_GROUP:
           return domain + "\\" + userOrGroup;
         default:
           return null;
@@ -138,10 +144,7 @@ class SmbAclBuilder {
    * Creates an {@link SmbAclBuilder}.
    *
    * @param file the {@link SmbFile} whose {@link Acl} we build.
-   * @param stripDomainFromAces if true domains will be stripped from user and
-   *        group names in the returned {@link Acl} and if false domains will
-   *        be included in the form {@literal domainName\\userOrGroupName}.
-   * @param aceSecurityLevel Security level to be considered while fetching ACL
+   * @param propertyFetcher Object containing the required properties.
    */
   SmbAclBuilder(SmbFile file, SmbAclProperties propertyFetcher) {
     this.file = file;
@@ -159,8 +162,8 @@ class SmbAclBuilder {
     if (tempFormat == null) {
       LOGGER.warning("Incorrect value specified for user AclFormat parameter; "
           + "Setting default value " 
-          + AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat());
-      this.userAclFormat = AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP;
+          + AclFormat.USER.getFormat());
+      this.userAclFormat = AclFormat.USER;
     } else {
       this.userAclFormat = tempFormat;
     }
@@ -169,8 +172,8 @@ class SmbAclBuilder {
     if (tempFormat == null) {
       LOGGER.warning("Incorrect value specified for group AclFormat parameter; "
             + "Setting default value " 
-            + AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat());
-      this.groupAclFormat = AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP;
+            + AclFormat.GROUP.getFormat());
+      this.groupAclFormat = AclFormat.GROUP;
     } else {
       this.groupAclFormat = tempFormat;
     }
@@ -580,7 +583,7 @@ class SmbAclBuilder {
   
   public static interface SmbAclProperties {
 
-	/**
+    /**
      * Gets the AceSecurityLevel
      */
     String getAceSecurityLevel();

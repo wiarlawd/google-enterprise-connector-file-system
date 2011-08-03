@@ -238,8 +238,8 @@
     <property name="delayBetweenTwoScansInMillis" value="60000"/>
     <property name="queueSize" value="1000"/>
     <property name="introduceDelayAfterEveryScan" value="false"/>
-    <property name="groupAclFormat" value="userOrGroup"/>
-    <property name="userAclFormat" value="userOrGroup"/>
+    <property name="groupAclFormat" value="group"/>
+    <property name="userAclFormat" value="user"/>
   </bean>
 
 

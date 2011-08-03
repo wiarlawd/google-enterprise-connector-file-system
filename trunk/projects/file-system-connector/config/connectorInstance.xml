@@ -84,23 +84,23 @@
     <!-- 
     Represents the format in which ACE entries should be fed to GSA for groups
     Possible values are 
-    1.userOrGroup@domain
-    2.domain\userOrGroup
-    3.userOrGroup   (only user or group name without domain information)
+    1.group@domain
+    2.domain\group
+    3.group   (only group name without domain information)
     -->
     <!--
-    <property name="groupAclFormat" value="userOrGroup"/>
+    <property name="groupAclFormat" value="group"/>
     -->
 
     <!-- 
     Represents the format in which ACE entries should be fed to GSA for users
     Possible values are 
-    1.userOrGroup@domain
-    2.domain\userOrGroup
-    3.userOrGroup   (only user or group name without domain information)
+    1.user@domain
+    2.domain\user
+    3.user   (only user name without domain information)
     -->
     <!--
-    <property name="userAclFormat" value="userOrGroup"/>
+    <property name="userAclFormat" value="user"/>
     -->
 
   </bean>
