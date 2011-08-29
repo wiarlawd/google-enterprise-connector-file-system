@@ -25,6 +25,9 @@ Please note that these advanced properties in this form are available only in FS
     
     <!-- 
     Flag to mark all crawled documents as 'public'.
+    Please note that this property is tightly coupled with 'pushAclFlag' property.
+    You cannot keep both these values true. So if you want documents to be sent as
+    public, then you must mark 'pushAclFlag' as 'false' 
     -->
     <!--
     <property name="markDocumentPublicFlag" value="false"/>
@@ -48,9 +51,11 @@ Please note that these advanced properties in this form are available only in FS
     -->
     
     <!-- 
-    Flag to reset the last access time of a local windows file after crawling.
-    This should be used when the start path of the url is a windows style 
-    file path. E.g. "c://share/data"
+    This flag is to specify whether connector should send ACL information with
+    each document to the GSA. If this is set to true, then connector will send
+    security information for each file such as which users and groups hav access    to the file. This information will be used while serving the results to the users.     
+    Please note that this property is tightly coupled with  'markDocumentPublicFlag' property.
+    You cannot keep both these values true. So if you want to send ACL information with each file, then you must mark 'markDocumentPublicFlag' as 'false' 
     -->
     <!--
     <property name="pushAclFlag" value="true"/>
