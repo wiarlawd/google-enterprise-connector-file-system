@@ -177,8 +177,15 @@ public class FileDocumentHandle implements DocumentHandle {
         LOG.finest("pushAcls flag is true so adding ACL to the document");
         Acl acl = getAcl(file);
         if (acl.isDeterminate()) {
-          document.setProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
-          document.setProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
+          if (acl.isPublic()) {
+            document.setProperty(SpiConstants.PROPNAME_ISPUBLIC, 
+                Boolean.TRUE.toString());
+          } else {
+            document.setProperty(SpiConstants.PROPNAME_ACLUSERS, 
+                acl.getUsers());
+            document.setProperty(SpiConstants.PROPNAME_ACLGROUPS, 
+                acl.getGroups());            
+          }
         }
       }
     }
