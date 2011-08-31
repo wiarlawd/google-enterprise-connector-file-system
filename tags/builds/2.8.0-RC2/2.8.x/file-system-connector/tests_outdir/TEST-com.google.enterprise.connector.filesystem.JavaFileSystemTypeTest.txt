@@ -1,0 +1,7 @@
+Testsuite: com.google.enterprise.connector.filesystem.JavaFileSystemTypeTest
+Tests run: 4, Failures: 0, Errors: 0, Time elapsed: 0.049 sec
+
+Testcase: testGetFile took 0.032 sec
+Testcase: testIsPath took 0.001 sec
+Testcase: testGetFileSystemType took 0.001 sec
+Testcase: testGetReadonlyFile took 0.004 sec

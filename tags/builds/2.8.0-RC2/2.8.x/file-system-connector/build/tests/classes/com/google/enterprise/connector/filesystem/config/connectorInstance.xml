@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+  <bean id = "filesystem-property-manager"
+        class = "com.google.enterprise.connector.filesystem.FileSystemPropertyManager"
+        parent = "filesystem-property-manager-defaults"
+        singleton = "false">
+        
+    <!--   
+    Security level to be considered for fetching ACL for a file
+    There are 4 possible values for this parameter. These are in the order of
+    Stronger to weaker security levels.
+    FILEANDSHARE
+    SHARE
+    FILE
+    FILEORSHARE
+    Default value is 'FILEANDSHARE'  since it is the most restrictive of all
+    4 scenarios.
+    -->
+    <!--
+      <property name="aceSecurityLevel" value="FILEANDSHARE"/>
+    -->
+    
+    <!-- 
+    Flag to mark all crawled documents as 'public'.
+    -->
+    <!--
+    <property name="markDocumentPublicFlag" value="false"/>
+    -->
+    
+    <!-- 
+    Flag to reset the last access time of a SMB file after crawling.
+    This should be used when the start path of the url starts with "smb://".
+    -->
+    <!--  
+    <property name="lastAccessResetFlagForSmb" value="false"/>
+    -->
+    
+    <!-- 
+    Flag to reset the last access time of a local windows file after crawling.
+    This should be used when the start path of the url is a windows 
+    style file path. E.g. "c://share/data"
+    -->
+    <!-- 
+    <property name="lastAccessResetFlagForLocalWindows" value="false"/>
+    -->
+    
+    <!-- 
+    Flag to specify whether ACL information needs to be sent by the connector 
+    or not. Please note that you cannot have 'markDocumentPublicFlag' set as true and
+    'pushAclFlag' set as true. So you cannot mark documents public and still expect
+    the connector to send ACL information. 
+    -->
+    <!--
+    <property name="pushAclFlag" value="true"/>
+    -->
+  
+    <!-- 
+    No. of milliseconds to sleep after a scan
+    When this delay is applied depends on the 'introduceDelayAfterEveryScan'
+    parameter described below.
+    -->
+    <!--
+    <property name="delayBetweenTwoScansInMillis" value="60000"/>
+    -->
+  
+    <!-- 
+    Size of the queue that holds the changes detected by the file system
+    connector. 
+    -->
+    <!--
+    <property name="queueSize" value="1000"/>
+    -->
+
+    <!-- 
+    Flag that decides whether to add delay after every scan or only after scan
+    that results in no changes. 
+    -->
+    <!--
+    <property name="introduceDelayAfterEveryScan" value="false"/>
+    -->
+  
+    <!-- 
+    Represents the format in which ACE entries should be fed to GSA for groups
+    Possible values are 
+    1.userOrGroup@domain
+    2.domain\userOrGroup
+    3.userOrGroup   (only user or group name without domain information)
+    -->
+    <!--
+    <property name="groupAclFormat" value="userOrGroup"/>
+    -->
+
+    <!-- 
+    Represents the format in which ACE entries should be fed to GSA for users
+    Possible values are 
+    1.userOrGroup@domain
+    2.domain\userOrGroup
+    3.userOrGroup   (only user or group name without domain information)
+    -->
+    <!--
+    <property name="userAclFormat" value="userOrGroup"/>
+    -->
+
+  </bean>
+
+</beans>

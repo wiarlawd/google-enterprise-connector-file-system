@@ -1,0 +1,12 @@
+Testsuite: com.google.enterprise.connector.filesystem.FileDocumentSnapshotRepositoryTest
+Tests run: 9, Failures: 0, Errors: 0, Time elapsed: 0.09 sec
+
+Testcase: testQuery_emptyRoot took 0.031 sec
+Testcase: testQuery_rootWith1File took 0.008 sec
+Testcase: testQuery_rootWith2Files took 0.003 sec
+Testcase: testQuery_rootWith1FileAnd1EmptyDir took 0.004 sec
+Testcase: testQuery_rootWith1FileAnd2Dirs took 0.006 sec
+Testcase: testQuery_filterTooBig took 0.006 sec
+Testcase: testQuery_filterNotIncludPattern took 0.004 sec
+Testcase: testQuery_filterExcludePattern took 0.004 sec
+Testcase: testQuery_filterIOException took 0.002 sec

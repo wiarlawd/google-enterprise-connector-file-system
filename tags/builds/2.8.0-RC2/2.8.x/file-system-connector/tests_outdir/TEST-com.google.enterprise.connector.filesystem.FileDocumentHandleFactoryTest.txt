@@ -1,0 +1,6 @@
+Testsuite: com.google.enterprise.connector.filesystem.FileDocumentHandleFactoryTest
+Tests run: 3, Failures: 0, Errors: 0, Time elapsed: 0.61 sec
+
+Testcase: testFromString took 0.424 sec
+Testcase: testFromString_missingIsDelete took 0.104 sec
+Testcase: testFromString_invalidJSON took 0.072 sec

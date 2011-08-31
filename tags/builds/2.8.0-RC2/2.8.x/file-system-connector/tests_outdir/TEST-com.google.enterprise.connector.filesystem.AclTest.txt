@@ -1,0 +1,9 @@
+Testsuite: com.google.enterprise.connector.filesystem.AclTest
+Tests run: 6, Failures: 0, Errors: 0, Time elapsed: 0.033 sec
+
+Testcase: testPublic took 0.013 sec
+Testcase: testUsersAndGroupsAcl took 0.004 sec
+Testcase: testUsersOnlyAcl took 0.001 sec
+Testcase: testGroupAcl took 0.002 sec
+Testcase: testNullAcl took 0 sec
+Testcase: testEmptyAcl took 0 sec

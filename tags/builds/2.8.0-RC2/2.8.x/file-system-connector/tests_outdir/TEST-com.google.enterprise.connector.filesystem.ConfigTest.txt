@@ -1,0 +1,10 @@
+Testsuite: com.google.enterprise.connector.filesystem.ConfigTest
+Tests run: 1, Failures: 0, Errors: 0, Time elapsed: 0.836 sec
+------------- Standard Error -----------------
+Aug 1, 2011 12:59:53 PM org.springframework.beans.factory.xml.XmlBeanDefinitionReader loadBeanDefinitions
+INFO: Loading XML bean definitions from class path resource [config/connectorDefaults.xml]
+Aug 1, 2011 12:59:53 PM org.springframework.beans.factory.xml.XmlBeanDefinitionReader loadBeanDefinitions
+INFO: Loading XML bean definitions from class path resource [config/connectorInstance.xml]
+------------- ---------------- ---------------
+
+Testcase: testInstantiation took 0.829 sec

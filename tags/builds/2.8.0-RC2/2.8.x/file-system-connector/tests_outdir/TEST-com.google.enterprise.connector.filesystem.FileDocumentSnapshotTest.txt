@@ -1,0 +1,13 @@
+Testsuite: com.google.enterprise.connector.filesystem.FileDocumentSnapshotTest
+Tests run: 10, Failures: 0, Errors: 0, Time elapsed: 0.996 sec
+
+Testcase: testGetUpdate_nullOnGsa took 0.301 sec
+Testcase: testGetUpdate_noChangeOnGsaStable took 0.105 sec
+Testcase: testGetUpdate_noChangeOnGsaUnstable took 0.073 sec
+Testcase: testGetUpdate_noChangeOnGsaMakeStable took 0.062 sec
+Testcase: testGetUpdate_aclChange took 0.063 sec
+Testcase: testGetUpdate_lastModifiedChange took 0.042 sec
+Testcase: testGetUpdate_contentChange took 0.176 sec
+Testcase: testGetUpdate_unsupportedMimeTypeNullOnGsa took 0.053 sec
+Testcase: testGetUpdate_unsupportedMimeTypeUpdateOnGsa took 0.045 sec
+Testcase: testGetUpdate_unsupportedMimeTypeNochangeOnGsa took 0.055 sec
