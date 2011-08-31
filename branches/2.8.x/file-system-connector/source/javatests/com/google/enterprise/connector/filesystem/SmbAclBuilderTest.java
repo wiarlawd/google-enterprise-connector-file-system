@@ -38,7 +38,7 @@ import junit.framework.TestCase;
 public class SmbAclBuilderTest extends TestCase {
 
   private final String defaultAceFormat =
-      AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
   
   public void testACLForFileAndShareAndIntersection () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
@@ -239,7 +239,7 @@ public class SmbAclBuilderTest extends TestCase {
     replay(smbFile);
     AclProperties fetcher = new AclProperties(
         AceSecurityLevel.SHARE.name(),
-        AclFormat.USER_OR_GROUP.getFormat(),AclFormat.USER_OR_GROUP.getFormat());
+        AclFormat.USER.getFormat(),AclFormat.GROUP.getFormat());
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();
     assertNotNull(acl);
@@ -306,7 +306,7 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForSAMLTypeACL () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    String samlAceFormat = AclFormat.USER_OR_GROUP_AT_DOMAIN.getFormat();
+    String samlAceFormat = AclFormat.USER_AT_DOMAIN.getFormat();
     ACE shareAce = createACE("google\\accountants", false /* this will create a group ACE*/);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
@@ -328,7 +328,7 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForHTTPBasicTypeACL () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    String httpAceFormat = AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+    String httpAceFormat = AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
     ACE shareAce = createACE("google\\accountants", false /* this will create a group ACE*/);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
@@ -363,7 +363,7 @@ public class SmbAclBuilderTest extends TestCase {
     replay(smbFile);
     AclProperties fetcher = new AclProperties(
         AceSecurityLevel.FILEORSHARE.name(),
-        AclFormat.USER_OR_GROUP_AT_DOMAIN.getFormat(),
+        AclFormat.GROUP_AT_DOMAIN.getFormat(),
         defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.build();

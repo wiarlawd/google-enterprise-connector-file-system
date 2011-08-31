@@ -162,11 +162,11 @@ class CopySmbToLocalDisk {
     }
 
     public String getGroupAclFormat() {
-      return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      return AclFormat.DOMAIN_BACKSLASH_GROUP.getFormat();
     }
 
     public String getUserAclFormat() {
-      return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+      return AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
     }
 
     public boolean isLastAccessResetFlagForSmb() {

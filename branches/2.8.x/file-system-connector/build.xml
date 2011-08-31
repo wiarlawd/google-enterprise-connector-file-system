@@ -18,7 +18,7 @@
   <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
   <property name="license-zip.dir" value  = "${zip.dir}/License" />
   <property name="file-connector-jar-zip.file" 
-	    value = "${zip.dir}/connector-filesystem.jar" />
+        value = "${zip.dir}/connector-filesystem.jar" />
   <property name="file-connector-copying-zip.file" value="${zip.dir}/COPYING" />
 
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
@@ -49,7 +49,7 @@
 
   <property name="zip-src.dir" value="${build.dir}/file-src" />
   <property name="release-notes-zip-src.file" 
-	    value="${zip-src.dir}/${release-notes.file}" />
+      value="${zip-src.dir}/${release-notes.file}" />
 
   <property name="tests_out.dir" value="tests_outdir" />
   <property name="tests.logging.properties"
@@ -68,7 +68,7 @@
   <property name="spi.jar.dir" value="${connector-manager.dir}/dist/jarfile" />
 
   <property name="connector-filesystem-src.zip" 
-	    value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
+      value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
   <!-- =========================== TASKS =============================== -->
   <target name="build" depends="init,compile_prod,run_tests,jar_prod">
   </target>
@@ -76,8 +76,8 @@
   <target name="init">
     <tstamp />
     <exec executable="svn" 
-	  failifexecutionfails="false"
-	  resultproperty="svn-status-result">
+    failifexecutionfails="false"
+    resultproperty="svn-status-result">
       <arg line="status"/>
       <redirector outputproperty="svn-status"
                   logError="true">
@@ -115,30 +115,30 @@
     <mkdir dir="${tests_out.dir}" />
 
     <exec executable="svn" 
-	  failifexecutionfails="false"
-	  resultproperty="svn-url-result" >
+    failifexecutionfails="false"
+    resultproperty="svn-url-result" >
       <arg line="info" />
       <redirector outputproperty="svn-url"
                   logError="true" >
         <outputfilterchain>
-	  <linecontains>
-	    <contains value="URL: "/>
-	  </linecontains>
+    <linecontains>
+      <contains value="URL: "/>
+    </linecontains>
           <replacestring from="URL: "/>
         </outputfilterchain>
       </redirector>
     </exec>
 
     <exec executable="svn" 
-	  failifexecutionfails="false"
-	  resultproperty="svn-revision-result" >
+    failifexecutionfails="false"
+    resultproperty="svn-revision-result" >
       <arg line="info"/>
       <redirector outputproperty="svn-revision"
                   logError="true">
         <outputfilterchain>
-	  <linecontains>
-	    <contains value="Revision: " />
-	  </linecontains>
+    <linecontains>
+      <contains value="Revision: " />
+    </linecontains>
           <replacestring from="Revision: " />
           <trim/>
         </outputfilterchain>
@@ -146,13 +146,13 @@
     </exec>
 
     <condition property="svn-version" 
-	       value="${svn-revision} (${svn-url})"
-	       else="?? Unknown svn version">
+         value="${svn-revision} (${svn-url})"
+         else="?? Unknown svn version">
       <and>
          <equals arg1="0" arg2="${svn-url-result}" />
          <equals arg1="0" arg2="${svn-revision-result}" />
          <equals arg1="0" arg2="${svn-status-result}" />
-	 <length string="${svn-status}" trim="true" length="0" />
+   <length string="${svn-status}" trim="true" length="0" />
       </and>
     </condition>
 
@@ -194,7 +194,7 @@
         </fileset>
         <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-      	<fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
+        <fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
         <pathelement location="${jar-prod.file}" />
       </classpath>
     </javac>
@@ -214,7 +214,7 @@
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
           <include name="**/spring.jar" />
           <include name="**/guava*.jar" />
-      	  <include name="**/json.jar" />
+          <include name="**/json.jar" />
           <include name="**/commons-logging.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
@@ -222,7 +222,7 @@
         </fileset>
         <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-      	<fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
+        <fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
         <pathelement location="${jar-prod.file}" />
       </classpath>
       <formatter type="brief" usefile="no"/>
@@ -298,6 +298,10 @@
     <copy file="${jar-prod.file}" tofile="${file-connector-jar-zip.file}"/>
     <copy file="${copying.file}" tofile="${file-connector-copying-zip.file}"/>
     <copy file="${logging-properties.file}" todir="${config-zip.dir}" />
+    <!-- Add connector instance xml files for manual upgrade process -->
+    <copy todir="${config-zip.dir}">
+      <fileset dir="./config" includes="connectorInstance.xml"></fileset>
+    </copy>
     <copy todir="${lib-zip.dir}">
       <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
     </copy>

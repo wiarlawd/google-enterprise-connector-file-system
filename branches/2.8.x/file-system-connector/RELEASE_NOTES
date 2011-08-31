@@ -10,7 +10,7 @@ issues and workarounds.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
-Release 2.8.0, July 22, 2011
+Release 2.8.0, September 1, 2011
 ================================
 Introduction
 ------------
@@ -42,6 +42,16 @@ Issue 4276129: File connector should record more crawl activities.
 Issue 4175439: FS connector fails to crawl if the start path contains even one 
                directory where the crawler user doesn't have permission.
 Issue 4062256: FS connector should handle the case when it is not able to delete snapshot files.
+
+Known limitations:
+-----------------
+Issue 5028655: File system connector should be more fault tolerant. Currently if the internal state that connector
+               maintains becomes unstable, connector stops working.
+Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
+Issue 5111509: File system connector goes into infinite loop when connector is reset.This is reproducible only for 
+               very small file shares.
+                         
+
                
 Advanced Configuration Properties
 ---------------------------------
@@ -50,8 +60,19 @@ http://code.google.com/p/google-enterprise-connector-file-system/wiki/AdvancedCo
 
 Manual upgrade instructions
 ---------------------------
-For detailed steps to upgrade file system connector from 2.6.0 to 2.8.0 version 
-Please see http://sites.google.com/a/google.com/google-persistent-team-site/file-connector/upgrade-instructions
+
+From 2.6.0 or 2.6.12 to 2.8.0
+-----------------------------
+1. Shutdown the connector service
+2. Upgrade the connector manager to 2.8 version using the connector manager patch upgrade steps.
+   The upgrade steps for connector manager are at http://code.google.com/p/google-enterprise-connector-manager/wiki/UpdatePatchRelease
+3. Unzip the connector-filesystem-2.8.0.zip on your machine. This will be referred as 'base' here after.
+4. Backup the <Tomcat-home>/webapps/connector-manager/WEB-INF/lib folder from the existing connector somewhere outside the tomcat.
+5. Copy the connector-filesystem.jar from base into <Tomcat-home>/webapps/connector-manager/WEB-INF/lib.
+6. Copy all the jars present in 'base/lib' and paste them into <Tomcat-home>/webapps/connector-manager/WEB-INF/lib (replace existing files).
+7. For every running file system connector, a folder named after the name of the connector is created at "<Tomcat-home>/webapps/connector-manager/WEB-INF/connectors/FileConnectorType"  follow next step for each of the running connectors.
+8. Copy 'connectorInstance.xml' file from 'base/config' and paste it into "<Tomcat-home>/webapps/connector-manager/WEB-INF/connectors/FileConnectorType/<name of the connector>"  (replace existing file)
+9. Start the connector service
 
 Version Compatibility
 ---------------------

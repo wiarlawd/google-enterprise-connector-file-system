@@ -51,11 +51,11 @@ public class FilePatternMatcherTest extends TestCase {
   private SmbFileProperties getFetcher() {
     return new SmbFileProperties() {
       public String getUserAclFormat() {
-        return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+        return AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
       }
         
       public String getGroupAclFormat() {
-        return AclFormat.DOMAIN_BACKSLASH_USER_OR_GROUP.getFormat();
+        return AclFormat.DOMAIN_BACKSLASH_GROUP.getFormat();
       }
       
       public String getAceSecurityLevel() {
