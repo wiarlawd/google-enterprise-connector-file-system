@@ -10,7 +10,7 @@ issues and workarounds.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
-Release 2.8.0, July 22, 2011
+Release 2.8.0, September 1, 2011
 ================================
 Introduction
 ------------
@@ -42,6 +42,16 @@ Issue 4276129: File connector should record more crawl activities.
 Issue 4175439: FS connector fails to crawl if the start path contains even one 
                directory where the crawler user doesn't have permission.
 Issue 4062256: FS connector should handle the case when it is not able to delete snapshot files.
+
+Known limitations:
+-----------------
+Issue 5028655: File system connector should be more fault tolerant. Currently if the internal state that connector
+               maintains becomes unstable, connector stops working.
+Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
+Issue 5111509: File system connector goes into infinite loop when connector is reset.This is reproducible only for 
+               very small file shares.
+                         
+
                
 Advanced Configuration Properties
 ---------------------------------
