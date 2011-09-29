@@ -1,0 +1,88 @@
+Testsuite: com.google.enterprise.connector.filesystem.FileConnectorTypeTest
+Tests run: 19, Failures: 0, Errors: 0, Time elapsed: 1.554 sec
+------------- Standard Error -----------------
+Aug 1, 2011 1:00:11 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-0/
+Aug 1, 2011 1:00:11 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-1/
+Aug 1, 2011 1:00:11 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-2/
+Aug 1, 2011 1:00:11 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-3/
+Aug 1, 2011 1:00:11 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-4/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-0
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-1
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-2
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-3
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-16ae6825-0e51-4cda-b182-8a1db315000a/start-path-4
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue start
+INFO: Starting CheckpointAndChangeQueue from null
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-fded8d16-6c67-41b9-a82b-0141de207f20/start-path-0/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-fded8d16-6c67-41b9-a82b-0141de207f20/start-path-1/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager addErrorToBuffer
+INFO: Path doesn't exist: /foo/bar/baz//foo/bar/baz/; com.google.enterprise.connector.filesystem.NonExistentResourceException: Path doesn't exist: /foo/bar/baz/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-fded8d16-6c67-41b9-a82b-0141de207f20/start-path-3/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-fded8d16-6c67-41b9-a82b-0141de207f20/start-path-4/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-cde0436e-27f7-494d-ac0f-9a256ad085f0/start-path-0/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-cde0436e-27f7-494d-ac0f-9a256ad085f0/start-path-1/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager addErrorToBuffer
+INFO: Path doesn't exist: /foo/bar/baz&<<>//foo/bar/baz&<<>/; com.google.enterprise.connector.filesystem.NonExistentResourceException: Path doesn't exist: /foo/bar/baz&<<>/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager addErrorToBuffer
+INFO: Path doesn't exist: /foo/baxxxx&&&!/baz&<<>//foo/baxxxx&&&!/baz&<<>/; com.google.enterprise.connector.filesystem.NonExistentResourceException: Path doesn't exist: /foo/baxxxx&&&!/baz&<<>/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-cde0436e-27f7-494d-ac0f-9a256ad085f0/start-path-4/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-0/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-1/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-2/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-3/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsReadable
+INFO: successfully read /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-4/
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-0
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path excluded: /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-1
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-2
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-3
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureStartPathsNotExcluded
+INFO: start path acceptable: /tmp/FileConnectorTypeTest/tmp/d-112cd94b-4bc0-4be9-94d4-afa699f1175c/start-path-4
+Aug 1, 2011 1:00:12 PM com.google.enterprise.connector.filesystem.FileConnectorType$FormManager assureNoUncPathStrings
+INFO: UNC need to be translated to SMB URL: \\UNC\AM\I\
+------------- ---------------- ---------------
+
+Testcase: testGetConfigForm took 0.185 sec
+Testcase: testGetPopulatedConfigFormEmptyConfig took 0.104 sec
+Testcase: testGetPopulatedConfigFormCompleteConfig took 0.069 sec
+Testcase: testValidateGoodConfig took 0.489 sec
+Testcase: testValidateIncompleteConfig took 0.041 sec
+Testcase: testEmptyConfig took 0.036 sec
+Testcase: testBadStartPath took 0.047 sec
+Testcase: testBadStartPathEscapeMsg took 0.042 sec
+Testcase: testStartPathEliminatedByPatterns took 0.05 sec
+Testcase: testFilterUserListWithComment took 0.03 sec
+Testcase: testFilterUserListWithNull took 0.029 sec
+Testcase: testFilterUserListWithEmpty took 0.038 sec
+Testcase: testFilterUserListWithTrim took 0.029 sec
+Testcase: testFilterUserListWithAllGood took 0.029 sec
+Testcase: testFilterUserListWithDuplicates took 0.027 sec
+Testcase: testUncDetectedAndSuggestionProvided took 0.045 sec
+Testcase: testXmlEscapingSingleLineField took 0.039 sec
+Testcase: testXmlEscapingMultiLineField took 0.037 sec
+Testcase: testNoCredentialswhereRequired took 0.149 sec

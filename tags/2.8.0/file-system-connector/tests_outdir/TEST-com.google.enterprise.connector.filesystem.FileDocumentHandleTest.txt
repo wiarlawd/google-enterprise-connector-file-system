@@ -1,0 +1,10 @@
+Testsuite: com.google.enterprise.connector.filesystem.FileDocumentHandleTest
+Tests run: 7, Failures: 0, Errors: 0, Time elapsed: 0.738 sec
+
+Testcase: testAddFile took 0.32 sec
+Testcase: testAddNotPublicFileWithAcl took 0.109 sec
+Testcase: testAddNotPublicFileWithIndeterminateAcl took 0.074 sec
+Testcase: testAddNotPublicFileWithPushAclsFalse took 0.069 sec
+Testcase: testAddNotPublicFileWithMarkAllDocumentsPublic took 0.062 sec
+Testcase: testPushAllAclsWithMarkAllDocumentsPublic took 0.046 sec
+Testcase: testDeleteFile took 0.042 sec

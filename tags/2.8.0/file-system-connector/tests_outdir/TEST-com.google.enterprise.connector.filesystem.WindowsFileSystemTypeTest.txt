@@ -1,0 +1,10 @@
+Testsuite: com.google.enterprise.connector.filesystem.WindowsFileSystemTypeTest
+Tests run: 7, Failures: 0, Errors: 0, Time elapsed: 0.391 sec
+
+Testcase: testGetFile took 0.167 sec
+Testcase: testIsPath took 0.003 sec
+Testcase: testGetFileSystemType took 0 sec
+Testcase: testGetReadableFileHappyScenario took 0.197 sec
+Testcase: testGetReadableFileForNonExistentFile took 0.004 sec
+Testcase: testGetReadableFileForUnreadableFile took 0.002 sec
+Testcase: testGetReadableFileForWrongPath took 0.001 sec

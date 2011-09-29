@@ -1,0 +1,30 @@
+Testsuite: com.google.enterprise.connector.filesystem.SmbAclBuilderTest
+Tests run: 15, Failures: 0, Errors: 0, Time elapsed: 0.575 sec
+------------- Standard Error -----------------
+Aug 1, 2011 1:00:46 PM com.google.enterprise.connector.filesystem.SmbAclBuilder <init>
+WARNING: Incorrect value specified for aceSecurityLevel parameter; Setting default value FILEANDSHARE
+Aug 1, 2011 1:00:46 PM com.google.enterprise.connector.filesystem.SmbAclBuilder checkAndAddAces
+WARNING: Cannot process ACL because getSecurity() not allowedon file://hostfile
+Aug 1, 2011 1:00:46 PM com.google.enterprise.connector.filesystem.SmbAclBuilder checkAndAddAces
+WARNING: Cannot process ACL because getShareSecurity() not allowedon file://hostfile
+Aug 1, 2011 1:00:46 PM com.google.enterprise.connector.filesystem.SmbAclBuilder checkAndLogDenyAce
+WARNING: Cannot process ACL. DENY ACE found. No ACL information returned for: file://hostfile
+Aug 1, 2011 1:00:46 PM com.google.enterprise.connector.filesystem.SmbAclBuilder checkAndLogDenyAce
+WARNING: Cannot process ACL. DENY ACE found. No ACL information returned for: file://hostfile
+------------- ---------------- ---------------
+
+Testcase: testACLForFileAndShareAndIntersection took 0.398 sec
+Testcase: testACLForFileAndShareAndUnion took 0.005 sec
+Testcase: testACLForFileLevelAClOnly took 0.003 sec
+Testcase: testACLForShareLevelAclOnly took 0.004 sec
+Testcase: testACLForShareLevelGroupAclOnly took 0.002 sec
+Testcase: testACLForIncorrectSecurityLevel took 0.032 sec
+Testcase: testACLForGetSecurityNotAllowedOnFile took 0.001 sec
+Testcase: testACLForGetShareSecurityNotAllowedOnFile took 0.001 sec
+Testcase: testACLForDomainNameStrippedOff took 0.002 sec
+Testcase: testACLForPresenceOfDenyShareLevelACE took 0.003 sec
+Testcase: testACLForPresenceOfDenyFileLevelACE took 0.002 sec
+Testcase: testACLForRunTimeExceptionAtFileLevelACE took 0.002 sec
+Testcase: testACLForSAMLTypeACL took 0.004 sec
+Testcase: testACLForHTTPBasicTypeACL took 0.002 sec
+Testcase: testACLForHTTPBasicUserAceAndSAMLGroupAce took 0.004 sec

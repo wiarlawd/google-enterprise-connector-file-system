@@ -1,0 +1,5 @@
+Testsuite: com.google.enterprise.connector.filesystem.MimeTypeFinderTest
+Tests run: 2, Failures: 0, Errors: 0, Time elapsed: 0.391 sec
+
+Testcase: testFileExtension took 0.264 sec
+Testcase: testFileContent took 0.119 sec
