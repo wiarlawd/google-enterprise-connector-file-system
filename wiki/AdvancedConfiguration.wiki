@@ -94,7 +94,7 @@ Please note that these advanced properties in this form are available only in FS
 
     2.domain\group
 
-    3.group   (only user or group name without domain information)
+    3.group   (only group name without domain information)
     -->
 
     <!--
@@ -109,7 +109,7 @@ Please note that these advanced properties in this form are available only in FS
 
     2.domain\user
 
-    3.user   (only user or group name without domain information)
+    3.user   (only user name without domain information)
     -->
     <!--
     <property name="userAclFormat" value="user"/>
