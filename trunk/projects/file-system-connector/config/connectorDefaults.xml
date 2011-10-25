@@ -25,7 +25,6 @@
     class="com.google.enterprise.connector.filesystem.FileSystemTypeRegistry">
     <constructor-arg>
       <list>
-        <ref bean="java-file-system-type" />
         <ref bean="windows-file-system-type" />
         <ref bean="smb-file-system-type" />
         <ref bean="nfs-file-system-type" />
