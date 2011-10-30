@@ -17,8 +17,8 @@
   <property name="config-zip.dir" value  = "${zip.dir}/Config" />
   <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
   <property name="license-zip.dir" value  = "${zip.dir}/License" />
-  <property name="file-connector-jar-zip.file" 
-	    value = "${zip.dir}/connector-filesystem.jar" />
+  <property name="file-connector-jar-zip.file"
+        value = "${zip.dir}/connector-filesystem.jar" />
   <property name="file-connector-copying-zip.file" value="${zip.dir}/COPYING" />
 
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
@@ -48,8 +48,8 @@
   <property name="downloads.dir" value="downloads" />
 
   <property name="zip-src.dir" value="${build.dir}/file-src" />
-  <property name="release-notes-zip-src.file" 
-	    value="${zip-src.dir}/${release-notes.file}" />
+  <property name="release-notes-zip-src.file"
+        value="${zip-src.dir}/${release-notes.file}" />
 
   <property name="tests_out.dir" value="tests_outdir" />
   <property name="tests.logging.properties"
@@ -67,17 +67,28 @@
     location="${connector-manager-thirdparty-jar.dir}/tests" />
   <property name="spi.jar.dir" value="${connector-manager.dir}/dist/jarfile" />
 
-  <property name="connector-filesystem-src.zip" 
-	    value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
+  <property name="connector-filesystem-src.zip"
+        value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
+
+    <!--Cobertura properties -->
+
+    <property file="${config.dir}/build_code_coverage.properties" />
+        <path id="cobertura.classpath">
+
+                               <fileset dir="${thirdparty-tests-jar.dir}">
+                                       <include name="**/*.jar" />
+                               </fileset>
+
+                       </path>
   <!-- =========================== TASKS =============================== -->
   <target name="build" depends="init,compile_prod,run_tests,jar_prod">
   </target>
 
   <target name="init">
     <tstamp />
-    <exec executable="svn" 
-	  failifexecutionfails="false"
-	  resultproperty="svn-status-result">
+    <exec executable="svn"
+      failifexecutionfails="false"
+      resultproperty="svn-status-result">
       <arg line="status"/>
       <redirector outputproperty="svn-status"
                   logError="true">
@@ -87,7 +98,7 @@
     <echo message="Note 'svn status' must return no changes to indicate a client with" />
     <echo message="no changes to set svn-version in ${jar-prod.file}" />
     <echo message="and in ${connector-filesystem-src.zip}." />
-    <echo message="svn status returned: " /> 
+    <echo message="svn status returned: " />
     <echo message="${svn-status}" />
 
     <mkdir dir="${build.dir}" />
@@ -114,50 +125,50 @@
 
     <mkdir dir="${tests_out.dir}" />
 
-    <exec executable="svn" 
-	  failifexecutionfails="false"
-	  resultproperty="svn-url-result" >
+    <exec executable="svn"
+      failifexecutionfails="false"
+      resultproperty="svn-url-result" >
       <arg line="info" />
       <redirector outputproperty="svn-url"
                   logError="true" >
         <outputfilterchain>
-	  <linecontains>
-	    <contains value="URL: "/>
-	  </linecontains>
+      <linecontains>
+        <contains value="URL: "/>
+      </linecontains>
           <replacestring from="URL: "/>
         </outputfilterchain>
       </redirector>
     </exec>
 
-    <exec executable="svn" 
-	  failifexecutionfails="false"
-	  resultproperty="svn-revision-result" >
+    <exec executable="svn"
+      failifexecutionfails="false"
+      resultproperty="svn-revision-result" >
       <arg line="info"/>
       <redirector outputproperty="svn-revision"
                   logError="true">
         <outputfilterchain>
-	  <linecontains>
-	    <contains value="Revision: " />
-	  </linecontains>
+      <linecontains>
+        <contains value="Revision: " />
+      </linecontains>
           <replacestring from="Revision: " />
           <trim/>
         </outputfilterchain>
       </redirector>
     </exec>
 
-    <condition property="svn-version" 
-	       value="${svn-revision} (${svn-url})"
-	       else="?? Unknown svn version">
+    <condition property="svn-version"
+           value="${svn-revision} (${svn-url})"
+           else="?? Unknown svn version">
       <and>
          <equals arg1="0" arg2="${svn-url-result}" />
          <equals arg1="0" arg2="${svn-revision-result}" />
          <equals arg1="0" arg2="${svn-status-result}" />
-	 <length string="${svn-status}" trim="true" length="0" />
+     <length string="${svn-status}" trim="true" length="0" />
       </and>
     </condition>
 
     <echo message="svn-version set to '${svn-version}'" />
-    
+
   </target>
 
   <target name="compile_prod" depends="init">
@@ -200,7 +211,7 @@
     </javac>
   </target>
 
-  <target name="run_tests" depends="compile_tests,jar_prod">
+  <target name="run_tests" depends="compile_tests,jar_prod,instrument">
     <mkdir dir="${classes-tests.dir}/com/google/enterprise/connector/filesystem/config"/>
 
     <copy todir="${classes-tests.dir}/com/google/enterprise/connector/filesystem/config" >
@@ -209,6 +220,13 @@
 
     <junit printsummary="yes" haltonfailure="yes">
       <assertions><enable/></assertions>
+           <!--
+                                  The instrumented classes reference classes used by the
+                                  Cobertura runtime, so Cobertura and its dependencies
+                                  must be on your classpath.
+                    -->
+           <classpath location="${instrumented.dir}" />
+           <classpath refid="cobertura.classpath" />
       <classpath>
         <pathelement location="${classes-tests.dir}" />
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
@@ -225,6 +243,13 @@
       	<fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
         <pathelement location="${jar-prod.file}" />
       </classpath>
+      <formatter type="xml" />
+      <test name="${testcase}" todir="${reports.xml.dir}" if="testcase" />
+      <batchtest todir="${reports.xml.dir}" unless="testcase">
+        <fileset dir="${test.dir}">
+          <include name="**/*Test.java" />
+        </fileset>
+      </batchtest>
       <formatter type="brief" usefile="no"/>
       <formatter type="plain" />
       <batchtest fork="yes" todir="${tests_out.dir}">
@@ -233,9 +258,17 @@
         </fileset>
       </batchtest>
     </junit>
+
+      <junitreport todir="${reports.xml.dir}">
+        <fileset dir="${reports.xml.dir}">
+            <include name="TEST-*.xml" />
+      </fileset>
+    <report format="frames" todir="${reports.html.dir}" />
+   </junitreport>
+
   </target>
 
-  <target name="jar_prod" description="Build filesystem-connector-jar" 
+  <target name="jar_prod" description="Build filesystem-connector-jar"
           depends="compile_prod">
     <copy todir="${build-prod-config.dir}">
       <fileset dir="${config.dir}" excludes="**/*.properties" />
@@ -280,7 +313,7 @@
     </javadoc>
   </target>
 
-  <target name="download_filesystem_connector" depends="jar_prod" 
+  <target name="download_filesystem_connector" depends="jar_prod"
           description="Build distribution zip files.">
     <copy file="${release-notes.file}" tofile="${release-notes-zip-src.file}" >
        <filterchain>
@@ -288,13 +321,13 @@
       </filterchain>
     </copy>
     <zip destfile="${connector-filesystem-src.zip}" >
-      <zipfileset dir="." prefix="connector-filesystem-${version}/projects/file-system-connector" 
+      <zipfileset dir="." prefix="connector-filesystem-${version}/projects/file-system-connector"
         includes="${readme.file}, ${copying.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
       <zipfileset dir="${zip-src.dir}" />
     </zip>
 
     <checksum file="${connector-filesystem-src.zip}" />
-    
+
     <copy file="${jar-prod.file}" tofile="${file-connector-jar-zip.file}"/>
     <copy file="${copying.file}" tofile="${file-connector-copying-zip.file}"/>
     <copy file="${logging-properties.file}" todir="${config-zip.dir}" />
@@ -312,7 +345,7 @@
     <zip destfile="${downloads.dir}/connector-filesystem-${version}.zip">
       <zipfileset dir="${zip.dir}" />
     </zip>
- 
+
   </target>
 
   <target name="clean" description="Deletes all build files.">
@@ -321,5 +354,95 @@
     <delete dir="${javadoc.dir}" />
     <delete dir="${tests_out.dir}" />
   </target>
+
+    <!-- Cobertura Tasks -->
+
+        <taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+
+            <target name="init_code_coverage">
+                <mkdir dir="${classes.dir}" />
+                <mkdir dir="${instrumented.dir}" />
+                <mkdir dir="${reports.xml.dir}" />
+                <mkdir dir="${reports.html.dir}" />
+                <mkdir dir="${coverage.xml.dir}" />
+                <mkdir dir="${coverage.summaryxml.dir}" />
+                <mkdir dir="${coverage.html.dir}" />
+            </target>
+
+
+            <target name="compile_code_coverage" depends="init_code_coverage">
+                  <javac srcdir="${src.dir}" destdir="${classes.dir}" debug="true">
+                    <classpath>
+                        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+                        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+                     </classpath>
+                </javac>
+                <javac srcdir="${test.dir}" destdir="${classes.dir}" debug="true">
+                     <classpath>
+                        <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
+                        <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
+                     </classpath>
+                </javac>
+            </target>
+
+            <target name="instrument" depends="compile_code_coverage">
+                        <!--
+                            Remove the coverage data file and any old instrumentation.
+                        -->
+                        <delete file="cobertura.ser"/>
+                        <!-- <delete dir="${instrumented.dir}" /> -->
+
+                        <cobertura-instrument todir="${instrumented.dir}">
+                            <!--
+                                The following line causes instrument to ignore any
+                                source line containing a reference to log4j, for the
+                                purposes of coverage reporting.
+                            -->
+                            <ignore regex="org.apache.log4j.*" />
+
+                            <fileset dir="${classes.dir}">
+                                <!--
+                                    Instrument all the application classes, but
+                                    don't instrument the test classes.
+                                -->
+                                <include name="**/*.class" />
+                                <exclude name="**/*Test.class" />
+                            </fileset>
+                        </cobertura-instrument>
+                    </target>
+
+            <target name="coverage-report">
+                            <!--
+                                Generate an XML file containing the coverage data using
+                                the "srcdir" attribute.
+                            -->
+                            <cobertura-report srcdir="${src.dir}" destdir="${coverage.xml.dir}" format="xml" />
+            </target>
+
+             <target name="alternate-coverage-report">
+                            <!--
+                                Generate a series of HTML files containing the coverage
+                                data in a user-readable form using nested source filesets.
+                            -->
+                            <cobertura-report destdir="${coverage.html.dir}">
+                                <fileset dir="${src.dir}">
+                                    <include name="**/*.java"/>
+                                </fileset>
+                            </cobertura-report>
+            </target>
+
+
+            <target name="clean_code_coverage" description="Remove all files created by the build/test process.">
+                            <delete dir="${classes.dir}" />
+                            <delete dir="${instrumented.dir}" />
+                            <delete dir="${reports.dir}" />
+                            <delete file="cobertura.log" />
+                            <delete file="cobertura.ser" />
+            </target>
+
+
+           <target name="run_code_coverage" depends="run_tests,coverage-report,alternate-coverage-report" description="Compile, instrument ourself, run the tests and generate JUnit and coverage reports."/>
+
+
 </project>
 
