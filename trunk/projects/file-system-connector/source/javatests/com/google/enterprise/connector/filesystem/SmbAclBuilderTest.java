@@ -61,7 +61,7 @@ public class SmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue(((String) acl.getUsers().get(0)).equals("user1"));
+    assertEquals("user1", acl.getUsers().get(0));
     assertFalse(acl.getUsers().get(0).contains("user2"));
     assertTrue(acl.getGroups().isEmpty());
     verify(smbFile);
@@ -369,8 +369,8 @@ public class SmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue(((String) acl.getUsers().get(0)).equals("google\\superUser"));
-    assertTrue(((String) acl.getGroups().get(0)).equals("employees@google"));
+    assertEquals("google\\superUser", acl.getUsers().get(0));
+    assertEquals("employees@google", acl.getGroups().get(0));
     verify(smbFile);
     verify(fileAce);
     verify(fileAce1);

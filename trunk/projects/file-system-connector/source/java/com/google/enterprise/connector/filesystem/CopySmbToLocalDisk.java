@@ -27,7 +27,7 @@ import java.util.List;
 
 /** Performs copies of SMB content directories to local disk.
     This class is a utility; it is not necessary for a File System
-    Connetor to operate. */
+    Connector to operate. */
 class CopySmbToLocalDisk {
   final private SmbReadonlyFile src;
   final private File dest;
@@ -104,7 +104,7 @@ class CopySmbToLocalDisk {
     fileCount++;
   }
 
-  private void processFile(ReadonlyFile inFile) throws IOException {
+  private void processFile(ReadonlyFile<? extends ReadonlyFile<?>> inFile) throws IOException {
     if (!inFile.isRegularFile()) {
       throw new IllegalStateException("not file: " + inFile);
     }
@@ -121,13 +121,13 @@ class CopySmbToLocalDisk {
     in.close();
   }
 
-  private void processDirectory(ReadonlyFile d) throws IOException,
-      DirectoryListingException, InsufficientAccessException {
+  private void processDirectory(ReadonlyFile<? extends ReadonlyFile<?>> d)
+      throws IOException, DirectoryListingException, InsufficientAccessException {
     if (!d.isDirectory()) {
       throw new IllegalStateException("not dir: " + d);
     }
-    List<SmbReadonlyFile> list = d.listFiles();
-    for (SmbReadonlyFile c : list) {
+    List<? extends ReadonlyFile<?>> list = d.listFiles();
+    for (ReadonlyFile<? extends ReadonlyFile<?>> c : list) {
       if (c.isRegularFile()) {
         processFile(c);
       } else if (c.isDirectory()) {

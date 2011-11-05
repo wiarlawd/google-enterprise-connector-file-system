@@ -14,21 +14,41 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.common.JarUtils;
-
-
-// TODO: import JarUtils from connector-util.jar when it is available.
+import java.net.JarURLConnection;
+import java.net.URL;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 /**
- * This main() just prints version information. See the BUILD file for the real
- * reason it exists.
- *
+ * Dump the Version info from the Manifest for the Connector's JAR file.
+ * This is set as the default main() for the JAR if running the jar 
+ * stand-alone.  This makes it easy to dump the Connector's JAR Manifest
+ * (including version and build info) simply by running the command:
+ *   java -jar /path/to/connector-otex.jar
  */
 public class FileConnectorMain {
-  private FileConnectorMain() { //Prevents instantiation.
-  }
+  public static void main(String[] args) throws Exception {
+    // From our class, get the jar file URL to this class file, and
+    // make our way to the the Manifest located in that jar file.
+    Class thisClass = FileConnectorMain.class;
+    String resName = "/" + thisClass.getName().replace('.', '/') + ".class";
 
-  public static void main(String[] args) {
-    System.out.println("File connector v" + JarUtils.getJarVersion(FileConnectorMain.class));
+    // Locate the Jar file containing our class.
+    URL url = thisClass.getResource(resName);
+    JarURLConnection connection = (JarURLConnection) url.openConnection();
+
+    // Get the Manifest for our Jar and extract the Implementation-Title
+    // and Implementation-Version.
+    Manifest manifest = connection.getManifest();
+    Attributes attrs = manifest.getMainAttributes();
+    String name = attrs.getValue("Implementation-Title");
+    if (name == null) {
+      name = thisClass.getName();
+    } else {
+      name = name.replaceAll("[ \t\r\n][ \t\r\n]+", " ");
+    }
+    String version = attrs.getValue("Implementation-Version");
+
+    System.out.println(name + " v" + version);
   }
 }
