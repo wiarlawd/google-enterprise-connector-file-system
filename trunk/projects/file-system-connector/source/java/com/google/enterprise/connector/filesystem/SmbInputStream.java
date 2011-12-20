@@ -44,6 +44,9 @@ public class SmbInputStream extends BufferedInputStream {
     this.delegate = delegate;
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     this.lastAccessTime = lastAccessTime;
+    if (lastAccessTimeResetFlag) {
+      SmbReadonlyFile.addToMap(delegate.getPath(), this);
+    }
   }
   
   /**

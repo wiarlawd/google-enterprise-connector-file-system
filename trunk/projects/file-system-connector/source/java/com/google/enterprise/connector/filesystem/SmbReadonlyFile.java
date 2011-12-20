@@ -93,7 +93,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     try {
       if (this.lastAccessTimeResetFlag && this.delegate.isFile()) {
-         this.lastAccessTime = this.getLastAccessTime();
+        this.lastAccessTime = this.getLastAccessTime();
         LOG.finest("Got the last access time for " + path + " as : " 
             + new Date(this.lastAccessTime));
       }
@@ -195,8 +195,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     if (!isRegularFile()) {
       throw new UnsupportedOperationException("not a regular file: " + getPath());
     }
-    return addToMap(this.delegate.getPath(),
-        new SmbInputStream(delegate, lastAccessTimeResetFlag, lastAccessTime));
+    return new SmbInputStream(delegate, lastAccessTimeResetFlag, lastAccessTime);
   }
 
   /**
@@ -204,32 +203,32 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * in order to determine the oldest file access time for resetting. 
    * @param path
    * @param smbInputStream
-   * @return Input stream for SMB crawl
    */
-  private InputStream addToMap(String path, SmbInputStream smbInputStream) {
+  static void addToMap(String path, SmbInputStream smbInputStream) {
     synchronized (map) {
       List<SmbInputStream> list = map.get(path);
       if (list == null) {
          list = new ArrayList<SmbInputStream>();
       } 
       list.add(smbInputStream);
+      LOG.fine("Added to list of streams: " + path);
       map.put(path, list);
-      }
-    return smbInputStream;
+    }
   }
   
   /**
    * This method removes an input stream when a file is processed completely.
    * @param path
    */
-  static void removeFromMap (String path)
-  {
+  static void removeFromMap(String path) {
     synchronized (map) {
       List<SmbInputStream> list = map.get(path);
+      LOG.fine("Asked to remove a stream for: " + path);
       if (list == null || list.isEmpty()) {
-        LOG.warning("List of streams shouldn't have been 0 but is for :" + path);
+        LOG.fine("Expected stream for removal:" + path);
       } else {
-        list.remove(0);
+        list.remove(list.size() - 1);  // Doesn't matter which one is removed.
+        LOG.fine("Removed a stream for: " + path);
         if (list.isEmpty()) {
           map.remove(path);
         }
