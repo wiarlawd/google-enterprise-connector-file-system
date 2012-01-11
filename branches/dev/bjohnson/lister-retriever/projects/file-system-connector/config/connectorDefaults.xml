@@ -149,6 +149,12 @@
     <constructor-arg ref="document-context"/>
   </bean>
 
+  <bean id="file-retriever"
+        class="com.google.enterprise.connector.filesystem.FileRetriever">
+    <constructor-arg ref="path-parser"/>
+    <constructor-arg ref="document-context"/>
+  </bean>
+
   <bean id="filesystem-property-manager-defaults">
     <property name="aceSecurityLevel" value="FILEANDSHARE"/>
     <property name="markDocumentPublicFlag" value="false"/>
@@ -163,7 +169,7 @@
         class="com.google.enterprise.connector.filesystem.FileConnector">
     <constructor-arg ref="authz"/>
     <constructor-arg ref="file-lister"/>
-    <constructor-arg index="2"><null/></constructor-arg>
+    <constructor-arg ref="file-retriever"/>
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
 
