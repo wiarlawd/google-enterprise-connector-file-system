@@ -41,7 +41,7 @@
         class="com.google.enterprise.connector.filesystem.MimeTypeFinder"/>
 
   <bean id="document-context"
-        class="com.google.enterprise.connector.filesystem.FileDocumentHandle$DocumentContext"
+        class="com.google.enterprise.connector.filesystem.DocumentContext"
         singleton="true">
     <constructor-arg ref="file-system-type-registry"/>
     <constructor-arg value="${domain}"/>
@@ -50,12 +50,6 @@
     <constructor-arg ref="mime-type-finder"/>
     <constructor-arg index="5"><null/></constructor-arg>
     <constructor-arg ref="filesystem-property-manager"/>
-  </bean>
-
-  <bean id="client-document-handle-factory"
-        class="com.google.enterprise.connector.filesystem.FileDocumentHandleFactory"
-        singleton="true">
-    <constructor-arg ref="document-context"/>
   </bean>
 
   <bean id="authz"
@@ -181,6 +175,7 @@
   <bean id="change-queue" class="java.lang.Object"/>
   <bean id="checkpoint-and-change-queue" class="java.lang.Object"/>
   <bean id="checksum-generator" class="java.lang.Object"/>
+  <bean id="client-document-handle-factory" class="java.lang.Object"/>
   <bean id="file-document-snapshot-factory" class="java.lang.Object"/>
   <bean id="file-fetcher" class="java.lang.Object"/>
   <bean id="filesystem-monitor-manager" class="java.lang.Object"/>
