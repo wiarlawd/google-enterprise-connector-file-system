@@ -58,10 +58,9 @@
     <constructor-arg ref="path-parser"/>
   </bean>
 
-  <bean id="file-document-snapshot-repository-list"
-       class="com.google.enterprise.connector.filesystem.FileDocumentSnapshotRepositoryList"
+  <bean id="file-lister"
+       class="com.google.enterprise.connector.filesystem.FileLister"
        singleton="true">
-    <constructor-arg index="0"><null/></constructor-arg>
     <constructor-arg ref="path-parser"/>
     <constructor-arg>
       <list>
@@ -163,7 +162,7 @@
   <bean id="file-connector"
         class="com.google.enterprise.connector.filesystem.FileConnector">
     <constructor-arg ref="authz"/>
-    <constructor-arg index="1"><null/></constructor-arg>
+    <constructor-arg ref="file-lister"/>
     <constructor-arg index="2"><null/></constructor-arg>
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
@@ -177,6 +176,7 @@
   <bean id="checksum-generator" class="java.lang.Object"/>
   <bean id="client-document-handle-factory" class="java.lang.Object"/>
   <bean id="file-document-snapshot-factory" class="java.lang.Object"/>
+  <bean id="file-document-snapshot-repository-list" class="java.lang.Object"/>
   <bean id="file-fetcher" class="java.lang.Object"/>
   <bean id="filesystem-monitor-manager" class="java.lang.Object"/>
   <bean id="internal-document-handle-factory" class="java.lang.Object"/>
