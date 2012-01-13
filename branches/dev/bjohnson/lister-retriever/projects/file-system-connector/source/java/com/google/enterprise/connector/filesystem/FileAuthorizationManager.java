@@ -14,7 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.util.diffing.DocIdUtil;
 import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
@@ -27,6 +26,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Implementation of the SPI {@link AuthorizationManager} interface
+ * for the file system connector.
  */
 public class FileAuthorizationManager implements AuthorizationManager {
   private static final Logger LOG =
@@ -51,8 +52,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
       return false;
     }
     try {
-      String path = DocIdUtil.idToPath(docId);
-      ReadonlyFile<?> file = pathParser.getFile(path, credentials);
+      ReadonlyFile<?> file = pathParser.getFile(docId, credentials);
       if (file.supportsAuthn()) {
         return file.canRead();
       } else {
@@ -102,8 +102,8 @@ public class FileAuthorizationManager implements AuthorizationManager {
   /**
    * @param arg String to show
    * @param isPassword Whether the string to show is password or not
-   * @return checks whether the input is null or blank, if yes then returns "blank or null", 
-   * If the input is not null or blank, then if it is a password then it returns "is not blank or null" 
+   * @return checks whether the input is null or blank, if yes then returns "blank or null",
+   * If the input is not null or blank, then if it is a password then it returns "is not blank or null"
    * if it is not password and not blank or null then returns the input as it is.
    */
   private String getShowString(String arg, boolean isPassword) {

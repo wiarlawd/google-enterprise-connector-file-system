@@ -38,7 +38,7 @@
   </bean>
 
   <bean id="mime-type-finder"
-        class="com.google.enterprise.connector.filesystem.MimeTypeFinder"/>
+        class="com.google.enterprise.connector.util.MimeTypeDetector"/>
 
   <bean id="document-context"
         class="com.google.enterprise.connector.filesystem.DocumentContext"
@@ -48,7 +48,6 @@
     <constructor-arg value="${user}"/>
     <constructor-arg value="${password}"/>
     <constructor-arg ref="mime-type-finder"/>
-    <constructor-arg index="5"><null/></constructor-arg>
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
 

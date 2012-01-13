@@ -14,15 +14,14 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.util.diffing.TraversalContextManager;
+import com.google.enterprise.connector.util.MimeTypeDetector;
 
 public class DocumentContext {
   private final FileSystemTypeRegistry fileSystemTypeRegistry;
   private final boolean pushAcls;
   private final boolean markAllDocumentsPublic;
   private final Credentials credentials;
-  private final MimeTypeFinder mimeTypeFinder;
-  private final TraversalContextManager traversalContextManager;
+  private final MimeTypeDetector mimeTypeDetector;
 
   /**
    * This constructor is used only in test cases.
@@ -30,17 +29,16 @@ public class DocumentContext {
   DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
                   boolean pushAcls, boolean markAllDocumentsPublic,
                   String domain, String userName, String password,
-                  MimeTypeFinder mimeTypeFinder,
-                  TraversalContextManager traversalContextManager) {
+                  MimeTypeDetector mimeTypeDetector) {
+
     this(fileSystemTypeRegistry, pushAcls, markAllDocumentsPublic,
          new Credentials(domain, userName, password),
-         mimeTypeFinder, traversalContextManager);
+         mimeTypeDetector);
   }
 
   DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
                   boolean pushAcls, boolean markAllDocumentsPublic,
-                  Credentials credentials, MimeTypeFinder mimeTypeFinder,
-                  TraversalContextManager traversalContextManager) {
+                  Credentials credentials, MimeTypeDetector mimeTypeDetector) {
     if (pushAcls && markAllDocumentsPublic) {
       throw new IllegalArgumentException(
           "pushAcls not supported with markAllDocumentsPublic");
@@ -49,8 +47,7 @@ public class DocumentContext {
     this.pushAcls = pushAcls;
     this.markAllDocumentsPublic = markAllDocumentsPublic;
     this.credentials = credentials;
-    this.mimeTypeFinder = mimeTypeFinder;
-    this.traversalContextManager = traversalContextManager;
+    this.mimeTypeDetector = mimeTypeDetector;
   }
 
   /**
@@ -59,13 +56,12 @@ public class DocumentContext {
    */
   DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
                   String domain, String userName, String password,
-                  MimeTypeFinder mimeTypeFinder,
-                  TraversalContextManager traversalContextManager,
+                  MimeTypeDetector mimeTypeDetector,
                   DocumentSecurityProperties propertyFetcher) {
     this(fileSystemTypeRegistry, propertyFetcher.isPushAclFlag(),
          propertyFetcher.isMarkDocumentPublicFlag(),
          new Credentials(domain, userName, password),
-         mimeTypeFinder, traversalContextManager);
+         mimeTypeDetector);
   }
 
   public FileSystemTypeRegistry getFileSystemTypeRegistry() {
@@ -84,12 +80,8 @@ public class DocumentContext {
     return credentials;
   }
 
-  public MimeTypeFinder getMimeTypeFinder() {
-    return mimeTypeFinder;
-  }
-
-  public TraversalContextManager getTraversalContextManager() {
-    return traversalContextManager;
+  public MimeTypeDetector getMimeTypeDetector() {
+    return mimeTypeDetector;
   }
 
   /**

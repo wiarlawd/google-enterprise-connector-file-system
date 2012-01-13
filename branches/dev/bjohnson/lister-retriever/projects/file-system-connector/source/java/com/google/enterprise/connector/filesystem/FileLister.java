@@ -25,8 +25,6 @@ import com.google.enterprise.connector.spi.TraversalSchedule;
 import com.google.enterprise.connector.spi.TraversalScheduleAware;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.util.filter.AddPropertyFilter;
-import com.google.enterprise.connector.util.filter.DocumentFilterFactory;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -45,7 +43,6 @@ class FileLister implements Lister, TraversalContextAware,
   private final Collection<String> startPaths;
   private final FilePatternMatcher filePatternMatcher;
   private final DocumentContext context;
-  private final DocumentFilterFactory listerFilters;
 
   private boolean isShutdown = false;
   private Thread listerThread;
@@ -69,7 +66,6 @@ class FileLister implements Lister, TraversalContextAware,
     this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
         includePatterns, excludePatterns);
     this.context = context;
-    this.listerFilters = listerFilters();
   }
 
   private static Collection<String> normalizeStartPaths(
@@ -137,8 +133,7 @@ class FileLister implements Lister, TraversalContextAware,
               try {
                 ReadonlyFile<?> file = iter.next();
                 path = file.getPath();
-                documentAcceptor.take(listerFilters.newDocumentFilter(
-                    new FileDocument(file, context)));
+                documentAcceptor.take(new FileDocument(file, context));
               } catch (RepositoryDocumentException e) {
                 LOGGER.log(Level.WARNING, "Failed to feed document " + path, e);
               }
@@ -189,19 +184,5 @@ class FileLister implements Lister, TraversalContextAware,
     } catch (InterruptedException ie) {
       Thread.interrupted();
     }
-  }
-
-  /**
-   * Construct a series of DocumentFilters that make a FileDocument suitable
-   * for a Lister feed.
-   */
-  // TODO: Set this property in FeedDocument, but what about Retriever metadata?
-  private DocumentFilterFactory listerFilters() {
-    // Add FeedType = CONTENTURL property.
-    AddPropertyFilter addFilter = new AddPropertyFilter();
-    addFilter.setPropertyName(SpiConstants.PROPNAME_FEEDTYPE);
-    addFilter.setPropertyValue(SpiConstants.FeedType.CONTENTURL.toString());
-    addFilter.setOverwrite(true);
-    return addFilter;
   }
 }

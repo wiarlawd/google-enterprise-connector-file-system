@@ -15,8 +15,6 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Maps;
-import com.google.enterprise.connector.util.diffing.DocIdUtil;
-import com.google.enterprise.connector.util.diffing.TraversalContextManager;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -25,6 +23,7 @@ import com.google.enterprise.connector.spi.SimpleProperty;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.Value;
+import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.io.IOException;
 import java.util.Calendar;
@@ -46,17 +45,6 @@ public class FileDocument implements Document {
   private final ReadonlyFile<?> file;
   private final DocumentContext context;
   private final Map<String, List<Value>> properties;
-
-  FileDocument(String filesys, String path, DocumentContext context)
-      throws RepositoryException {
-    this(context.getFileSystemTypeRegistry().get(filesys)
-         .getFile(path, context.getCredentials()), context);
-  }
-
-  FileDocument(PathParser pathParser, String path, DocumentContext context)
-      throws RepositoryException {
-    this(pathParser.getFile(path, context.getCredentials()), context);
-  }
 
   FileDocument(ReadonlyFile<?> file, DocumentContext context)
       throws RepositoryException {
@@ -95,6 +83,8 @@ public class FileDocument implements Document {
   }
 
   private void fetchProperties() throws RepositoryException {
+    addProperty(SpiConstants.PROPNAME_FEEDTYPE,
+                SpiConstants.FeedType.CONTENTURL.toString());
     addProperty(SpiConstants.PROPNAME_DOCID, getDocumentId());
     addProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
     try {
@@ -105,31 +95,33 @@ public class FileDocument implements Document {
       LOGGER.log(Level.WARNING, "failed to get last-modified time for file: "
           + file.getPath(), e);
     }
-    // Add placeholders for MimeType and Content, but don't actually
+
+    fetchAcl(file);
+
+    // Add placeholders for MimeType and Content but don't actually
     // attempt to open the file, yet. Delay opening the file until
     // these fields are actually requested.  They might not be, in
     // the case of Retriever with IfModifiedSince.
     properties.put(SpiConstants.PROPNAME_MIMETYPE, null);
-    properties.put(SpiConstants.PROPNAME_CONTENT, null);
-    fetchAcl(file);
 
+    // TODO: Re-enable CONTENT if changes to Retriever interface require it.
+    // Currently neither the Lister, nor Retriever interfaces want CONTENT.
+    // properties.put(SpiConstants.PROPNAME_CONTENT, null);
+
+    // TODO: Include SpiConstants.PROPNAME_FOLDER.
     // TODO: Include Filesystem-specific properties (length, etc).
     // TODO: Include extended attributes (Java 7 java.nio.file.attributes).
   }
 
   private void fetchMimeType(ReadonlyFile<?> file)
-      throws RepositoryDocumentException{
+      throws RepositoryDocumentException {
     try {
-      // TODO: Switch to the CM MimeTypeDetector.
-      TraversalContext traversalContext =
-          context.getTraversalContextManager().getTraversalContext();
-      MimeTypeFinder mimeTypeFinder = context.getMimeTypeFinder();
+      MimeTypeDetector mimeTypeDetector = context.getMimeTypeDetector();
       addProperty(SpiConstants.PROPNAME_MIMETYPE,
-          mimeTypeFinder.find(traversalContext,
-          file.getPath(), new FileInfoInputStreamFactory(file)));
-    } catch (IOException ioe) {
-      throw new RepositoryDocumentException("Unable to get mime type for file "
-          + file.getPath(), ioe);
+                  mimeTypeDetector.getMimeType(file.getPath(), file));
+    } catch (IOException e) {
+      LOGGER.log(Level.WARNING, "Failed to determine MimeType for "
+                 + file.getPath(), e);
     }
   }
 

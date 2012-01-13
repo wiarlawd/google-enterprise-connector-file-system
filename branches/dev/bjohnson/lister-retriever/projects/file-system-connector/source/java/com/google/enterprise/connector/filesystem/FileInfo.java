@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,16 +51,6 @@ public interface FileInfo {
    * @return true if this is a regular file
    */
   public boolean isRegularFile();
-
-  // TODO: Remove this. Users currently must have a ReadOnlyFile to
-  //     access the stream anyway.
-  /**
-   * @return an input stream that reads this file.
-   * @throws IOException if this is a regular file but cannot be opened
-   * @throws UnsupportedOperationException if this is a directory, or if it
-   *         represents a defunct file.
-   */
-  public InputStream getInputStream() throws IOException;
 
   /**
    * @return the time this file was last modified
