@@ -14,116 +14,62 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentContext;
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
-import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.spi.ListerAware;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.RetrieverAware;
 import com.google.enterprise.connector.spi.Session;
-import com.google.enterprise.connector.spi.TraversalContext;
-import com.google.enterprise.connector.util.diffing.ChangeQueue;
-import com.google.enterprise.connector.util.diffing.ChangeQueue.DefaultCrawlActivityLogger;
-import com.google.enterprise.connector.util.diffing.ChangeSource;
-import com.google.enterprise.connector.util.diffing.DeleteDocumentHandleFactory;
-import com.google.enterprise.connector.util.diffing.DiffingConnector;
-import com.google.enterprise.connector.util.diffing.DiffingConnectorTraversalManager;
-import com.google.enterprise.connector.util.diffing.TraversalContextManager;
-import com.google.enterprise.connector.util.diffing.testing.FakeDocumentSnapshotRepositoryMonitorManager;
-import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 
 import junit.framework.TestCase;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /** Test Session aspect of FileConnector. */
 public class FileSessionTest extends TestCase {
   private Session session;
-  private ChangeSource changes;
   private FileAuthorizationManager authz;
-  private FakeDocumentSnapshotRepositoryMonitorManager monitorManager;
+  private FileLister lister;
+  private FileRetriever retriever;
 
   @Override
-  public void setUp() throws IOException {
-    changes = new ChangeQueue(100, 10, new DefaultCrawlActivityLogger());
-    SmbFileProperties fetcher = getFetcher();
-    FileSystemTypeRegistry fileSystemTypeRegistry =
-      new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType(),
-          new SmbFileSystemType(fetcher)));
-    authz = new FileAuthorizationManager(new PathParser(
-        fileSystemTypeRegistry));
-    TraversalContext traversalContext = new FakeTraversalContext();
-    TraversalContextManager tcm = new TraversalContextManager();
-    tcm.setTraversalContext(traversalContext);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry, false,
-        true, null, null,null, new MimeTypeFinder(), tcm);
-    FileDocumentHandleFactory clientFactory = new FileDocumentHandleFactory(
-        context);
-    monitorManager = new FakeDocumentSnapshotRepositoryMonitorManager(changes,
-        this, new DeleteDocumentHandleFactory(), clientFactory);
-    session = new DiffingConnector(authz, monitorManager, tcm);
+  public void setUp() throws Exception {
+    FileSystemTypeRegistry fileSystemTypeRegistry = new FileSystemTypeRegistry(
+        Collections.singletonList(new JavaFileSystemType()));
+
+    PathParser pathParser = new PathParser(fileSystemTypeRegistry);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+        false, true, null, null, null, null);
+
+    authz = new FileAuthorizationManager(pathParser);
+    List<String> empty = Collections.emptyList();
+    lister = new FileLister(pathParser, empty, empty, empty, context);
+    retriever = new FileRetriever(pathParser, context);
+
+    FileConnector connector = new FileConnector(authz, lister, retriever, null);
+    session = connector.login();
+    assertNotNull(session);
   }
 
-  private SmbFileProperties getFetcher() {
-    return new SmbFileProperties() {
-      public String getUserAclFormat() {
-        return AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
-      }
-        
-      public String getGroupAclFormat() {
-        return AclFormat.DOMAIN_BACKSLASH_GROUP.getFormat();
-      }
-      
-      public String getAceSecurityLevel() {
-        return AceSecurityLevel.FILEORSHARE.name();
-      }
-      
-      public boolean isLastAccessResetFlagForSmb() {
-        return false;
-      }
-    };
-  }
-
-public void testAuthn() throws RepositoryException {
+  public void testAuthnMgr() throws RepositoryException {
     assertNull(session.getAuthenticationManager());
-    assertEquals(0, monitorManager.getStartCount());
-    assertEquals(0, monitorManager.getStopCount());
-    assertEquals(0, monitorManager.getCleanCount());
   }
 
-  public void testAuthz() throws RepositoryException {
+  public void testAuthzMgr() throws RepositoryException {
     assertEquals(authz, session.getAuthorizationManager());
-    assertEquals(0, monitorManager.getStartCount());
-    assertEquals(0, monitorManager.getStopCount());
-    assertEquals(0, monitorManager.getCleanCount());
-    assertEquals(0, monitorManager.getGuaranteeCount());
   }
 
-  public void testTraversal() throws RepositoryException {
-    DiffingConnectorTraversalManager tm = (DiffingConnectorTraversalManager) session.getTraversalManager();
-    tm.setTraversalContext(new FakeTraversalContext());
-    assertNotNull(tm);
-    assertEquals(0, monitorManager.getStartCount());
-    assertEquals(0, monitorManager.getStopCount());
-    assertEquals(0, monitorManager.getCleanCount());
-    assertEquals(0, monitorManager.getGuaranteeCount());
+  public void testTraversalMgr() throws RepositoryException {
+    assertNull(session.getTraversalManager());
+  }
 
-    tm.startTraversal();
-    assertEquals(1, monitorManager.getStartCount());
-    assertEquals(1, monitorManager.getStopCount());
-    assertEquals(1, monitorManager.getCleanCount());
-    assertEquals(1, monitorManager.getGuaranteeCount());
+  public void testLister() throws RepositoryException {
+    assertTrue(session instanceof ListerAware);
+    assertEquals(lister, ((ListerAware) session).getLister());
+  }
 
-    tm.resumeTraversal(null);
-    assertEquals(1, monitorManager.getStartCount());
-    assertEquals(1, monitorManager.getStopCount());
-    assertEquals(1, monitorManager.getCleanCount());
-    assertEquals(2, monitorManager.getGuaranteeCount());
-
-    tm.startTraversal();
-    assertEquals(2, monitorManager.getStartCount());
-    assertEquals(2, monitorManager.getStopCount());
-    assertEquals(2, monitorManager.getCleanCount());
-    assertEquals(3, monitorManager.getGuaranteeCount());
+  public void testRetriever() throws RepositoryException {
+    assertTrue(session instanceof RetrieverAware);
+    assertEquals(retriever, ((RetrieverAware) session).getRetriever());
   }
 }

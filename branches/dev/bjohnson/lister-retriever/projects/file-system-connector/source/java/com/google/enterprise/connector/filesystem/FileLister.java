@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
+import com.google.enterprise.connector.spi.DocumentAcceptorException;
 import com.google.enterprise.connector.spi.Lister;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
@@ -146,8 +147,14 @@ class FileLister implements Lister, TraversalContextAware,
       }
     } catch (Exception e) {
       LOGGER.log(Level.WARNING, "Lister feed failed.", e);
+    } finally {
+      LOGGER.fine("Halting File Lister");
+      try {
+        documentAcceptor.cancel();
+      } catch (DocumentAcceptorException e) {
+        LOGGER.log(Level.WARNING, "Error shutting down Lister", e);
+      }
     }
-    LOGGER.fine("Halting File Lister");
   }
 
   private synchronized boolean notShutdown() {
@@ -175,8 +182,10 @@ class FileLister implements Lister, TraversalContextAware,
       }
 
       // TODO: Take into account next Schedule interval.
-      seconds = schedule.isDisabled() ? Integer.MAX_VALUE
-                                      : schedule.getRetryDelay();
+      if (schedule.isDisabled() || schedule.getRetryDelay() < 0)
+        seconds =  Integer.MAX_VALUE;
+      else
+        seconds = schedule.getRetryDelay();
     }
 
     try {

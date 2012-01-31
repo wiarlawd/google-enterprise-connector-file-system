@@ -289,7 +289,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.exception = execeptionToThrow;
   }
 
-  public void setLenghException(IOException exceptionToThrow) {
+  public void setLengthException(IOException exceptionToThrow) {
     this.lengthException = exceptionToThrow;
   }
 
@@ -314,7 +314,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   public boolean exists() {
     return this.exists;
   }
-  
+
   /**Sets the boolean that decides whether the file should exist or not.
    * @param exists
    */

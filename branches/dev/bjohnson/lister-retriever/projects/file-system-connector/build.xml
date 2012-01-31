@@ -195,10 +195,7 @@
       <classpath>
         <pathelement location="${classes-tests.dir}" />
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
-          <include name="**/spring.jar" />
-          <include name="**/guava*.jar" />
-      	  <include name="**/json.jar" />
-          <include name="**/commons-logging.jar" />
+          <include name="**/*.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
           <include name="**/junit.jar" />

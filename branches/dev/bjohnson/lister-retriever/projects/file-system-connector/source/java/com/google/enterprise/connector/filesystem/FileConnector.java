@@ -43,7 +43,7 @@ public class FileConnector
     this.lister = lister;
     this.retriever = retriever;
 
-    //TODO: If we add a property to PropertyManager, then this would be the
+    // TODO: If we add a property to PropertyManager, then this would be the
     // place to validate the properties.
   }
 
