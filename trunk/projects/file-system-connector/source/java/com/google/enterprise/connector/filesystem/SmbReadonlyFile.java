@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.util.diffing.SnapshotRepositoryRuntimeException;
 import com.google.enterprise.connector.util.IOExceptionHelper;
 
 import jcifs.smb.SmbException;
@@ -82,6 +83,19 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       throw new IncorrectURLException("malformed SMB path: " + path, e);
     }
   }
+
+  /** If repository cannot be contacted throws SnapshotRepositoryRuntimeException. */
+  private static void detectServerDown(SmbException smbe) {
+    // Not 100% sure if identifying all server downs and only server downs.
+    boolean badCommunication = SmbException.NT_STATUS_UNSUCCESSFUL == smbe.getNtStatus();
+    boolean noTransport = smbe.getRootCause() instanceof jcifs.util.transport.TransportException;
+    boolean noConnection = ("" + smbe).contains("Failed to connect");
+    LOG.info("server down variables:" + smbe.getNtStatus() + " " + smbe.getRootCause().getClass()
+        + " " + smbe.getMessage());
+    if (badCommunication && noTransport && noConnection) {
+      throw new SnapshotRepositoryRuntimeException("server down", smbe);
+    }
+  }
   
   /**
    * @param path
@@ -98,8 +112,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
             + new Date(this.lastAccessTime));
       }
     } catch (SmbException e) {
-        throw new RepositoryDocumentException("Cannot access path: " + path, e);
-     }
+      throw new RepositoryDocumentException("Cannot access path: " + path, e);
+    }
   }
   
   /**
@@ -114,7 +128,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
             + this.delegate.getPath());
         return list.get(0).getLastAccessTime();
       } else {
-      return this.delegate.lastAccess();
+        return this.delegate.lastAccess();
       }
     }
   }
@@ -147,6 +161,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.canRead();
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -180,6 +195,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return builder.build();
     } catch (SmbException e) {
+      detectServerDown(e);
       LOG.warning("Failed to get ACL: " + e.getMessage());
       LOG.log(Level.FINEST,"Got smbException while getting ACLs", e);
       return Acl.USE_HEAD_REQUEST;
@@ -243,6 +259,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       // non-existent paths to return true.
       return delegate.exists() ? delegate.isDirectory() : false;
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -252,6 +269,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.isFile();
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -262,6 +280,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       files = delegate.listFiles();
     } catch (SmbException e) {
+      detectServerDown(e);
       if (e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
         throw new InsufficientAccessException("failed to list files in " + getPath(), e);
       } else {
@@ -294,6 +313,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.lastModified();
     } catch (SmbException e) {
+      detectServerDown(e);
       throw IOExceptionHelper.newIOException(
           "failed to get last modified time for " + getPath(), e);
     }
