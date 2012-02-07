@@ -214,6 +214,7 @@ public class FileConnectorTest extends TestCase {
     return Collections.unmodifiableSet(docids);
   }
 
+/*
   public void testGettingTraversalManagerMultipleTimesWithNull()
       throws RepositoryLoginException, RepositoryException, Exception {
     Session session = connector.login();
@@ -242,6 +243,7 @@ public class FileConnectorTest extends TestCase {
     connector.shutdown();
     assertEquals(0, fileSystemMonitorManager.getThreadCount());
   }
+*/
 
   public void testAbandondedTraversalManagerUseTriggersException() {
     DiffingConnectorTraversalManager mngr =
