@@ -31,6 +31,15 @@
     -->
     
     <!-- 
+    Flag to reset the last access time of a local windows file after crawling.
+    This should be used when the start path of the url is a windows style 
+    file path. E.g. "c://share/data"
+    -->
+    <!--
+    <property name="pushAclFlag" value="true"/>
+    -->
+  
+    <!-- 
     Flag to reset the last access time of a SMB file after crawling.
     This should be used when the start path of the url starts with "smb://".
     -->
@@ -46,16 +55,7 @@
     <!-- 
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
     -->
-    
-    <!-- 
-    Flag to reset the last access time of a local windows file after crawling.
-    This should be used when the start path of the url is a windows style 
-    file path. E.g. "c://share/data"
-    -->
-    <!--
-    <property name="pushAclFlag" value="true"/>
-    -->
-  
+
     <!-- 
     No. of milliseconds to sleep after a scan
     When this delay is applied depends on the 'introduceDelayAfterEveryScan'

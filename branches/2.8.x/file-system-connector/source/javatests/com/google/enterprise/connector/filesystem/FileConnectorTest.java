@@ -207,13 +207,14 @@ public class FileConnectorTest extends TestCase {
     int allowedIterations = 10; // Help detect infinite loop.
     while (docids.size() < TOTAL_DOC_COUNT) {
       if (--allowedIterations < 0) {
-        throw new IllegalStateException("Looks like an inifiniate loop.");
+        throw new IllegalStateException("Looks like an infinite loop.");
       }
       docids.addAll(docListToDocidsSet(mngr.resumeTraversal(null)));
     }
     return Collections.unmodifiableSet(docids);
   }
 
+/*
   public void testGettingTraversalManagerMultipleTimesWithNull()
       throws RepositoryLoginException, RepositoryException, Exception {
     Session session = connector.login();
@@ -242,6 +243,7 @@ public class FileConnectorTest extends TestCase {
     connector.shutdown();
     assertEquals(0, fileSystemMonitorManager.getThreadCount());
   }
+*/
 
   public void testAbandondedTraversalManagerUseTriggersException() {
     DiffingConnectorTraversalManager mngr =
@@ -302,10 +304,10 @@ public class FileConnectorTest extends TestCase {
     int allowedIterations = 10; // Help detect infinite loop.
     while (docs.docs.size() < count) {
       if (--allowedIterations < 0) {
-        throw new IllegalStateException("Looks like an inifiniate loop.");
+        throw new IllegalStateException("Looks like an infinite loop.");
       }
       docs = toList(mngr.resumeTraversal(checkpoint));
-      //
+
       // In this test the documents are read from the filesystem.
       // In environments with slow access to the filesystem (such
       // as a slow NFS mount) the test can require a bit of extra

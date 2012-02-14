@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.util.diffing.SnapshotRepositoryRuntimeException;
 import com.google.enterprise.connector.util.IOExceptionHelper;
 
 import jcifs.smb.SmbException;
@@ -31,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -47,18 +47,26 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   private SmbFile delegate;
 
   private static final Logger LOG = Logger.getLogger(SmbReadonlyFile.class.getName());
-  /**
-   * It stores the last access time for the underlying file.
-   */
+
+  /** It stores the last access time for the underlying file. */
   private long lastAccessTime = 0L;
-  /**
-   * Flag to turn on /off the last access time reset flag
-   */
+
+  /** Flag to turn on /off the last access time reset flag. */
   private boolean lastAccessTimeResetFlag = false;
 
-  private static Hashtable<String, List<SmbInputStream>> map =
-      new Hashtable<String, List<SmbInputStream>>();
-  
+  /*
+   * Last access times are stored for both regular files and directories.
+   * The code performs operations that modify access time and then restores them.
+   *
+   * For directory files the operation that modifies access time is listing the 
+   * directory.  After the directory is listed the access time is put back.
+   *
+   * For regular files the last access time is modified when InputStream is used.
+   * The time is put back when stream is closed.  The close happens outside
+   * of the scope of this class.  For this reason the time is kept inside
+   * a map inside of SmbInputStream class.
+   */
+
   /**
    * Implementation of {@link SmbFileProperties} that gives the 
    * required properties for SMB crawling.
@@ -82,6 +90,19 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       throw new IncorrectURLException("malformed SMB path: " + path, e);
     }
   }
+
+  /** If repository cannot be contacted throws SnapshotRepositoryRuntimeException. */
+  private static void detectServerDown(SmbException smbe) {
+    // Not 100% sure if identifying all server downs and only server downs.
+    boolean badCommunication = SmbException.NT_STATUS_UNSUCCESSFUL == smbe.getNtStatus();
+    boolean noTransport = smbe.getRootCause() instanceof jcifs.util.transport.TransportException;
+    boolean noConnection = ("" + smbe).contains("Failed to connect");
+    LOG.info("server down variables:" + smbe.getNtStatus() + " " + smbe.getRootCause().getClass()
+        + " " + smbe.getMessage());
+    if (badCommunication && noTransport && noConnection) {
+      throw new SnapshotRepositoryRuntimeException("server down", smbe);
+    }
+  }
   
   /**
    * @param path
@@ -92,14 +113,14 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       String path, boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     try {
-      if (this.lastAccessTimeResetFlag && this.delegate.isFile()) {
-         this.lastAccessTime = this.getLastAccessTime();
+      if (this.lastAccessTimeResetFlag) {
+        this.lastAccessTime = this.getLastAccessTime();
         LOG.finest("Got the last access time for " + path + " as : " 
             + new Date(this.lastAccessTime));
       }
     } catch (SmbException e) {
-        throw new RepositoryDocumentException("Cannot access path: " + path, e);
-     }
+      throw new RepositoryDocumentException("Cannot access path: " + path, e);
+    }
   }
   
   /**
@@ -107,16 +128,14 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws SmbException 
    */
   private long getLastAccessTime() throws SmbException {
-    synchronized (map) {
-      List<SmbInputStream> list = map.get(this.delegate.getPath());
-      if (list != null && !list.isEmpty()) {
-        LOG.info("Got the live stream so getting the last access time from there for" 
-            + this.delegate.getPath());
-        return list.get(0).getLastAccessTime();
-      } else {
-      return this.delegate.lastAccess();
-      }
+    Long savedTime = null;
+    if (isRegularFile()) {  // Regular files might have time saved.
+      savedTime = SmbInputStream.getSavedTime(this.delegate.getPath());
     }
+    if (null == savedTime) {  // If dir or wasn't saved.
+      savedTime = this.delegate.lastAccess();
+    }
+    return savedTime;
   }
 
   /**
@@ -147,6 +166,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.canRead();
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -180,6 +200,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return builder.build();
     } catch (SmbException e) {
+      detectServerDown(e);
       LOG.warning("Failed to get ACL: " + e.getMessage());
       LOG.log(Level.FINEST,"Got smbException while getting ACLs", e);
       return Acl.USE_HEAD_REQUEST;
@@ -195,46 +216,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     if (!isRegularFile()) {
       throw new UnsupportedOperationException("not a regular file: " + getPath());
     }
-    return addToMap(this.delegate.getPath(),
-        new SmbInputStream(delegate, lastAccessTimeResetFlag, lastAccessTime));
-  }
-
-  /**
-   * This method adds each input stream instantiated for the file in a map 
-   * in order to determine the oldest file access time for resetting. 
-   * @param path
-   * @param smbInputStream
-   * @return Input stream for SMB crawl
-   */
-  private InputStream addToMap(String path, SmbInputStream smbInputStream) {
-    synchronized (map) {
-      List<SmbInputStream> list = map.get(path);
-      if (list == null) {
-         list = new ArrayList<SmbInputStream>();
-      } 
-      list.add(smbInputStream);
-      map.put(path, list);
-      }
-    return smbInputStream;
-  }
-  
-  /**
-   * This method removes an input stream when a file is processed completely.
-   * @param path
-   */
-  static void removeFromMap (String path)
-  {
-    synchronized (map) {
-      List<SmbInputStream> list = map.get(path);
-      if (list == null || list.isEmpty()) {
-        LOG.warning("List of streams shouldn't have been 0 but is for :" + path);
-      } else {
-        list.remove(0);
-        if (list.isEmpty()) {
-          map.remove(path);
-        }
-      }
-    }
+    return new SmbInputStream(delegate, lastAccessTimeResetFlag, lastAccessTime);
   }
 
   /* @Override */
@@ -244,6 +226,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       // non-existent paths to return true.
       return delegate.exists() ? delegate.isDirectory() : false;
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -253,6 +236,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.isFile();
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -263,6 +247,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       files = delegate.listFiles();
     } catch (SmbException e) {
+      detectServerDown(e);
       if (e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
         throw new InsufficientAccessException("failed to list files in " + getPath(), e);
       } else {
@@ -287,6 +272,9 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
         return o1.getPath().compareTo(o2.getPath());
       }
     });
+    if (lastAccessTimeResetFlag) {
+      delegate.setLastAccess(lastAccessTime);
+    }
     return result;
   }
 
@@ -295,6 +283,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     try {
       return delegate.lastModified();
     } catch (SmbException e) {
+      detectServerDown(e);
       throw IOExceptionHelper.newIOException(
           "failed to get last modified time for " + getPath(), e);
     }
