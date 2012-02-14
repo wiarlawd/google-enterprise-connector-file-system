@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+  <bean id = "filesystem-property-manager"
+        class = "com.google.enterprise.connector.filesystem.FileSystemPropertyManager"
+        parent = "filesystem-property-manager-defaults"
+        singleton = "false">
+
+    <!--
+    Security level to be considered for fetching ACL for a file
+    There are 4 possible values for this parameter. These are in the order of
+    Stronger to weaker security levels.
+    FILEANDSHARE
+    SHARE
+    FILE
+    FILEORSHARE
+    Default value is 'FILEANDSHARE'  since it is the most restrictive of all
+    4 scenarios.
+    -->
+    <!--
+      <property name="aceSecurityLevel" value="FILEANDSHARE"/>
+    -->
+
+    <!--
+    Flag to mark all crawled documents as 'public'.
+    -->
+    <!--
+    <property name="markDocumentPublicFlag" value="false"/>
+    -->
+
+    <!--
+    Flag to reset the last access time of a local windows file after crawling.
+    This should be used when the start path of the url is a windows style
+    file path. E.g. "c://share/data"
+    -->
+    <!--
+    <property name="pushAclFlag" value="true"/>
+    -->
+
+    <!--
+    Flag to reset the last access time of a SMB file after crawling.
+    This should be used when the start path of the url starts with "smb://".
+    -->
+    <!--
+    <property name="lastAccessResetFlagForSmb" value="false"/>
+    -->
+
+    <!--
+    Flag to reset the last access time of a local windows file after crawling.
+    This should be used when the start path of the url is a windows
+    style file path. E.g. "c://share/data"
+    -->
+    <!--
+    <property name="lastAccessResetFlagForLocalWindows" value="false"/>
+    -->
+
+    <!--
+    Represents the format in which ACE entries should be fed to GSA for groups
+    Possible values are
+    1.group@domain
+    2.domain\group
+    3.group   (only group name without domain information)
+    -->
+    <!--
+    <property name="groupAclFormat" value="group"/>
+    -->
+
+    <!--
+    Represents the format in which ACE entries should be fed to GSA for users
+    Possible values are
+    1.user@domain
+    2.domain\user
+    3.user   (only user name without domain information)
+    -->
+    <!--
+    <property name="userAclFormat" value="user"/>
+    -->
+
+  </bean>
+
+</beans>
