@@ -84,7 +84,7 @@ public class FileDocument implements Document {
 
   private void fetchProperties() throws RepositoryException {
     addProperty(SpiConstants.PROPNAME_FEEDTYPE,
-                SpiConstants.FeedType.CONTENTURL.toString());
+                SpiConstants.FeedType.CONTENT.toString());
     addProperty(SpiConstants.PROPNAME_DOCID, getDocumentId());
     addProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
     try {
@@ -106,7 +106,7 @@ public class FileDocument implements Document {
 
     // TODO: Re-enable CONTENT if changes to Retriever interface require it.
     // Currently neither the Lister, nor Retriever interfaces want CONTENT.
-    // properties.put(SpiConstants.PROPNAME_CONTENT, null);
+    properties.put(SpiConstants.PROPNAME_CONTENT, null);
 
     // TODO: Include SpiConstants.PROPNAME_FOLDER.
     // TODO: Include Filesystem-specific properties (length, etc).
