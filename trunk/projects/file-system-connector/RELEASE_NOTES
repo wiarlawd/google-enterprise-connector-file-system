@@ -21,6 +21,8 @@ upgrade.
 
 Issues fixed from last release:
 -------------------------------
+Issue 5398852: File System connector should not modify last access
+               time on folders when lastAccessResetFlagForSmb is enabled.
 Issues 5734921, 5735103: Do not store access times when
                lastAccessResetFlagForSmb feature is off. This avoids
                a memory leak and performance degradation.
