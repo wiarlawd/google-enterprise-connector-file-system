@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.SmbAclProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 import jcifs.Config;
 import jcifs.smb.SmbException;
@@ -127,7 +128,7 @@ public class SmbFileSystemType implements FileSystemType {
     }
     SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials);
     if (null == result) {
-      throw new RepositoryDocumentException("failed to open file: " 
+      throw new RepositoryDocumentException("failed to open file: "
           + smbStylePath);
     } else if (!result.isTraversable()) {
       throw new WrongSmbTypeException("Wrong smb type", null);
@@ -148,14 +149,14 @@ public class SmbFileSystemType implements FileSystemType {
     } catch (FilesystemRepositoryDocumentException e) {
       LOG.info("Validation error occured: " + e.getMessage());
       throw e;
-    } catch(RepositoryDocumentException rde) {
+    } catch(RepositoryException e) {
       result = null;
-      if (rde.getCause() instanceof SmbException) {
-        SmbException smbe = (SmbException)rde.getCause();
+      if (e.getCause() instanceof SmbException) {
+        SmbException smbe = (SmbException)e.getCause();
         if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-          throw new InsufficientAccessException("access denied", smbe); 
+          throw new InsufficientAccessException("access denied", smbe);
         } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
-          throw new NonExistentResourceException("Path does not exist", smbe);                    
+          throw new NonExistentResourceException("Path does not exist", smbe);
         }
       }
     }
@@ -166,22 +167,22 @@ public class SmbFileSystemType implements FileSystemType {
   public String getName() {
     return SmbReadonlyFile.FILE_SYSTEM_TYPE;
   }
-  
+
   /* @Override */
   public boolean isUserPasswordRequired() {
     return true;
   }
-  
+
   /**
-   * Interface to retrieve the properties required for Smb crawling. 
+   * Interface to retrieve the properties required for Smb crawling.
    */
   public static interface SmbFileProperties extends SmbAclProperties {
-      
+
     /**
      * Gets the lastAccessTimeResetFlag
      * @return Flag to decide whether or not to reset the last access time of file.
      */
     boolean isLastAccessResetFlagForSmb();
   }
-  
+
 }

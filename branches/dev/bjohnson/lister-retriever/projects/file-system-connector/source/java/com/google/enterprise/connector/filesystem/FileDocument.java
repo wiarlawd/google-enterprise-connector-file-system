@@ -113,8 +113,7 @@ public class FileDocument implements Document {
     // TODO: Include extended attributes (Java 7 java.nio.file.attributes).
   }
 
-  private void fetchMimeType(ReadonlyFile<?> file)
-      throws RepositoryDocumentException {
+  private void fetchMimeType(ReadonlyFile<?> file) throws RepositoryException {
     try {
       MimeTypeDetector mimeTypeDetector = context.getMimeTypeDetector();
       addProperty(SpiConstants.PROPNAME_MIMETYPE,
@@ -125,8 +124,7 @@ public class FileDocument implements Document {
     }
   }
 
-  private void fetchAcl(ReadonlyFile<?> file)
-      throws RepositoryDocumentException {
+  private void fetchAcl(ReadonlyFile<?> file) throws RepositoryException {
     if (context.isMarkAllDocumentsPublic()) {
       LOGGER.finest("Public flag is true so setting PROPNAME_ISPUBLIC "
                     + "to TRUE");

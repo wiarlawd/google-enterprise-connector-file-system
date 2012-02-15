@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.InputStreamFactory;
 
 import java.io.IOException;
@@ -30,9 +30,9 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
     extends FileInfo, InputStreamFactory {
 
   /**
-   * @return true if this file or directory exists
+   * @return true if the file exists and can be read; false otherwise
    */
-  public boolean canRead();
+  public boolean canRead() throws RepositoryException;
 
   /**
    * Return the contents of this directory, sorted in an order consistent with
@@ -43,12 +43,12 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
    * @throws DirectoryListingException if the user is not authorized to read
    */
   public List<T> listFiles() throws IOException, DirectoryListingException,
-      InsufficientAccessException;
+      InsufficientAccessException, RepositoryException;
 
   /**
    * Returns the display url for this file.
    */
-  public String getDisplayUrl();
+  public String getDisplayUrl() throws RepositoryException;
 
   /**
    * Returns true if this {@link ReadonlyFile} matches the supplied
@@ -66,17 +66,17 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
    * file in bytes. Otherwise this returns 0L.
    * @throws IOException
    */
-  public long length() throws IOException;
+  public long length() throws IOException, RepositoryException;
 
   /**
    * Returns true if this {@Link ReadonlyFile} supports authn
    * based on a specific associated {@link Credentials}.
    */
-  public boolean supportsAuthn();
+  public boolean supportsAuthn() throws RepositoryException;
 
   /**
    * Returns true if the file actually exists in the file system false otherwise
    * @return true / false depending on whether the file exists or not.
    */
-  public boolean exists() throws RepositoryDocumentException;
+  public boolean exists() throws RepositoryException;
 }

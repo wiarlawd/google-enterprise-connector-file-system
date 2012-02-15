@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.RepositoryException;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -44,23 +46,31 @@ public interface FileInfo {
 
   /**
    * @return true if this is a directory.
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
    */
-  public boolean isDirectory();
+  public boolean isDirectory() throws RepositoryException;
 
   /**
    * @return true if this is a regular file
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
    */
-  public boolean isRegularFile();
+  public boolean isRegularFile() throws RepositoryException;
 
   /**
    * @return the time this file was last modified
    * @throws IOException if the modification time cannot be obtained
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
    */
-  public long getLastModified() throws IOException;
+  public long getLastModified() throws IOException, RepositoryException;
 
   /**
    * Returns a {@link Acl} for this file or directory.
    * @throws IOException
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
    */
-  public Acl getAcl() throws IOException;
+  public Acl getAcl() throws IOException, RepositoryException;
 }

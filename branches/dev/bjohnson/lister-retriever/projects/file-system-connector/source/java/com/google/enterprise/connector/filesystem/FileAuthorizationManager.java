@@ -18,6 +18,7 @@ import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,7 +44,8 @@ public class FileAuthorizationManager implements AuthorizationManager {
    * passed in identity has permission to read the document with the
    * passed in docId and false otherwise.
    */
-  private boolean canRead(String docId, AuthenticationIdentity identity) {
+  private boolean canRead(String docId, AuthenticationIdentity identity)
+      throws RepositoryException {
     Credentials credentials =
         FileConnectorType.newCredentials(identity.getDomain(),
             identity.getUsername(), identity.getPassword());
@@ -74,7 +76,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
   // TODO: This will require work for non-SMB files.
   /* @Override */
   public List<AuthorizationResponse> authorizeDocids(Collection<String> docIds,
-      AuthenticationIdentity identity) {
+      AuthenticationIdentity identity) throws RepositoryException {
     LOG.info("User name passed is : " + getShowString(identity.getUsername(),
         false) + " password is :"
         + getShowString(identity.getPassword(), true) + " domain is : "

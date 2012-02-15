@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.IOExceptionHelper;
 
 import jcifs.smb.SmbException;
@@ -46,7 +47,9 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
 
   private SmbFile delegate;
 
-  private static final Logger LOG = Logger.getLogger(SmbReadonlyFile.class.getName());
+  private static final Logger LOG =
+      Logger.getLogger(SmbReadonlyFile.class.getName());
+
   /**
    * It stores the last access time for the underlying file.
    */
@@ -58,9 +61,9 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
 
   private static Hashtable<String, List<SmbInputStream>> map =
       new Hashtable<String, List<SmbInputStream>>();
-  
+
   /**
-   * Implementation of {@link SmbFileProperties} that gives the 
+   * Implementation of {@link SmbFileProperties} that gives the
    * required properties for SMB crawling.
    */
   private final SmbFileProperties smbPropertyFetcher;
@@ -69,7 +72,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @param path see {@code jcifs.org.SmbFile} for path syntax.
    * @param credentials
    * @param propertyFetcher Fetcher object that gives the required properties
-   * for Smb crawling.
+   *        for Smb crawling.
    * @throws RepositoryDocumentException if the path is malformed
    */
   public SmbReadonlyFile(String path, Credentials credentials,
@@ -82,39 +85,55 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       throw new IncorrectURLException("malformed SMB path: " + path, e);
     }
   }
-  
+
+  /** If repository cannot be contacted throws RepositoryException. */
+  private static void detectServerDown(SmbException smbe)
+      throws RepositoryException {
+    // Not 100% sure if identifying all server downs and only server downs.
+    boolean badCommunication =
+        SmbException.NT_STATUS_UNSUCCESSFUL == smbe.getNtStatus();
+    boolean noTransport =
+        smbe.getRootCause() instanceof jcifs.util.transport.TransportException;
+    boolean noConnection = ("" + smbe).contains("Failed to connect");
+    LOG.finest("server down variables:" + smbe.getNtStatus() + " "
+        + smbe.getRootCause().getClass() + " " + smbe.getMessage());
+    if (badCommunication && noTransport && noConnection) {
+      throw new RepositoryException("server down", smbe);
+    }
+  }
+
   /**
    * @param path
    * @param lastAccessTimeResetFlag
-   * @throws RepositoryDocumentException 
+   * @throws RepositoryDocumentException
    */
-  private void setProperties(
-      String path, boolean lastAccessTimeResetFlag) throws RepositoryDocumentException {
+  private void setProperties(String path, boolean lastAccessTimeResetFlag)
+      throws RepositoryDocumentException {
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     try {
       if (this.lastAccessTimeResetFlag && this.delegate.isFile()) {
         this.lastAccessTime = this.getLastAccessTime();
-        LOG.finest("Got the last access time for " + path + " as : " 
+        LOG.finest("Got the last access time for " + path + " as : "
             + new Date(this.lastAccessTime));
       }
     } catch (SmbException e) {
-        throw new RepositoryDocumentException("Cannot access path: " + path, e);
-     }
+      throw new RepositoryDocumentException("Cannot access path: " + path, e);
+    }
   }
-  
+
   /**
    * @return long last access time for the file
-   * @throws SmbException 
+   * @throws SmbException
    */
   private long getLastAccessTime() throws SmbException {
     synchronized (map) {
       List<SmbInputStream> list = map.get(this.delegate.getPath());
       if (list != null && !list.isEmpty()) {
-        LOG.info("Got the live stream so getting the last access time from there for" 
+        LOG.finer("Got the live stream so getting the last access time from there for"
             + this.delegate.getPath());
         return list.get(0).getLastAccessTime();
       } else {
-      return this.delegate.lastAccess();
+        return this.delegate.lastAccess();
       }
     }
   }
@@ -129,12 +148,12 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    *        domainName\\userOrGroupName}.
    * @throws RepositoryDocumentException
    */
-  private SmbReadonlyFile(
-      SmbFile smbFile, SmbFileProperties propertyFetcher)
-              throws RepositoryDocumentException {
+  private SmbReadonlyFile(SmbFile smbFile, SmbFileProperties propertyFetcher)
+        throws RepositoryDocumentException {
     this.delegate = smbFile;
     this.smbPropertyFetcher = propertyFetcher;
-    setProperties(smbFile.getPath(), propertyFetcher.isLastAccessResetFlagForSmb());
+    setProperties(smbFile.getPath(),
+                  propertyFetcher.isLastAccessResetFlagForSmb());
   }
 
   /* @Override */
@@ -143,10 +162,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
-  public boolean canRead() {
+  public boolean canRead() throws RepositoryException {
     try {
       return delegate.canRead();
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
@@ -160,8 +180,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   public String getDisplayUrl() {
     URL documentUrl = delegate.getURL();
     try {
-      int port =
-          (documentUrl.getPort() == documentUrl.getDefaultPort()) ? -1 : documentUrl.getPort();
+      int port = (documentUrl.getPort() == documentUrl.getDefaultPort())
+                 ? -1 : documentUrl.getPort();
       URI displayUri = new URI("file", null /* userInfo */,
           documentUrl.getHost(),
           port,
@@ -170,37 +190,55 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
           null /* fragment */);
       return displayUri.toASCIIString();
     } catch (URISyntaxException use) {
-      throw new IllegalStateException("Delegate URL not valid " + delegate.getURL(), use);
+      throw new IllegalStateException(
+          "Delegate URL not valid " + delegate.getURL(), use);
     }
   }
 
   /* @Override */
-  public Acl getAcl() throws IOException {
+  public Acl getAcl() throws IOException, RepositoryException {
     SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
     try {
       return builder.build();
     } catch (SmbException e) {
+      detectServerDown(e);
       LOG.warning("Failed to get ACL: " + e.getMessage());
       LOG.log(Level.FINEST,"Got smbException while getting ACLs", e);
       return Acl.USE_HEAD_REQUEST;
     }
     catch (IOException e) {
-      LOG.log(Level.WARNING,"Cannot process ACL...Got IOException while getting ACLs for " + this.getPath(), e);
+      LOG.log(Level.WARNING,"Cannot process ACL...Got IOException while "
+              + "getting ACLs for " + this.getPath(), e);
       throw e;
     }
   }
 
   /* @Override */
   public InputStream getInputStream() throws IOException {
-    if (!isRegularFile()) {
-      throw new UnsupportedOperationException("not a regular file: " + getPath());
+    // Can not throw RepositoryException here because of the
+    // InputStreamFactory interface signature, so we avoid calling
+    // isRegularFile or detectServerDown.
+    try {
+      if (!delegate.isFile()) {
+        throw new UnsupportedOperationException("not a regular file: "
+                                                + getPath());
+      }
+      return new SmbInputStream(delegate, lastAccessTimeResetFlag,
+                                lastAccessTime);
+    } catch (SmbException e) {
+      // Call detectServerDown for the benefit of logging, but
+      // don't allow RepositoryException to propagate.
+      try {
+        detectServerDown(e);
+      } catch (RepositoryException re) {}
+      throw IOExceptionHelper.newIOException(
+          "failed to get input stream for " + getPath(), e);
     }
-    return new SmbInputStream(delegate, lastAccessTimeResetFlag, lastAccessTime);
   }
 
   /**
-   * This method adds each input stream instantiated for the file in a map 
-   * in order to determine the oldest file access time for resetting. 
+   * This method adds each input stream instantiated for the file in a map
+   * in order to determine the oldest file access time for resetting.
    * @param path
    * @param smbInputStream
    */
@@ -209,13 +247,13 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       List<SmbInputStream> list = map.get(path);
       if (list == null) {
          list = new ArrayList<SmbInputStream>();
-      } 
+      }
       list.add(smbInputStream);
       LOG.fine("Added to list of streams: " + path);
       map.put(path, list);
     }
   }
-  
+
   /**
    * This method removes an input stream when a file is processed completely.
    * @param path
@@ -237,33 +275,39 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
-  public boolean isDirectory() {
+  public boolean isDirectory() throws RepositoryException {
     try {
       // There appears to be a bug in (at least) v1.2.13 that causes
       // non-existent paths to return true.
       return delegate.exists() ? delegate.isDirectory() : false;
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
 
   /* @Override */
-  public boolean isRegularFile() {
+  public boolean isRegularFile() throws RepositoryException {
     try {
       return delegate.isFile();
     } catch (SmbException e) {
+      detectServerDown(e);
       return false;
     }
   }
 
   /* @Override */
-  public List<SmbReadonlyFile> listFiles() throws IOException, DirectoryListingException, InsufficientAccessException {
+  public List<SmbReadonlyFile> listFiles() throws IOException,
+      DirectoryListingException, InsufficientAccessException,
+      RepositoryException {
     SmbFile[] files;
     try {
       files = delegate.listFiles();
     } catch (SmbException e) {
+      detectServerDown(e);
       if (e.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-        throw new InsufficientAccessException("failed to list files in " + getPath(), e);
+        throw new InsufficientAccessException("failed to list files in "
+                                              + getPath(), e);
       } else {
         throw IOExceptionHelper.newIOException(
             "IOException while processing the directory " + getPath(), e);
@@ -274,10 +318,8 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       try {
         result.add(new SmbReadonlyFile(files[k], smbPropertyFetcher));
       } catch (RepositoryDocumentException e) {
-        //TODO: This seems wrong. If we are not able to process a file 
-        //while listing the directory, may be we should skip it? 
-        throw new DirectoryListingException(
-            "Couldn't get last access time for a file :" + files[k].getPath(), e);
+        LOG.log(Level.FINEST, "Couldn't get last access time for file - "
+                + "Skipping " + files[k].getPath(), e);
       }
     }
     Collections.sort(result, new Comparator<SmbReadonlyFile>() {
@@ -290,17 +332,18 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
-  public long getLastModified() throws IOException {
+  public long getLastModified() throws IOException, RepositoryException {
     try {
       return delegate.lastModified();
     } catch (SmbException e) {
+      detectServerDown(e);
       throw IOExceptionHelper.newIOException(
           "failed to get last modified time for " + getPath(), e);
     }
   }
 
   /* @Override */
-  public long length() throws IOException {
+  public long length() throws IOException, RepositoryException {
     return isRegularFile() ? delegate.length() : 0L;
   }
 
@@ -351,13 +394,15 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       throw new RepositoryDocumentException(e);
     }
   }
-  
-  public boolean exists() throws RepositoryDocumentException {
+
+  public boolean exists() throws RepositoryException {
     try {
       return delegate.exists();
     } catch (SmbException e) {
+      detectServerDown(e);
       if (e.getNtStatus() == SmbException.NT_STATUS_LOGON_FAILURE) {
-        throw new InvalidUserException("Please specify correct user name and password" + getPath(), e);
+        throw new InvalidUserException("Please specify correct user name "
+                                       + "and password" + getPath(), e);
       } else {
         throw new RepositoryDocumentException(e);
       }

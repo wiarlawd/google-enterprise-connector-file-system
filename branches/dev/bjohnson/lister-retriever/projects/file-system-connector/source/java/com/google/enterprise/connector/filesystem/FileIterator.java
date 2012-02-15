@@ -171,7 +171,8 @@ public class FileIterator {
     }
   }
 
-  private List<? extends ReadonlyFile<?>> listFiles(ReadonlyFile<?> dir) {
+  private List<? extends ReadonlyFile<?>> listFiles(ReadonlyFile<?> dir)
+      throws RepositoryException {
     try {
       List<? extends ReadonlyFile<?>> result = dir.listFiles();
       return result;
