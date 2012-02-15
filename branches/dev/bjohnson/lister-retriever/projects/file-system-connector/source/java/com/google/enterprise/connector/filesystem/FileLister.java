@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Lists;
+import com.google.enterprise.connector.logging.NDC;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
@@ -32,6 +33,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,6 +50,7 @@ class FileLister implements Lister, TraversalContextAware,
   private final Collection<String> startPaths;
   private final FilePatternMatcher filePatternMatcher;
   private final DocumentContext context;
+  private final ExecutorService traverserService;
 
   private boolean isShutdown = false;
   private Thread listerThread;
@@ -73,6 +80,8 @@ class FileLister implements Lister, TraversalContextAware,
     this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
         includePatterns, excludePatterns);
     this.context = context;
+    // TODO (bmj): Get number of threads from advanced config properties.
+    this.traverserService = Executors.newFixedThreadPool(10);
   }
 
   private static Collection<String> normalizeStartPaths(
@@ -113,19 +122,25 @@ class FileLister implements Lister, TraversalContextAware,
   public void start() throws RepositoryException {
     this.listerThread = Thread.currentThread();
     LOGGER.fine("Starting File Lister");
+
+    Collection<Callable<Void>> traversers = Lists.newArrayList();
+    for (String startPath : startPaths) {
+      traversers.add(new Traverser(startPath, documentAcceptor));
+    }
+
     try {
       while (notShutdown()) {
-        // TODO: Run each startPath in a separate thread.
+        sleep(Sleep.SCHEDULE_DELAY);
         try {
-          Iterator<String> rootIter = startPaths.iterator();
-          while (notShutdown() && rootIter.hasNext()) {
-            sleep(Sleep.SCHEDULE_DELAY);
-            traverse(rootIter.next());
+          for (Future future : traverserService.invokeAll(traversers)) {
+            future.get();
           }
           sleep(Sleep.RETRY_DELAY);
-        } catch (DocumentAcceptorException e) {
-          LOGGER.log(Level.WARNING, "Lister feed error.", e);
+        } catch (ExecutionException e) {
+          // Already logged in child thread context.
           sleep(Sleep.ERROR_DELAY);
+        } catch (InterruptedException ie) {
+          // Awoken from sleep. Maybe shutdown, maybe not.
         }
       }
     } catch (Exception e) {
@@ -140,47 +155,6 @@ class FileLister implements Lister, TraversalContextAware,
     }
   }
 
-  private void traverse(String startPath)
-      throws DocumentAcceptorException {
-    LOGGER.fine("Start traversal: " + startPath);
-    ReadonlyFile<?> root;
-    try {
-      root = pathParser.getFile(startPath, context.getCredentials());
-      if (root == null) {
-        LOGGER.warning("Failed to open start path: " + startPath);
-        return;
-      }
-    } catch (RepositoryException e) {
-      LOGGER.log(Level.WARNING, "Failed to open start path: " + startPath, e);
-      // TODO: invoke ERROR_DELAY.
-      return;
-    }
-    try {
-      FileIterator iter =
-          new FileIterator(root, filePatternMatcher, context, traversalContext);
-      while (notShutdown() && iter.hasNext()) {
-        String path = "";
-        try {
-          ReadonlyFile<?> file = iter.next();
-          path = file.getPath();
-          documentAcceptor.take(new FileDocument(file, context));
-        } catch (RepositoryDocumentException rde) {
-          LOGGER.log(Level.WARNING, "Failed to feed document " + path, rde);
-        }
-      }
-    } catch (RepositoryException e) {
-      LOGGER.log(Level.WARNING, "Failed to traverse: " + startPath, e);
-      // TODO: invoke ERROR_DELAY.
-    } finally {
-      try {
-        LOGGER.fine("End traversal: " + startPath);
-        documentAcceptor.flush();
-      } catch (RepositoryException e) {
-        LOGGER.log(Level.WARNING, "Lister feed error.", e);
-      }
-    }
-  }
-
   private synchronized boolean notShutdown() {
     return !isShutdown;
   }
@@ -188,6 +162,7 @@ class FileLister implements Lister, TraversalContextAware,
   /* @Override */
   public synchronized void shutdown() throws RepositoryException {
     isShutdown = true;
+    traverserService.shutdownNow();
     if (listerThread != null) {
       // Wake thread from sleep() to notice the change.
       listerThread.interrupt();
@@ -227,9 +202,72 @@ class FileLister implements Lister, TraversalContextAware,
     }
 
     try {
+      LOGGER.finest("Sleeping for " + seconds + " seconds.");
       Thread.sleep(1000L * seconds);
     } catch (InterruptedException ie) {
       Thread.interrupted();
+    }
+    LOGGER.finest("Awake from sleep.");
+  }
+
+  private class Traverser implements Callable<Void> {
+    private final String startPath;
+    private final DocumentAcceptor documentAcceptor;
+    private final String ndc;
+
+    public Traverser(String startPath, DocumentAcceptor documentAcceptor) {
+      this.startPath = startPath;
+      this.documentAcceptor = documentAcceptor;
+      this.ndc = NDC.peek();
+    }
+
+    public Void call() throws Exception {
+      NDC.clear();
+      NDC.push(ndc);
+      NDC.pushAppend(Thread.currentThread().getName());
+      try {
+        traverse();
+      } catch (DocumentAcceptorException e) {
+        LOGGER.log(Level.WARNING, "Lister feed error.", e);
+        throw e;
+      } catch (RepositoryException e) {
+        LOGGER.log(Level.WARNING, "Failed to traverse: " + startPath, e);
+        throw e;
+      } catch (Exception e) {
+        LOGGER.log(Level.WARNING, "Failed to traverse: " + startPath, e);
+        throw e;
+      } finally {
+        NDC.remove();
+      }
+      return null;
+    }
+
+    private void traverse() throws DocumentAcceptorException,
+        RepositoryException {
+      LOGGER.fine("Start traversal: " + startPath);
+      ReadonlyFile<?> root =
+          pathParser.getFile(startPath, context.getCredentials());
+      if (root == null) {
+        LOGGER.warning("Failed to open start path: " + startPath);
+        return;
+      }
+      try {
+        FileIterator iter =
+          new FileIterator(root, filePatternMatcher, context, traversalContext);
+        while (notShutdown() && iter.hasNext()) {
+          String path = "";
+          try {
+            ReadonlyFile<?> file = iter.next();
+            path = file.getPath();
+            documentAcceptor.take(new FileDocument(file, context));
+          } catch (RepositoryDocumentException rde) {
+            LOGGER.log(Level.WARNING, "Failed to feed document " + path, rde);
+          }
+        }
+      } finally {
+        LOGGER.fine("End traversal: " + startPath);
+        documentAcceptor.flush();
+      }
     }
   }
 }
