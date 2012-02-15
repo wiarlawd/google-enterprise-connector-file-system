@@ -62,6 +62,14 @@ public class MockTraversalSchedule implements TraversalSchedule {
   }
 
   /**
+   * Returns the number of seconds until the next scheduled traversal interval.
+   */
+  /* @Override */
+  public int nextScheduledInterval() {
+    return (inInterval) ? 0 : 2;
+  }
+
+  /**
    * Returns {@code true} if traversals could run at this time,
    * equivalent to <pre>!isDisabled() && inScheduledInterval()</pre>.
    */
