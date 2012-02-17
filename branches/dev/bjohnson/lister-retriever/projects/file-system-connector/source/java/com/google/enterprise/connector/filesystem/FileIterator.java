@@ -18,6 +18,7 @@ import com.google.common.collect.Lists;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,12 +38,13 @@ import java.util.logging.Logger;
 public class FileIterator {
 
   private static final Logger LOGGER =
-    Logger.getLogger(FileIterator.class.getName());
+      Logger.getLogger(FileIterator.class.getName());
 
   private final FilePatternMatcher filePatternMatcher;
   private final DocumentContext context;
   private final TraversalContext traversalContext;
-  
+  private final MimeTypeDetector mimeTypeDetector;
+
   private boolean positioned;
 
   /**
@@ -61,9 +63,10 @@ public class FileIterator {
     this.context = context;
     this.traversalContext = traversalContext;
     this.traversalStateStack = Lists.newArrayList();
+    this.mimeTypeDetector = context.getMimeTypeDetector();
 
     this.positioned = false;
-    
+
     // Prime the traversal with the root directory.
     List<ReadonlyFile<?>> list = Lists.newArrayList();
     list.add(root);
@@ -81,7 +84,7 @@ public class FileIterator {
     if (!hasNext()) {
       return null;
     }
-    // reset the flag for next setPositionToNextFile run
+    // Reset the flag for next setPositionToNextFile run.
     positioned = false;
     return traversalStateStack.get(traversalStateStack.size() - 1).remove(0);
   }
@@ -92,14 +95,13 @@ public class FileIterator {
   }
 
   private void setPositionToNextFile() throws RepositoryException {
-
     if (positioned) {
       return;
     }
 
     while (traversalStateStack.size() > 0) {
       List<ReadonlyFile<?>> l =
-        traversalStateStack.get(traversalStateStack.size() - 1);
+          traversalStateStack.get(traversalStateStack.size() - 1);
 
       if (l.isEmpty()) {
         traversalStateStack.remove(traversalStateStack.size() - 1);
@@ -109,14 +111,13 @@ public class FileIterator {
           l.remove(0);
           if (f.acceptedBy(filePatternMatcher)) {
             // Copy of the returned list because we modify our copy.
-
-            ArrayList<ReadonlyFile<?>> al = 
+            ArrayList<ReadonlyFile<?>> al =
                 new ArrayList<ReadonlyFile<?>>();
 
-            // add the proccessed dir to the top of the list for 
-            // next method's immediate consumption
-            al.add(f);  
-            al.addAll(listFiles(f));            
+            // Add the proccessed dir to the top of the list for
+            // next method's immediate consumption.
+            al.add(f);
+            al.addAll(listFiles(f));
             traversalStateStack.add(
                 new ArrayList<ReadonlyFile<?>>(al));
 
@@ -136,7 +137,7 @@ public class FileIterator {
   }
 
   private boolean isQualifyingFile(ReadonlyFile<?> f)
-    throws RepositoryException {
+      throws RepositoryException {
     try {
       if (!f.isRegularFile()) {
         LOGGER.finest("Skipping " + f.getPath()
@@ -160,9 +161,16 @@ public class FileIterator {
           LOGGER.finest("Skipping file " + f.getPath() + " - too big.");
           return false;
         }
-        // TODO: Skip on mimetype support level < 0.
-      }
 
+        // TODO: Feed metadata for files with unsupported MIME types
+        // based upon advanced configuration option.
+        String mimeType = mimeTypeDetector.getMimeType(f.getPath(), f);
+        if (traversalContext.mimeTypeSupportLevel(mimeType) <= 0) {
+          LOGGER.finest("Skipping file " + f.getPath()
+              + " - unsupported or excluded MIME type: " + mimeType);
+          return false;
+        }
+      }
       return true;
     } catch (IOException ioe) {
       LOGGER.warning("Skipping file " + f.getPath() + " - access error: "
