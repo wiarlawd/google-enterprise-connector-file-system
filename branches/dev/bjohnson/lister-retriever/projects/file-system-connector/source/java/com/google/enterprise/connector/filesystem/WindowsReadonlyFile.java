@@ -202,4 +202,10 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
   public boolean exists() {
     return delegate.exists();
   }
+
+  /* @Override */
+  @Override
+  public String getParent() {
+    return delegate.getParent();
+  }
 }

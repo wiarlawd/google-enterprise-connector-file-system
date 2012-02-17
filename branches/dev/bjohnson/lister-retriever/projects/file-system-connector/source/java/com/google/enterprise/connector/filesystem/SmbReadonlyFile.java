@@ -297,6 +297,11 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   }
 
   /* @Override */
+  public String getParent() {
+    return delegate.getParent();
+  }
+
+  /* @Override */
   public List<SmbReadonlyFile> listFiles() throws IOException,
       DirectoryListingException, InsufficientAccessException,
       RepositoryException {

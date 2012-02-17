@@ -491,7 +491,8 @@ class SmbAclBuilder {
    * applies to contained objects but not this one.
    */
   private boolean isInheritOnlyAce(int aceFlags) {
-    return (aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY;
+    return (((aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY) 
+        || ((aceFlags & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED));
   }
 
   /**

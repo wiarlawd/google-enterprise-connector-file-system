@@ -83,8 +83,15 @@ public class FileDocument implements Document {
   }
 
   private void fetchProperties() throws RepositoryException {
-    addProperty(SpiConstants.PROPNAME_FEEDTYPE,
-                SpiConstants.FeedType.CONTENTURL.toString());
+    if (file.isDirectory()) {
+      addProperty(SpiConstants.PROPNAME_FEEDTYPE, 
+          SpiConstants.FeedType.ACL.toString());
+      addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
+          SpiConstants.InheritanceType.CHILD_OVERRIDES.toString());
+    } else {
+      addProperty(SpiConstants.PROPNAME_FEEDTYPE, 
+          SpiConstants.FeedType.CONTENTURL.toString());
+    }
     addProperty(SpiConstants.PROPNAME_DOCID, getDocumentId());
     addProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
     try {
@@ -141,6 +148,9 @@ public class FileDocument implements Document {
               addProperty(SpiConstants.PROPNAME_ISPUBLIC,
                           Boolean.TRUE.toString());
             } else {
+              //TODO: handle root parent pointing to share ACL for share 
+              addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
+                  file.getParent());
               addProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
               addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
             }

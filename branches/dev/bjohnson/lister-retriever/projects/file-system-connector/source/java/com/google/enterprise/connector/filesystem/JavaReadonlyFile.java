@@ -166,4 +166,9 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
   public boolean exists() {
     return delegate.exists();
   }
+
+  /* @Override */
+  public String getParent() {
+    return delegate.getParent();
+  }
 }
