@@ -87,7 +87,7 @@ public class FileDocument implements Document {
       addProperty(SpiConstants.PROPNAME_FEEDTYPE, 
           SpiConstants.FeedType.ACL.toString());
       addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
-          SpiConstants.InheritanceType.CHILD_OVERRIDES.toString());
+          SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString());
     } else {
       addProperty(SpiConstants.PROPNAME_FEEDTYPE, 
           SpiConstants.FeedType.CONTENTURL.toString());
