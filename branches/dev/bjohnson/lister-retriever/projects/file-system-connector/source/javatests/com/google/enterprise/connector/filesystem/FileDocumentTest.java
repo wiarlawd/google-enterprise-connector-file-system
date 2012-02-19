@@ -197,16 +197,16 @@ public class FileDocumentTest extends TestCase {
     validateRepeatedProperty(groups, groupsProperty);
 
     if (foo.isDirectory()) {
-      Property aclFeedProperty = 
+      Property aclFeedProperty =
           doc.findProperty(SpiConstants.PROPNAME_FEEDTYPE);
       assertNotNull(aclFeedProperty);
-      assertEquals(SpiConstants.FeedType.ACL.toString(), 
+      assertEquals(SpiConstants.FeedType.ACL.toString(),
           aclFeedProperty.nextValue().toString());
 
       Property aclInheritanceTypeProperty =
           doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE);
       assertNotNull(aclInheritanceTypeProperty);
-      assertEquals(SpiConstants.InheritanceType.CHILD_OVERRIDES.toString(),
+      assertEquals(SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString(),
           aclInheritanceTypeProperty.nextValue().toString());
     }
 

@@ -47,6 +47,10 @@ public class FileListerTest extends TestCase {
   private static final boolean PUSH_ACLS = true;
   private static final boolean MARK_ALL_DOCUMENTS_PUBLIC = false;
 
+  static {
+    MIME_TYPE_DETECTOR.setTraversalContext(TRAVERSAL_CONTEXT);
+  }
+
   private static void runLister(MockReadonlyFile root,
       RecordingDocumentAcceptor acceptor) throws RepositoryException {
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
@@ -141,7 +145,7 @@ public class FileListerTest extends TestCase {
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
 
-    assertTraversal(it, root, d1, d1f1, d2, d2d1, d2d2, d2f1, f1);    
+    assertTraversal(it, root, d1, d1f1, d2, d2d1, d2d2, d2f1, f1);
   }
 
   public void testQuery_rootWithDirsandFiles() throws Exception {
@@ -162,11 +166,11 @@ public class FileListerTest extends TestCase {
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
 
-    assertTraversal(it, root, d1, d1f3, d2, d2a4, d2d4, d2d5, d2d6, d2d6f7, 
+    assertTraversal(it, root, d1, d1f3, d2, d2a4, d2d4, d2d5, d2d6, d2d6f7,
         d2d6f8, d2d6f9, d2f4);
   }
 
-  public void assertTraversal(Iterator<FileDocument> it, 
+  public void assertTraversal(Iterator<FileDocument> it,
       ReadonlyFile<?>... expectedFiles) {
     for (ReadonlyFile<?> file : expectedFiles) {
       assertTrue(it.hasNext());
@@ -174,7 +178,7 @@ public class FileListerTest extends TestCase {
     }
     assertFalse(it.hasNext());
   }
-  
+
   public void testQuery_filterTooBig() throws Exception {
     final String maxSizeData = "not to big and not too small ends here<";
     final String tooBigData = maxSizeData + "x";
