@@ -10,7 +10,7 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
-Release 2.8.4, February 6, 2012
+Release 2.8.4, February 21, 2012
 ===============================
 
 Introduction
@@ -28,14 +28,12 @@ Issues 5734921, 5735103: Do not store access times when
                a memory leak and performance degradation.
 Issue 5806403: Connector sends delete feeds when the share is only
                temporarily available.
+Issue 5676083: Fix logic bug where recovery-files' age comparison
+               was broken.  
 
 Known limitations:
 -----------------
-Issue 5028655: File system connector should be more fault tolerant. Currently if the internal state that connector
-               maintains becomes unstable, connector stops working.
 Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
-Issue 5111509: File system connector goes into infinite loop when connector is reset. This is reproducible only for 
-               very small file shares.
 
 Advanced Configuration Properties
 ---------------------------------
