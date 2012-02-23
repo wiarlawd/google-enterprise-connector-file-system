@@ -28,12 +28,15 @@ Issues 5734921, 5735103: Do not store access times when
                a memory leak and performance degradation.
 Issue 5806403: Connector sends delete feeds when the share is only
                temporarily available.
-Issue 5676083: Fix logic bug where recovery-files' age comparison
-               was broken.  
+Issue 5028655, 6019938: Fix logic bug where recovery-files' age comparison
+               was broken.  This could lead to the connector resending the
+               same files again after Tomcat was restarted.
 
 Known limitations:
 -----------------
 Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
+Issue 5111509: File system connector goes into infinite loop when connector is reset. This is reproducible only for
+               very small file shares.
 
 Advanced Configuration Properties
 ---------------------------------
