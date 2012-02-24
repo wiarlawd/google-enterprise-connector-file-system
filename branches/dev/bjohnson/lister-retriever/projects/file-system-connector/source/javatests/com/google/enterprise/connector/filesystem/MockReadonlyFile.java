@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.Clock;
 import com.google.enterprise.connector.util.SystemClock;
 
@@ -32,18 +33,66 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private static final String SEPARATOR = "/";
 
   private final MockReadonlyFile parent;
-  private final String name;
   private final boolean isDir;
   private final List<MockReadonlyFile> directoryContents;
   private final Clock clock;
 
+  private String name;
   private boolean readable = true;
   private Acl acl;
   private long lastModified;
   private String fileContents;
-  private IOException exception;
-  private IOException lengthException;
   private boolean exists = true;
+  private boolean isRegularFile = true;
+
+  private Where where = Where.NONE; // Where to throw an Exception.
+  private Exception exception;      // What exception to throw.
+
+  /**
+   * Locations from where MockReadonlyFile may throw its exceptions.
+   */
+  public static enum Where { NONE, ALL, IS_DIRECTORY, IS_REGULAR_FILE,
+      GET_LAST_MODIFIED, GET_ACL, CAN_READ, LIST_FILES, GET_DISPLAY_URL,
+      LENGTH, EXISTS, SUPPORTS_AUTHN, GET_INPUT_STREAM }
+
+  void setException(Where where, Exception exception) {
+    this.where = where;
+    this.exception = exception;
+  }
+
+  /** If exception is an IOException, throw it. */
+  private void maybeThrowIOException(Where whereNow)
+      throws IOException {
+    if ((where == Where.ALL || where == whereNow) &&
+        exception instanceof IOException) {
+      throw (IOException) exception;
+    }
+  }
+
+  /** If exception is an RepositoryException, throw it. */
+  private void maybeThrowRepositoryException(Where whereNow)
+      throws RepositoryException {
+    if ((where == Where.ALL || where == whereNow) &&
+        exception instanceof RepositoryException) {
+      throw (RepositoryException) exception;
+    }
+  }
+
+  /** Maybe throw one of listFiles() many exceptions. */
+  private void maybeThrowListingException() throws RepositoryException,
+    DirectoryListingException, IOException, InsufficientAccessException {
+    if (where == Where.ALL || where == Where.LIST_FILES) {
+      if (exception instanceof RepositoryException)
+        throw (RepositoryException) exception;
+      else if (exception instanceof DirectoryListingException)
+        throw (DirectoryListingException) exception;
+      else if (exception instanceof InsufficientAccessException)
+        throw (InsufficientAccessException) exception;
+      else if (exception instanceof IOException)
+        throw (IOException) exception;
+    }
+  }
+
   /**
    * Create a file or directory under {@code parent} with the specified {@code name}.
    * @param parent
@@ -55,11 +104,12 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     if (parent == null && name.endsWith(SEPARATOR)) {
       throw new RuntimeException("mock root ends with " + SEPARATOR);
     }
-    if (parent != null && name.contains("/")) {
+    if (parent != null && name.contains(SEPARATOR)) {
       throw new RuntimeException("file name cannot contain " + SEPARATOR);
     }
     this.parent = parent;
     this.isDir = isDir;
+    this.isRegularFile = !isDir;
     this.name = name;
     this.fileContents = isDir ? null : "";
     this.directoryContents = isDir ? new ArrayList<MockReadonlyFile>() : null;
@@ -122,15 +172,14 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   public String getPath() {
     if (parent == null) {
       return name;
-    } else if (isDir) {
-      return parent.getPath() + SEPARATOR + name + SEPARATOR;
     } else {
       return parent.getPath() + SEPARATOR + name;
     }
   }
 
   /* @Override */
-  public String getDisplayUrl() {
+  public String getDisplayUrl() throws RepositoryException {
+    maybeThrowRepositoryException(Where.GET_DISPLAY_URL);
     try {
       URI displayUri = new URI("file", null /* userInfo */, "google.com", 123,
           getPath(), null /* query */, null /* fragment */);
@@ -148,24 +197,15 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public boolean canRead() {
+  public boolean canRead() throws RepositoryException {
+    maybeThrowRepositoryException(Where.CAN_READ);
     return readable;
   }
 
-  /**
-   * If {@code exception} is non-null, throw it. For testing exceptions.
-   *
-   * @throws IOException
-   */
-  private void maybeThrow() throws IOException {
-    if (exception != null) {
-      throw exception;
-    }
-  }
-
   /* @Override */
-  public Acl getAcl() throws IOException {
-    maybeThrow();
+  public Acl getAcl() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.GET_ACL);
+    maybeThrowIOException(Where.GET_ACL);
     return acl;
   }
 
@@ -185,7 +225,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   /* @Override */
   public InputStream getInputStream() throws IOException {
-    maybeThrow();
+    maybeThrowIOException(Where.GET_INPUT_STREAM);
     if (isDir) {
       throw new RuntimeException("attempt to get input stream of directory: " + getPath());
     }
@@ -193,22 +233,27 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public long length() throws IOException {
-    if (lengthException != null) {
-      throw lengthException;
-    }
-
+  public long length() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.LENGTH);
+    maybeThrowIOException(Where.LENGTH);
     return fileContents.length();
   }
 
   /* @Override */
-  public boolean isDirectory() {
+  public boolean isDirectory() throws RepositoryException {
+    maybeThrowRepositoryException(Where.IS_DIRECTORY);
     return isDir;
   }
 
+  /** If false, maybe a directory, pipe, device, broken link, hidden, etc. */
+  public void setIsRegularFile(boolean isRegularFile) {
+    this.isRegularFile = isRegularFile;
+  }
+
   /* @Override */
-  public boolean isRegularFile() {
-    return !isDir;
+  public boolean isRegularFile() throws RepositoryException {
+    maybeThrowRepositoryException(Where.IS_REGULAR_FILE);
+    return isRegularFile;
   }
 
   /**
@@ -221,8 +266,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public long getLastModified() throws IOException {
-    maybeThrow();
+  public long getLastModified() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.GET_LAST_MODIFIED);
+    maybeThrowIOException(Where.GET_LAST_MODIFIED);
     return lastModified;
   }
 
@@ -231,7 +277,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    * @return the contained file or directory with the specified {@code name}.
    */
   public MockReadonlyFile get(String fileOrDirectoryName) {
-    if (!isDirectory()) {
+    if (!isDir) {
       throw new RuntimeException("not a directory: " + getPath());
     }
     for (MockReadonlyFile f : directoryContents) {
@@ -260,8 +306,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public List<MockReadonlyFile> listFiles() throws IOException {
-    maybeThrow();
+  public List<MockReadonlyFile> listFiles() throws DirectoryListingException,
+      InsufficientAccessException, RepositoryException, IOException {
+    maybeThrowListingException();
     if (!isDir) {
       throw new IOException("not a directory: " + getPath());
     }
@@ -275,22 +322,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public boolean supportsAuthn() {
+  public boolean supportsAuthn() throws RepositoryException {
+    maybeThrowRepositoryException(Where.SUPPORTS_AUTHN);
     return false;
-  }
-
-  /**
-   * Arrange for an IOException to be thrown if this file is accessed. Call with
-   * null to turn this off.
-   *
-   * @param execeptionToThrow
-   */
-  public void setFlaky(IOException execeptionToThrow) {
-    this.exception = execeptionToThrow;
-  }
-
-  public void setLengthException(IOException exceptionToThrow) {
-    this.lengthException = exceptionToThrow;
   }
 
   /**
@@ -311,7 +345,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public boolean exists() {
+  public boolean exists() throws RepositoryException {
+    maybeThrowRepositoryException(Where.EXISTS);
     return this.exists;
   }
 
@@ -324,6 +359,14 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   @Override
   public String getParent() {
-    return parent.toString();
+    return (parent == null) ? null : parent.getPath();
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public String getName() {
+    return name;
   }
 }
