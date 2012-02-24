@@ -36,7 +36,7 @@ public interface FileSystemType {
    * @return a ReadonlyFile corresponding to {@code path}.
    * @throws RepositoryDocumentException if the path is malformed
    *         or there are errors accessing a specific document.
-   * @throws RepositoryException if there was an error accessing the repository.
+   * @throws RepositoryException if there are repository access errors.
    */
   public ReadonlyFile<?> getFile(String path, Credentials credentials)
       throws RepositoryException;
@@ -59,7 +59,7 @@ public interface FileSystemType {
    *         credentials.
    * @throws RepositoryDocumentException
    *         or there are errors accessing a specific document.
-   * @throws RepositoryException if there was an error accessing the repository.
+   * @throws RepositoryException if there are repository access errors.
    */
   public ReadonlyFile<?> getReadableFile(String path, Credentials credentials)
       throws RepositoryException;

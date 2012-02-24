@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-//
+// 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-//
+// 
 //      http://www.apache.org/licenses/LICENSE-2.0
-//
+// 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,14 +15,13 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
-import com.google.enterprise.connector.spi.RepositoryException;
 
 /**
  */
 public class MockFileSystemType implements FileSystemType {
   private final MockReadonlyFile root;
   private final boolean isUserPasswordRequired;
-
+  
   public MockFileSystemType(MockReadonlyFile root) {
     this(root, false);
   }
@@ -31,7 +30,7 @@ public class MockFileSystemType implements FileSystemType {
     this.root = root;
     this.isUserPasswordRequired = isUserPasswordRequired;
   }
-
+  
   /* @Override */
   public boolean isPath(String path) {
     return path.startsWith(root.getPath());
@@ -69,7 +68,7 @@ public class MockFileSystemType implements FileSystemType {
 
   /* @Override */
   public MockReadonlyFile getReadableFile(String path, Credentials credentials)
-      throws RepositoryException {
+      throws RepositoryDocumentException {
     MockReadonlyFile result = getFile(path, credentials);
     if (!result.canRead()) {
       throw new RepositoryDocumentException("failed to open file: " + path);

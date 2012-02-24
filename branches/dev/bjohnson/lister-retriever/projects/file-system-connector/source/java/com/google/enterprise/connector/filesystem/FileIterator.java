@@ -109,7 +109,7 @@ public class FileIterator {
         ReadonlyFile<?> f = l.get(0);
         if (f.isDirectory()) {
           l.remove(0);
-          if (f.acceptedBy(filePatternMatcher) && f.canRead()) {
+          if (f.acceptedBy(filePatternMatcher)) {
             // Copy of the returned list because we modify our copy.
             ArrayList<ReadonlyFile<?>> al =
                 new ArrayList<ReadonlyFile<?>>();
@@ -123,9 +123,9 @@ public class FileIterator {
 
             positioned = true;
             return;
-          } else {
-            LOGGER.log(Level.FINEST,
-                "Skipping directory {0} - pattern mismatch.", f.getPath());
+          } else if (LOGGER.isLoggable(Level.FINEST)) {
+            LOGGER.finest("Skipping directory " + f.getPath()
+                          + " - pattern mismatch.");
           }
         } else if (!isQualifyingFile(f)) {
           l.remove(0);
@@ -140,27 +140,25 @@ public class FileIterator {
       throws RepositoryException {
     try {
       if (!f.isRegularFile()) {
-        LOGGER.log(Level.FINEST, "Skipping {0} - not a regular file.",
-                   f.getPath());
+        LOGGER.finest("Skipping " + f.getPath()
+                      + " - not a regular file. ");
         return false;
       }
 
       if (!f.acceptedBy(filePatternMatcher)) {
-        LOGGER.log(Level.FINEST, "Skipping file {0} - pattern mismatch.",
-                   f.getPath());
+        LOGGER.finest("Skipping file " + f.getPath()
+                      + " - pattern mismatch.");
         return false;
       }
 
       if (!f.canRead()) {
-        LOGGER.log(Level.FINEST, "Skipping file {0} - no read access.",
-                   f.getPath());
+        LOGGER.finest("Skipping file " + f.getPath() + " - no read access.");
         return false;
       }
 
       if (traversalContext != null) {
         if (traversalContext.maxDocumentSize() < f.length()) {
-          LOGGER.log(Level.FINEST, "Skipping file {0} - too big.",
-                     f.getPath());
+          LOGGER.finest("Skipping file " + f.getPath() + " - too big.");
           return false;
         }
 
@@ -168,15 +166,15 @@ public class FileIterator {
         // based upon advanced configuration option.
         String mimeType = mimeTypeDetector.getMimeType(f.getPath(), f);
         if (traversalContext.mimeTypeSupportLevel(mimeType) <= 0) {
-          LOGGER.log(Level.FINEST, "Skipping file {0} - unsupported or excluded"
-                     + " MIME type: {1}", new Object[] {f.getPath(), mimeType});
+          LOGGER.finest("Skipping file " + f.getPath()
+              + " - unsupported or excluded MIME type: " + mimeType);
           return false;
         }
       }
       return true;
     } catch (IOException ioe) {
-      LOGGER.log(Level.WARNING, "Skipping file {0} - access error: {1}",
-                 new Object[] {f.getPath(), ioe.getMessage()});
+      LOGGER.warning("Skipping file " + f.getPath() + " - access error: "
+                     + ioe.getMessage());
       return false;
     }
   }
