@@ -91,7 +91,7 @@ public class SmbFileSystemType implements FileSystemType {
 
   /* @Override */
   public SmbReadonlyFile getFile(String path, Credentials credentials)
-      throws RepositoryDocumentException {
+      throws RepositoryException {
     return new SmbReadonlyFile(path, credentials, propertyFetcher);
   }
 
@@ -122,7 +122,7 @@ public class SmbFileSystemType implements FileSystemType {
   /* @Override */
   public SmbReadonlyFile getReadableFile(final String smbStylePath,
       final Credentials credentials)
-          throws RepositoryDocumentException, WrongSmbTypeException {
+          throws RepositoryException, WrongSmbTypeException {
     if (!isPath(smbStylePath)) {
       throw new IllegalArgumentException("Invalid path " + smbStylePath);
     }

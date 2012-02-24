@@ -20,6 +20,9 @@ import jcifs.smb.SmbFile;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,7 +56,7 @@ public class SmbInputStream extends FilterInputStream {
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     this.lastAccessTime = lastAccessTime;
     if (lastAccessTimeResetFlag) {
-      SmbReadonlyFile.addToMap(delegate.getPath(), this);
+      addToMap(delegate.getPath(), this);
     }
   }
 
@@ -69,7 +72,7 @@ public class SmbInputStream extends FilterInputStream {
     super.close();
     if (lastAccessTimeResetFlag) {
       setLastAccessTime();
-      SmbReadonlyFile.removeFromMap(delegate.getPath());
+      removeFromMap(delegate.getPath());
     }
   }
 
@@ -85,6 +88,60 @@ public class SmbInputStream extends FilterInputStream {
     } catch (SmbException e) {
       LOG.log(Level.WARNING, "Could not set the last access time for "
               + delegate.getPath(), e);
+    }
+  }
+
+  private static Hashtable<String, List<SmbInputStream>> map =
+      new Hashtable<String, List<SmbInputStream>>();
+
+  static Long getSavedTime(String path) {
+    synchronized (map) {
+      List<SmbInputStream> list = map.get(path);
+      if (list != null && !list.isEmpty()) {
+        LOG.info("Got the live stream so getting the last access time from there for "
+            + path);
+        return list.get(0).getLastAccessTime();
+      } else {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * This method adds each input stream instantiated for the file in a map
+   * in order to determine the oldest file access time for resetting.
+   * @param path
+   * @param smbInputStream
+   */
+  private static void addToMap(String path, SmbInputStream smbInputStream) {
+    synchronized (map) {
+      List<SmbInputStream> list = map.get(path);
+      if (list == null) {
+         list = new ArrayList<SmbInputStream>();
+      }
+      list.add(smbInputStream);
+      LOG.fine("Added to list of streams: " + path);
+      map.put(path, list);
+    }
+  }
+
+  /**
+   * This method removes an input stream when a file is processed completely.
+   * @param path
+   */
+  private static void removeFromMap(String path) {
+    synchronized (map) {
+      List<SmbInputStream> list = map.get(path);
+      LOG.fine("Asked to remove a stream for: " + path);
+      if (list == null || list.isEmpty()) {
+        LOG.fine("Expected stream for removal:" + path);
+      } else {
+        list.remove(list.size() - 1);  // Doesn't matter which one is removed.
+        LOG.fine("Removed a stream for: " + path);
+        if (list.isEmpty()) {
+          map.remove(path);
+        }
+      }
     }
   }
 }

@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
@@ -30,7 +30,7 @@ import java.util.List;
 public class FilePatternMatcherTest extends TestCase {
   Credentials credentials = new Credentials(null, "testUser", "foobar");
 
-  public void testBasics() throws RepositoryDocumentException {
+  public void testBasics() throws RepositoryException {
     List<String> include = Arrays.asList("smb://foo.com/", "/foo/bar/");
     List<String> exclude = Arrays.asList("smb://foo.com/secret/", "/foo/bar/hidden/");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
@@ -47,21 +47,21 @@ public class FilePatternMatcherTest extends TestCase {
     assertFalse(new JavaReadonlyFile(new File("/bar/foo/public/knowledge"))
         .acceptedBy(matcher));
   }
-  
+
   private SmbFileProperties getFetcher() {
     return new SmbFileProperties() {
       public String getUserAclFormat() {
         return AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
       }
-        
+
       public String getGroupAclFormat() {
         return AclFormat.DOMAIN_BACKSLASH_GROUP.getFormat();
       }
-      
+
       public String getAceSecurityLevel() {
         return AceSecurityLevel.FILEANDSHARE.name();
       }
-      
+
       public boolean isLastAccessResetFlagForSmb() {
         return false;
       }

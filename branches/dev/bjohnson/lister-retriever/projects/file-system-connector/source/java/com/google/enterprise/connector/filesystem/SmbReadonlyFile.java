@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,17 +49,25 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   private static final Logger LOG =
       Logger.getLogger(SmbReadonlyFile.class.getName());
 
-  /**
-   * It stores the last access time for the underlying file.
-   */
+
+  /** It stores the last access time for the underlying file. */
   private long lastAccessTime = 0L;
-  /**
-   * Flag to turn on /off the last access time reset flag
-   */
+
+  /** Flag to turn on /off the last access time reset flag. */
   private boolean lastAccessTimeResetFlag = false;
 
-  private static Hashtable<String, List<SmbInputStream>> map =
-      new Hashtable<String, List<SmbInputStream>>();
+  /*
+   * Last access times are stored for both regular files and directories.
+   * The code performs operations that modify access time and then restores them.
+   *
+   * For directory files the operation that modifies access time is listing the
+   * directory.  After the directory is listed the access time is put back.
+   *
+   * For regular files the last access time is modified when InputStream is used.
+   * The time is put back when stream is closed.  The close happens outside
+   * of the scope of this class.  For this reason the time is kept inside
+   * a map inside of SmbInputStream class.
+   */
 
   /**
    * Implementation of {@link SmbFileProperties} that gives the
@@ -76,7 +83,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws RepositoryDocumentException if the path is malformed
    */
   public SmbReadonlyFile(String path, Credentials credentials,
-      SmbFileProperties propertyFetcher) throws RepositoryDocumentException {
+      SmbFileProperties propertyFetcher) throws RepositoryException {
     try {
       this.delegate = new SmbFile(path, credentials.getNtlmAuthorization());
       this.smbPropertyFetcher = propertyFetcher;
@@ -108,10 +115,10 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws RepositoryDocumentException
    */
   private void setProperties(String path, boolean lastAccessTimeResetFlag)
-      throws RepositoryDocumentException {
+      throws RepositoryException {
     this.lastAccessTimeResetFlag = lastAccessTimeResetFlag;
     try {
-      if (this.lastAccessTimeResetFlag && this.delegate.isFile()) {
+      if (this.lastAccessTimeResetFlag) {
         this.lastAccessTime = this.getLastAccessTime();
         LOG.finest("Got the last access time for " + path + " as : "
             + new Date(this.lastAccessTime));
@@ -125,17 +132,15 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @return long last access time for the file
    * @throws SmbException
    */
-  private long getLastAccessTime() throws SmbException {
-    synchronized (map) {
-      List<SmbInputStream> list = map.get(this.delegate.getPath());
-      if (list != null && !list.isEmpty()) {
-        LOG.finer("Got the live stream so getting the last access time from there for"
-            + this.delegate.getPath());
-        return list.get(0).getLastAccessTime();
-      } else {
-        return this.delegate.lastAccess();
-      }
+  private long getLastAccessTime() throws SmbException, RepositoryException {
+    Long savedTime = null;
+    if (isRegularFile()) {  // Regular files might have time saved.
+      savedTime = SmbInputStream.getSavedTime(this.delegate.getPath());
     }
+    if (null == savedTime) {  // If dir or wasn't saved.
+      savedTime = this.delegate.lastAccess();
+    }
+    return savedTime;
   }
 
   /**
@@ -149,7 +154,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
    * @throws RepositoryDocumentException
    */
   private SmbReadonlyFile(SmbFile smbFile, SmbFileProperties propertyFetcher)
-        throws RepositoryDocumentException {
+        throws RepositoryException {
     this.delegate = smbFile;
     this.smbPropertyFetcher = propertyFetcher;
     setProperties(smbFile.getPath(),
@@ -236,44 +241,6 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
     }
   }
 
-  /**
-   * This method adds each input stream instantiated for the file in a map
-   * in order to determine the oldest file access time for resetting.
-   * @param path
-   * @param smbInputStream
-   */
-  static void addToMap(String path, SmbInputStream smbInputStream) {
-    synchronized (map) {
-      List<SmbInputStream> list = map.get(path);
-      if (list == null) {
-         list = new ArrayList<SmbInputStream>();
-      }
-      list.add(smbInputStream);
-      LOG.fine("Added to list of streams: " + path);
-      map.put(path, list);
-    }
-  }
-
-  /**
-   * This method removes an input stream when a file is processed completely.
-   * @param path
-   */
-  static void removeFromMap(String path) {
-    synchronized (map) {
-      List<SmbInputStream> list = map.get(path);
-      LOG.fine("Asked to remove a stream for: " + path);
-      if (list == null || list.isEmpty()) {
-        LOG.fine("Expected stream for removal:" + path);
-      } else {
-        list.remove(list.size() - 1);  // Doesn't matter which one is removed.
-        LOG.fine("Removed a stream for: " + path);
-        if (list.isEmpty()) {
-          map.remove(path);
-        }
-      }
-    }
-  }
-
   /* @Override */
   public boolean isDirectory() throws RepositoryException {
     try {
@@ -333,6 +300,14 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
         return o1.getPath().compareTo(o2.getPath());
       }
     });
+    if (lastAccessTimeResetFlag) {
+      try {
+        delegate.setLastAccess(lastAccessTime);
+      } catch (SmbException e) {
+        String msg = "could not set last access time on: " + delegate.getPath();
+        LOG.log(Level.INFO, msg, e);
+      }
+    }
     return result;
   }
 

@@ -1,11 +1,11 @@
 // Copyright 2009 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 /**
  * This represents a type of file system: SMB, NFS, etc. It provides a way to
@@ -33,9 +34,12 @@ public interface FileSystemType {
    * @param path An absolute path identifing file to be retrieved.
    * @param credentials Potentially required for authentication.
    * @return a ReadonlyFile corresponding to {@code path}.
-   * @throws RepositoryDocumentException if the path is malformed.
+   * @throws RepositoryDocumentException if the path is malformed
+   *         or there are errors accessing a specific document.
+   * @throws RepositoryException if there are repository access errors.
    */
-  public ReadonlyFile<?> getFile(String path, Credentials credentials) throws RepositoryDocumentException;
+  public ReadonlyFile<?> getFile(String path, Credentials credentials)
+      throws RepositoryException;
 
   /**
    * Returns true if the provided path follows the syntactic conventions for
@@ -50,11 +54,15 @@ public interface FileSystemType {
    * Return a {@link ReadonlyFile} that is readable. This function is intended
    * to be useful for validation of user provided path.
    *
-   * @throws RepositoryDocumentException if the provided path does not refer to
-   *         a file that is readable with the provided credentials.
+   * @throws RepositoryDocumentException if the path is malformed or the path
+   *         does not refer to a file that is readable with the provided
+   *         credentials.
+   * @throws RepositoryDocumentException
+   *         or there are errors accessing a specific document.
+   * @throws RepositoryException if there are repository access errors.
    */
   public ReadonlyFile<?> getReadableFile(String path, Credentials credentials)
-      throws RepositoryDocumentException;
+      throws RepositoryException;
 
   /**
    * Returns whether this file system requires user name and password.
