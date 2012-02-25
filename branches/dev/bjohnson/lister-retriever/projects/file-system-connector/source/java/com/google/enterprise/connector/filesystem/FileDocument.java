@@ -84,12 +84,12 @@ public class FileDocument implements Document {
 
   private void fetchProperties() throws RepositoryException {
     if (file.isDirectory()) {
-      addProperty(SpiConstants.PROPNAME_FEEDTYPE, 
+      addProperty(SpiConstants.PROPNAME_FEEDTYPE,
           SpiConstants.FeedType.ACL.toString());
       addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
           SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString());
     } else {
-      addProperty(SpiConstants.PROPNAME_FEEDTYPE, 
+      addProperty(SpiConstants.PROPNAME_FEEDTYPE,
           SpiConstants.FeedType.CONTENTURL.toString());
     }
     addProperty(SpiConstants.PROPNAME_DOCID, getDocumentId());
@@ -99,7 +99,7 @@ public class FileDocument implements Document {
       calendar.setTimeInMillis(file.getLastModified());
       addProperty(SpiConstants.PROPNAME_LASTMODIFIED, Value.getDateValue(calendar));
     } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "failed to get last-modified time for file: "
+      LOGGER.log(Level.WARNING, "Failed to get last-modified time for file: "
           + file.getPath(), e);
     }
 
@@ -148,8 +148,8 @@ public class FileDocument implements Document {
               addProperty(SpiConstants.PROPNAME_ISPUBLIC,
                           Boolean.TRUE.toString());
             } else {
-              //TODO: handle root parent pointing to share ACL for share 
-              addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
+              //TODO: handle root parent pointing to share ACL for share
+              addProperty(SpiConstants.PROPNAME_ACLINHERITFROM,
                   file.getParent());
               addProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
               addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
