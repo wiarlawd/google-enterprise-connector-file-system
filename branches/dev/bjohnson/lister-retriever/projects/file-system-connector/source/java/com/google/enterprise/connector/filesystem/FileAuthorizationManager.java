@@ -60,7 +60,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
       } else {
         return false;
       }
-    } catch (RepositoryDocumentException re) {
+    } catch (RepositoryException re) {
       LOG.log(Level.FINE,
           "Exception during authorization check for document id "
           + docId, re);
