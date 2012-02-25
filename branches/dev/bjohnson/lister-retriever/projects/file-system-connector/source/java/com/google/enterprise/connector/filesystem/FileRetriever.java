@@ -53,7 +53,7 @@ class FileRetriever implements Retriever, TraversalContextAware {
     if (file.isRegularFile() && file.canRead()) {
       try {
         long len = file.length();
-        if (len > 0 && len < traversalContext.maxDocumentSize()) {
+        if (len > 0 && len <= traversalContext.maxDocumentSize()) {
           return file.getInputStream();
         }
       } catch (IOException e) {
