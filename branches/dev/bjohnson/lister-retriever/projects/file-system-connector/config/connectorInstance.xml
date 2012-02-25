@@ -31,15 +31,6 @@
     -->
 
     <!--
-    Flag to reset the last access time of a local windows file after crawling.
-    This should be used when the start path of the url is a windows style
-    file path. E.g. "c://share/data"
-    -->
-    <!--
-    <property name="pushAclFlag" value="true"/>
-    -->
-
-    <!--
     Flag to reset the last access time of a SMB file after crawling.
     This should be used when the start path of the url starts with "smb://".
     -->
@@ -54,6 +45,13 @@
     -->
     <!--
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
+    -->
+
+    <!--
+    Flag to decide whether or not to include ACLs in the feed.
+    -->
+    <!--
+    <property name="pushAclFlag" value="true"/>
     -->
 
     <!--
