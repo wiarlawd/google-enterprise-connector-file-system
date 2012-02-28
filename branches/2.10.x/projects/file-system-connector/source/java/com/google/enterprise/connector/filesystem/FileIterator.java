@@ -45,8 +45,6 @@ public class FileIterator {
   private final TraversalContext traversalContext;
   private final MimeTypeDetector mimeTypeDetector;
 
-  private boolean positioned;
-
   /**
    * Stack for tracking the state of the ongoing depth-first traversal.
    * Each level starting with the root at level 0 contains files and
@@ -65,8 +63,6 @@ public class FileIterator {
     this.traversalStateStack = Lists.newArrayList();
     this.mimeTypeDetector = context.getMimeTypeDetector();
 
-    this.positioned = false;
-
     // Prime the traversal with the root directory.
     List<ReadonlyFile<?>> list = Lists.newArrayList();
     list.add(root);
@@ -84,8 +80,6 @@ public class FileIterator {
     if (!hasNext()) {
       return null;
     }
-    // Reset the flag for next setPositionToNextFile run.
-    positioned = false;
     return traversalStateStack.get(traversalStateStack.size() - 1).remove(0);
   }
 
@@ -95,10 +89,6 @@ public class FileIterator {
   }
 
   private void setPositionToNextFile() throws RepositoryException {
-    if (positioned) {
-      return;
-    }
-
     while (traversalStateStack.size() > 0) {
       List<ReadonlyFile<?>> l =
           traversalStateStack.get(traversalStateStack.size() - 1);
@@ -111,18 +101,8 @@ public class FileIterator {
           l.remove(0);
           if (f.acceptedBy(filePatternMatcher)) {
             // Copy of the returned list because we modify our copy.
-            ArrayList<ReadonlyFile<?>> al =
-                new ArrayList<ReadonlyFile<?>>();
-
-            // Add the proccessed dir to the top of the list for
-            // next method's immediate consumption.
-            al.add(f);
-            al.addAll(listFiles(f));
             traversalStateStack.add(
-                new ArrayList<ReadonlyFile<?>>(al));
-
-            positioned = true;
-            return;
+                new ArrayList<ReadonlyFile<?>>(listFiles(f)));
           } else if (LOGGER.isLoggable(Level.FINEST)) {
             LOGGER.finest("Skipping directory " + f.getPath()
                           + " - pattern mismatch.");

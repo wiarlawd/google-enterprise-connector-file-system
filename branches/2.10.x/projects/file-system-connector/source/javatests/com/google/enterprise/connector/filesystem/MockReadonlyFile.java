@@ -321,9 +321,4 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   public void setExists(boolean exists) {
     this.exists = exists;
   }
-
-  @Override
-  public String getParent() {
-    return parent.toString();
-  }
 }

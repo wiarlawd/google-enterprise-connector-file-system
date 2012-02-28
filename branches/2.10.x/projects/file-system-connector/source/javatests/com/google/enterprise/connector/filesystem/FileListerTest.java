@@ -97,7 +97,7 @@ public class FileListerTest extends TestCase {
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
-    assertEquals(1, acceptor.size());
+    assertEquals(0, acceptor.size());
   }
 
   public void testQuery_rootWith1File() throws Exception {
@@ -106,7 +106,9 @@ public class FileListerTest extends TestCase {
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-    assertTraversal(it, root, f1);
+    assertTrue(it.hasNext());
+    assertEquals(f1.getPath(), it.next().getDocumentId());
+    assertFalse(it.hasNext());
   }
 
   public void testQuery_rootWith2Files() throws Exception {
@@ -116,8 +118,11 @@ public class FileListerTest extends TestCase {
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, f1, f2);
+    assertTrue(it.hasNext());
+    assertEquals(f1.getPath(), it.next().getDocumentId());
+    assertTrue(it.hasNext());
+    assertEquals(f2.getPath(), it.next().getDocumentId());
+    assertFalse(it.hasNext());
   }
 
   public void testQuery_rootWith1FileAnd1EmptyDir() throws Exception {
@@ -127,8 +132,9 @@ public class FileListerTest extends TestCase {
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, d1, f1);
+    assertTrue(it.hasNext());
+    assertEquals(f1.getPath(), it.next().getDocumentId());
+    assertFalse(it.hasNext());
   }
 
   public void testQuery_rootWith1FileAnd2Dirs() throws Exception {
@@ -144,38 +150,12 @@ public class FileListerTest extends TestCase {
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, d1, d1f1, d2, d2d1, d2d2, d2f1, f1);
-  }
-
-  public void testQuery_rootWithDirsandFiles() throws Exception {
-    MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/root");
-    MockReadonlyFile d1 = root.addSubdir("d1");
-    MockReadonlyFile d2 = root.addSubdir("d2");
-    MockReadonlyFile d1f3 = d1.addFile("d1f3", "d1f3.d1");
-    MockReadonlyFile d2f4 = d2.addFile("d2f4", "d2f4.d2");
-    MockReadonlyFile d2a4 = d2.addFile("d2a4", "d2a4.d2");
-    MockReadonlyFile d2d4 = d2.addSubdir("d2d4");
-    MockReadonlyFile d2d5 = d2.addSubdir("d2d5");
-    MockReadonlyFile d2d6 = d2.addSubdir("d2d6");
-    MockReadonlyFile d2d6f7 = d2d6.addFile("d2d6f7", "d2d6f7.d6");
-    MockReadonlyFile d2d6f8 = d2d6.addFile("d2d6f8", "d2d6f8.d6");
-    MockReadonlyFile d2d6f9 = d2d6.addFile("d2d6f9", "d2d6f9.d6");
-
-    RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
-    runLister(root, acceptor);
-    Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, d1, d1f3, d2, d2a4, d2d4, d2d5, d2d6, d2d6f7,
-        d2d6f8, d2d6f9, d2f4);
-  }
-
-  public void assertTraversal(Iterator<FileDocument> it,
-      ReadonlyFile<?>... expectedFiles) {
-    for (ReadonlyFile<?> file : expectedFiles) {
-      assertTrue(it.hasNext());
-      assertEquals(file.getPath(), it.next().getDocumentId());
-    }
+    assertTrue(it.hasNext());
+    assertEquals(d1f1.getPath(), it.next().getDocumentId());
+    assertTrue(it.hasNext());
+    assertEquals(d2f1.getPath(), it.next().getDocumentId());
+    assertTrue(it.hasNext());
+    assertEquals(f1.getPath(), it.next().getDocumentId());
     assertFalse(it.hasNext());
   }
 
@@ -192,8 +172,11 @@ public class FileListerTest extends TestCase {
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
               new FakeTraversalContext(maxSizeData.length()), acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, d1, d1f1, fx);
+    assertTrue(it.hasNext());
+    assertEquals(d1f1.getPath(), it.next().getDocumentId());
+    assertTrue(it.hasNext());
+    assertEquals(fx.getPath(), it.next().getDocumentId());
+    assertFalse(it.hasNext());
   }
 
   public void testQuery_filterNotIncludPattern() throws Exception {
@@ -208,8 +191,6 @@ public class FileListerTest extends TestCase {
     runLister(root, include, exclude, TRAVERSAL_CONTEXT, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
     assertTrue(it.hasNext());
-    assertEquals(root.getPath(), it.next().getDocumentId());
-    assertTrue(it.hasNext());
     assertEquals(f1.getPath(), it.next().getDocumentId());
     assertFalse(it.hasNext());
   }
@@ -223,8 +204,9 @@ public class FileListerTest extends TestCase {
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, INCLUDE_ALL_PATTERNS, exclude, TRAVERSAL_CONTEXT, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, d1, f1);
+    assertTrue(it.hasNext());
+    assertEquals(f1.getPath(), it.next().getDocumentId());
+    assertFalse(it.hasNext());
   }
 
   public void testQuery_filterIOException() throws Exception {
@@ -236,8 +218,11 @@ public class FileListerTest extends TestCase {
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
-
-    assertTraversal(it, root, f1, f2);
+    assertTrue(it.hasNext());
+    assertEquals(f1.getPath(), it.next().getDocumentId());
+    assertTrue(it.hasNext());
+    assertEquals(f2.getPath(), it.next().getDocumentId());
+    assertFalse(it.hasNext());
   }
 
   private static class RecordingDocumentAcceptor extends ArrayList<FileDocument>

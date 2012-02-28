@@ -31,7 +31,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Set;
 
 /**
  */
@@ -104,11 +103,6 @@ public class FileDocumentTest extends TestCase {
     validateRepeatedProperty(users, usersProperty);
     Property groupsProperty = doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS);
     validateRepeatedProperty(groups, groupsProperty);
-
-    Property aclInheritFrom = doc.findProperty(
-        SpiConstants.PROPNAME_ACLINHERITFROM);
-    assertNotNull(aclInheritFrom);
-    assertEquals(foo.getParent(), aclInheritFrom.nextValue().toString());
   }
 
   private void validateNotPublic(Document doc) throws RepositoryException {
@@ -177,43 +171,6 @@ public class FileDocumentTest extends TestCase {
       assertTrue(iae.getMessage().contains(
                  "pushAcls not supported with markAllDocumentsPublic"));
     }
-  }
-
-  public void testDirectoryWithAcl() throws RepositoryException {
-    root = MockReadonlyFile.createRoot("/foo/bar");
-    fileFactory = new MockFileSystemType(root);
-    foo = root.addSubdir("subFolder");
-    foo.setLastModified(LAST_MODIFIED.getTimeInMillis());
-    List<String> users = Arrays.asList("domain1\\James", "domain1\\Mike");
-    List<String> groups = Arrays.asList("domain1\\engineers",
-                                        "domain1\\managers");
-    Acl acl = Acl.newAcl(users, groups);
-    foo.setAcl(acl);
-    Document doc = new FileDocument(foo, makeContext(true, false));
-    validateNotPublic(doc);
-    Property usersProperty = doc.findProperty(SpiConstants.PROPNAME_ACLUSERS);
-    validateRepeatedProperty(users, usersProperty);
-    Property groupsProperty = doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS);
-    validateRepeatedProperty(groups, groupsProperty);
-
-    if (foo.isDirectory()) {
-      Property aclFeedProperty =
-          doc.findProperty(SpiConstants.PROPNAME_FEEDTYPE);
-      assertNotNull(aclFeedProperty);
-      assertEquals(SpiConstants.FeedType.ACL.toString(),
-          aclFeedProperty.nextValue().toString());
-
-      Property aclInheritanceTypeProperty =
-          doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE);
-      assertNotNull(aclInheritanceTypeProperty);
-      assertEquals(SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString(),
-          aclInheritanceTypeProperty.nextValue().toString());
-    }
-
-    Property aclInheritFrom = doc.findProperty(
-        SpiConstants.PROPNAME_ACLINHERITFROM);
-    assertNotNull(aclInheritFrom);
-    assertEquals(foo.getParent(), aclInheritFrom.nextValue().toString());
   }
 
   private DocumentContext makeContext(boolean pushAcls,

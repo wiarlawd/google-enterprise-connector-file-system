@@ -134,9 +134,4 @@ public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
   public boolean exists() {
     return delegate.exists();
   }
-
-  /* @Override */
-  public String getParent() {
-    return delegate.getParent();
-  }
 }

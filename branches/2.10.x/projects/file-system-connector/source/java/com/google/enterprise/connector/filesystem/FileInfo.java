@@ -73,10 +73,4 @@ public interface FileInfo {
    *         For instance, a network file share is off-line.
    */
   public Acl getAcl() throws IOException, RepositoryException;
-  
-  /**
-   * Returns parent directory path of this file.
-   * @return parent directory path as String
-   */
-  public String getParent();
 }
