@@ -71,17 +71,12 @@ public class SmbFileSystemType implements FileSystemType {
             + JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME
             + ". Accepting default jcifs configuration.", ioe);
       } finally {
-        close(is);
+        try {
+          is.close();
+        } catch (IOException ioe) {
+          LOG.log(Level.WARNING, "Failed to close input stream.", ioe);
+        }
       }
-    }
-
-  }
-
-  private static void close(InputStream is) {
-    try {
-      is.close();
-    } catch (IOException ioe) {
-      LOG.log(Level.WARNING, "Failed to close input stream.", ioe);
     }
   }
 
@@ -111,10 +106,7 @@ public class SmbFileSystemType implements FileSystemType {
    *   smb://host/path
    * </pre>
    *
-   * The CIFS library is very picky about trailing slashes: directories must
-   * end in slash and regular files must not. This parser is much less picky:
-   * it tries both and uses whichever yields a readable file.
-   *
+   * @throws RepositoryException if repository is inaccessible.
    * @throws RepositoryDocumentException if {@code path} is valid.
    * @throws IllegalArgumentException if {@link #isPath} returns false for
    * path.
@@ -122,45 +114,24 @@ public class SmbFileSystemType implements FileSystemType {
   /* @Override */
   public SmbReadonlyFile getReadableFile(final String smbStylePath,
       final Credentials credentials)
-          throws RepositoryException, WrongSmbTypeException {
+      throws RepositoryException, WrongSmbTypeException {
     if (!isPath(smbStylePath)) {
       throw new IllegalArgumentException("Invalid path " + smbStylePath);
     }
-    SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials);
-    if (null == result) {
-      throw new RepositoryDocumentException("failed to open file: "
-          + smbStylePath);
-    } else if (!result.isTraversable()) {
-      throw new WrongSmbTypeException("Wrong smb type", null);
-    } else {
-      return result;
-    }
-  }
-
-  private SmbReadonlyFile getReadableFileHelper(String path,
-      Credentials credentials) throws FilesystemRepositoryDocumentException {
-    SmbReadonlyFile result = null;
     try {
-      result = new SmbReadonlyFile(path, credentials, propertyFetcher);
+      SmbReadonlyFile result = getFile(smbStylePath, credentials);
       if (!result.exists()) {
         throw new NonExistentResourceException(
-            "This resource path does not exist: " + path);
+            "This resource path does not exist: " + smbStylePath);
       }
+      if (!result.isTraversable()) {
+        throw new WrongSmbTypeException("Wrong SMB type", null);
+      }
+      return result;
     } catch (FilesystemRepositoryDocumentException e) {
       LOG.info("Validation error occured: " + e.getMessage());
       throw e;
-    } catch(RepositoryException e) {
-      result = null;
-      if (e.getCause() instanceof SmbException) {
-        SmbException smbe = (SmbException)e.getCause();
-        if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-          throw new InsufficientAccessException("access denied", smbe);
-        } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
-          throw new NonExistentResourceException("Path does not exist", smbe);
-        }
-      }
     }
-    return result;
   }
 
   /* @Override */
