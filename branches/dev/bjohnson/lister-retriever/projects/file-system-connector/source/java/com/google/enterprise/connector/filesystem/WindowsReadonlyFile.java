@@ -186,7 +186,7 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
    * Method to get the last access time of the file. If for some reason, the
    * last access time is not fetched, null is returned and in that case, the
    * access time is not set to the file.
-   * 
+   *
    * @param absolutePath File name
    * @return Last access time if it is successfully fetched, null otherwise.
    */
@@ -204,7 +204,6 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
   }
 
   /* @Override */
-  @Override
   public String getParent() {
     return delegate.getParent();
   }
