@@ -273,7 +273,12 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
       }
     });
     if (lastAccessTimeResetFlag) {
-      delegate.setLastAccess(lastAccessTime);
+      try {
+        delegate.setLastAccess(lastAccessTime);
+      } catch (SmbException e) {
+        String msg = "could not set last access time on: " + delegate.getPath();
+        LOG.log(Level.INFO, msg, e);
+      }
     }
     return result;
   }
