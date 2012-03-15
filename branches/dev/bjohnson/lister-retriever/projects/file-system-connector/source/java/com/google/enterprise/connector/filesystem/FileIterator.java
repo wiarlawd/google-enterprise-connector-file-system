@@ -110,22 +110,23 @@ public class FileIterator {
         if (f.isDirectory()) {
           l.remove(0);
           if (f.acceptedBy(filePatternMatcher)) {
-            // Copy of the returned list because we modify our copy.
-            ArrayList<ReadonlyFile<?>> al =
-                new ArrayList<ReadonlyFile<?>>();
+            List<? extends ReadonlyFile<?>> files = listFiles(f);
+            if (!files.isEmpty()) {
+              // Copy of the returned list because we modify our copy.
+              ArrayList<ReadonlyFile<?>> al = new ArrayList<ReadonlyFile<?>>();
 
-            // Add the proccessed dir to the top of the list for
-            // next method's immediate consumption.
-            al.add(f);
-            al.addAll(listFiles(f));
-            traversalStateStack.add(
-                new ArrayList<ReadonlyFile<?>>(al));
+              // Add the proccessed dir to the top of the list for
+              // next method's immediate consumption.
+              al.add(f);
+              al.addAll(files);
+              traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(al));
 
-            positioned = true;
-            return;
-          } else if (LOGGER.isLoggable(Level.FINEST)) {
-            LOGGER.finest("Skipping directory " + f.getPath()
-                          + " - pattern mismatch.");
+              positioned = true;
+              return;
+            }
+          } else {
+            LOGGER.log(Level.FINEST,
+                "Skipping directory {0} - pattern mismatch.", f.getPath());
           }
         } else if (!isQualifyingFile(f)) {
           l.remove(0);
@@ -140,25 +141,27 @@ public class FileIterator {
       throws RepositoryException {
     try {
       if (!f.isRegularFile()) {
-        LOGGER.finest("Skipping " + f.getPath()
-                      + " - not a regular file. ");
+        LOGGER.log(Level.FINEST, "Skipping {0} - not a regular file.",
+                   f.getPath());
         return false;
       }
 
       if (!f.acceptedBy(filePatternMatcher)) {
-        LOGGER.finest("Skipping file " + f.getPath()
-                      + " - pattern mismatch.");
+        LOGGER.log(Level.FINEST, "Skipping file {0} - pattern mismatch.",
+                   f.getPath());
         return false;
       }
 
       if (!f.canRead()) {
-        LOGGER.finest("Skipping file " + f.getPath() + " - no read access.");
+        LOGGER.log(Level.FINEST, "Skipping file {0} - no read access.",
+                   f.getPath());
         return false;
       }
 
       if (traversalContext != null) {
         if (traversalContext.maxDocumentSize() < f.length()) {
-          LOGGER.finest("Skipping file " + f.getPath() + " - too big.");
+          LOGGER.log(Level.FINEST, "Skipping file {0} - too big.",
+                     f.getPath());
           return false;
         }
 
@@ -166,15 +169,15 @@ public class FileIterator {
         // based upon advanced configuration option.
         String mimeType = mimeTypeDetector.getMimeType(f.getPath(), f);
         if (traversalContext.mimeTypeSupportLevel(mimeType) <= 0) {
-          LOGGER.finest("Skipping file " + f.getPath()
-              + " - unsupported or excluded MIME type: " + mimeType);
+          LOGGER.log(Level.FINEST, "Skipping file {0} - unsupported or excluded"
+              + " MIME type: {1}", new Object[] { f.getPath(), mimeType });
           return false;
         }
       }
       return true;
     } catch (IOException ioe) {
-      LOGGER.warning("Skipping file " + f.getPath() + " - access error: "
-                     + ioe.getMessage());
+      LOGGER.log(Level.WARNING, "Skipping file {0} - access error: {1}",
+                 new Object[] { f.getPath(), ioe.getMessage() });
       return false;
     }
   }

@@ -97,7 +97,7 @@ public class FileListerTest extends TestCase {
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
-    assertEquals(1, acceptor.size());
+    assertEquals(0, acceptor.size());
   }
 
   public void testQuery_rootWith1File() throws Exception {
@@ -128,7 +128,7 @@ public class FileListerTest extends TestCase {
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
 
-    assertTraversal(it, root, d1, f1);
+    assertTraversal(it, root, f1);
   }
 
   public void testQuery_rootWith1FileAnd2Dirs() throws Exception {
@@ -145,7 +145,7 @@ public class FileListerTest extends TestCase {
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
 
-    assertTraversal(it, root, d1, d1f1, d2, d2d1, d2d2, d2f1, f1);
+    assertTraversal(it, root, d1, d1f1, d2, d2f1, f1);
   }
 
   public void testQuery_rootWithDirsandFiles() throws Exception {
@@ -166,8 +166,8 @@ public class FileListerTest extends TestCase {
     runLister(root, acceptor);
     Iterator<FileDocument> it = acceptor.iterator();
 
-    assertTraversal(it, root, d1, d1f3, d2, d2a4, d2d4, d2d5, d2d6, d2d6f7,
-        d2d6f8, d2d6f9, d2f4);
+    assertTraversal(it, root, d1, d1f3, d2, d2a4, d2d6, d2d6f7, d2d6f8, d2d6f9,
+                    d2f4);
   }
 
   public void assertTraversal(Iterator<FileDocument> it,
