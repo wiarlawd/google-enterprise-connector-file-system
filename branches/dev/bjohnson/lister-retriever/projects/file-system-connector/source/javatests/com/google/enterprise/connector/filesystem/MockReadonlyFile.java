@@ -179,6 +179,23 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     }
   }
 
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  /**
+   * Return the name to this file or directory.
+   */
+  /* @Override */
+  public String getName() {
+    return name;
+  }
+
+  /* @Override */
+  public String getParent() {
+    return (parent == null) ? null : parent.getPath();
+  }
+
   /* @Override */
   public String getDisplayUrl() throws RepositoryException {
     maybeThrowRepositoryException(Where.GET_DISPLAY_URL);
@@ -366,18 +383,5 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    */
   public void setExists(boolean exists) {
     this.exists = exists;
-  }
-
-  /* @Override */
-  public String getParent() {
-    return (parent == null) ? null : parent.getPath();
-  }
-
-  public void setName(String name) {
-    this.name = name;
-  }
-
-  public String getName() {
-    return name;
   }
 }

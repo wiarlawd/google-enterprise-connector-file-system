@@ -20,7 +20,8 @@ import com.google.enterprise.connector.spi.RepositoryException;
 
 /**
  */
-public class MockFileSystemType implements FileSystemType {
+public class MockFileSystemType
+    extends AbstractFileSystemType<MockReadonlyFile> {
   private final MockReadonlyFile root;
   private final AuthenticationIdentity identity;
 
@@ -28,25 +29,23 @@ public class MockFileSystemType implements FileSystemType {
     this(root, null);
   }
 
-  public MockFileSystemType(MockReadonlyFile root, AuthenticationIdentity identity) {
+  public MockFileSystemType(MockReadonlyFile root,
+                            AuthenticationIdentity identity) {
     this.root = root;
     this.identity = identity;
   }
 
-  /* @Override */
+  @Override
   public boolean isPath(String path) {
     return path.startsWith(root.getPath());
   }
 
-  /* @Override */
+  @Override
   public MockReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryDocumentException {
     validateCredentials(credentials);
     if (path.equals(root.getPath())) {
       return root;
-    }
-    if (!path.startsWith(root.getPath())) {
-      throw new RepositoryDocumentException("no such file or directory: " + path);
     }
     String relativePath = path.substring(root.getPath().length());
     String[] names = relativePath.split("/");
@@ -55,8 +54,8 @@ public class MockFileSystemType implements FileSystemType {
     for (String name : names) {
       if (name.length() != 0) {
         if (result.get(name) == null) {
-          throw new RepositoryDocumentException("no such file or directory: " + result.getPath()
-              + "/" + name);
+          throw new RepositoryDocumentException("No such file or directory: "
+              + result.getPath() + "/" + name);
         }
         result = result.get(name);
       }
@@ -64,22 +63,12 @@ public class MockFileSystemType implements FileSystemType {
     return result;
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return "mock " + root.getPath();
   }
 
-  /* @Override */
-  public MockReadonlyFile getReadableFile(String path, Credentials credentials)
-      throws RepositoryException {
-    MockReadonlyFile result = getFile(path, credentials);
-    if (!result.canRead()) {
-      throw new RepositoryDocumentException("failed to open file: " + path);
-    }
-    return result;
-  }
-
-  /* @Override */
+  @Override
   public boolean isUserPasswordRequired() {
     return identity != null;
   }

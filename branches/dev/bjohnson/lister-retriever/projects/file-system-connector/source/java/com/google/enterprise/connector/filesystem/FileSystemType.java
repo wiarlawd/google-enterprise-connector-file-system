@@ -20,9 +20,28 @@ import com.google.enterprise.connector.spi.RepositoryException;
 /**
  * This represents a type of file system: SMB, NFS, etc. It provides a way to
  * translate a String path into a ReadonlyFile corresponding to the path.
- *
+ * <p/>
+ * When adding support for a new file system type (for example AFP),
+ * the developer would typically provide implementations of three interfaces.
+ * <ul>
+ * <li>{@link FileSystemType} (usually by extending
+ * {@link AbstractFileSystemType}) This provides a factory for converting
+ * file system specific pathnames into {@link ReadonlyFile} instances.</li>
+ * <li>{@link ReadonlyFile} (usually by extending {@link AbstractReadonlyFile})
+ * This provides the implementation of higher-level file access used by this
+ * connector.  File system specific error handling is typically done here.</li>
+ * <li>{@link FileDelegate} This codifies a partial java.io.File Interface
+ * over the native file objects (like SmbFile, XFile, etc). This implementation
+ * is only required if the {@code ReadonlyFile} implementation extends
+ * {@code AbstractReadonlyFile}.</li>
+ * </ul>
+ * In order for the new file system support to be recognized by the connector,
+ * the {@code FileSystemType} implementation must be registered with the
+ * {@link FileSystemTypeRegistry}.  This is typically done in the connector's
+ * Spring bean configuration in {@code connectorInstance.xml} and/or
+ * {@code connectorDefaults.xml}.
  */
-public interface FileSystemType {
+public interface FileSystemType<T extends ReadonlyFile<T>> {
   /**
    * @return a name for this type of file system. E.g., SMB, NFS, etc.
    */
@@ -38,7 +57,7 @@ public interface FileSystemType {
    *         or there are errors accessing a specific document.
    * @throws RepositoryException if there was an error accessing the repository.
    */
-  public ReadonlyFile<?> getFile(String path, Credentials credentials)
+  public T getFile(String path, Credentials credentials)
       throws RepositoryException;
 
   /**
@@ -61,7 +80,7 @@ public interface FileSystemType {
    *         or there are errors accessing a specific document.
    * @throws RepositoryException if there was an error accessing the repository.
    */
-  public ReadonlyFile<?> getReadableFile(String path, Credentials credentials)
+  public T getReadableFile(String path, Credentials credentials)
       throws RepositoryException;
 
   /**

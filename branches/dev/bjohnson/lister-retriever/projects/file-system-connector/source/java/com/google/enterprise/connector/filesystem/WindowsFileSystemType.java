@@ -1,11 +1,11 @@
 // Copyright 2010 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,30 +26,32 @@ import java.util.regex.Pattern;
  * Windows files after the connector manager crawls the contents. Windows
  * specific implementation is provided to solve this problem.
  */
-public class WindowsFileSystemType implements FileSystemType {
+public class WindowsFileSystemType
+    extends AbstractFileSystemType<WindowsReadonlyFile> {
+
   private static final String COLON = ":";
+  private static final Pattern DRIVE_LETTERS = Pattern.compile("[a-zA-Z]");
 
   /**
    * Flag to turn on/off the access time reset feature for windows local files.
    */
   private final boolean accessTimeResetFlag;
 
-  /* @VisibleForTesting */
+  @VisibleForTesting
   public WindowsFileSystemType(boolean accessTimeResetFlag) {
-    super();
     this.accessTimeResetFlag = accessTimeResetFlag;
   }
-  
+
   public WindowsFileSystemType(WindowsFileProperties propertyFetcher) {
     this(propertyFetcher.isLastAccessResetFlagForLocalWindows());
   }
 
-  /* @Override */
+  @Override
   public WindowsReadonlyFile getFile(String path, Credentials credentials) {
     return new WindowsReadonlyFile(path, accessTimeResetFlag);
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return WindowsReadonlyFile.FILE_SYSTEM_TYPE;
   }
@@ -59,6 +62,7 @@ public class WindowsFileSystemType implements FileSystemType {
    * using ":" to get the drive letter. If it is more than one letter, it
    * rejects saying that it isn't a windows file path name
    */
+  @Override
   public boolean isPath(String path) {
     if (path == null || path.trim().length() < 1
             || path.trim().indexOf(COLON) == -1) {
@@ -77,45 +81,20 @@ public class WindowsFileSystemType implements FileSystemType {
 
   /**
    * Method to check whether the character is a valid drive letter or not.
-   * 
+   *
    * @param driveLetter
-   * @return
+   * @return true if driveLetter is valid, false otherwise
    */
   private boolean isAllowedDriveLetter(String driveLetter) {
-    Pattern p = Pattern.compile("[a-zA-Z]");
-    Matcher m = p.matcher(driveLetter);
-    return m.find();
+    return DRIVE_LETTERS.matcher(driveLetter).find();
   }
 
-  /* @Override */
-  public WindowsReadonlyFile getReadableFile(String path,
-          Credentials credentials) throws RepositoryDocumentException {
-    if (!isPath(path)) {
-      throw new IllegalArgumentException("Invalid path : " + path);
-    }
-    WindowsReadonlyFile result = getFile(path, credentials);
-    //TODO: lot of implementation of java and windows file system is similar, 
-    //may be extract common code in the base class ?
-    if (!result.exists()) {
-      throw new NonExistentResourceException("Path doesn't exist: " + path);
-    }
-    if (!result.canRead()) {
-      throw new InsufficientAccessException("User doesn't have access to : " + path);
-    }
-    return result;
-  }
-  
-  /* @Override */
-  public boolean isUserPasswordRequired() {
-    return false;
-  }
-  
   /**
-   * Interface to retrieve properties required for crawling local 
+   * Interface to retrieve properties required for crawling local
    * windows files.
    */
   public static interface WindowsFileProperties {
-    
+
     /**
      * Gets the accessTimeResetFlag
      * @return Flag to decide whether or not to reset the last access time

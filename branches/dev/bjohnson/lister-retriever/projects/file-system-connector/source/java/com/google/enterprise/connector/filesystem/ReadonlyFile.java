@@ -23,11 +23,84 @@ import java.util.List;
 
 /**
  * This interface is a minimal API for a read-only directory tree.
+ * <p/>
+ * This provides the Abstraction Interface of the Bridge pattern,
+ * with implementations of FileDelegate as the ConcreteImplementor component.
  *
  * @param <T> the concrete type of {@link ReadonlyFile} for this {@link Object}.
  */
 public interface ReadonlyFile<T extends ReadonlyFile<T>>
-    extends FileInfo, InputStreamFactory {
+    extends InputStreamFactory {
+
+  /**
+   * @return the kind of file system this file belongs to. E.g., SMB, JAVA, etc.
+   */
+  public String getFileSystemType();
+
+  /**
+   * <p>Lexicographic ordering of the paths within a directory tree must be
+   * consistent with in-order, depth-first traversal of that directory tree..
+   * This is tricky, because simple lexicographic ordering of paths doesn't
+   * quite work. To see why, suppose that a directory contains files named "abc"
+   * and "foo.bar" and a directory named "foo". Also suppose that "foo" contains
+   * a file named "x". If the file separator is "/", lexicographic ordering
+   * would be {abc, foo, foo.bar, foo/x}, but this is inconsistent with a
+   * depth-first scan. (For many file systems, one way to avoid this problem is
+   * to append the separator to directories before sorting.)
+   *
+   * @return file system path to this file.
+   */
+  public String getPath();
+
+  /**
+   * Returns the name of the file or directory denoted by this abstract
+   * pathname.  This is just the last name in the pathname's name
+   * sequence.  If the pathname's name sequence is empty, then the empty
+   * string is returned.
+   *
+   * @return  The name of the file or directory denoted by this abstract
+   *          pathname, or the empty string if this pathname's name sequence
+   *          is empty
+   */
+  public String getName();
+
+  /**
+   * Returns parent directory path of this file.
+   *
+   * @return parent directory path as String
+   */
+  public String getParent();
+
+
+  /**
+   * @return true if this is a directory.
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
+   */
+  public boolean isDirectory() throws RepositoryException;
+
+  /**
+   * @return true if this is a regular file
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
+   */
+  public boolean isRegularFile() throws RepositoryException;
+
+  /**
+   * @return the time this file was last modified
+   * @throws IOException if the modification time cannot be obtained
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
+   */
+  public long getLastModified() throws IOException, RepositoryException;
+
+  /**
+   * Returns a {@link Acl} for this file or directory.
+   * @throws IOException
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
+   */
+  public Acl getAcl() throws IOException, RepositoryException;
 
   /**
    * @return true if the file exists and can be read; false otherwise

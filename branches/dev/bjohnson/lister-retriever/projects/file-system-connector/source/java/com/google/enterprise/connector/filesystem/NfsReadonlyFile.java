@@ -13,130 +13,42 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.sun.xfile.XFile;
-import com.sun.xfile.XFileInputStream;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.logging.Logger;
-
 /**
  * Implementation of ReadonlyFile that delegates to {@code com.sun.xfile.XFile}.
  *
  * @see PathParser
  */
-public class NfsReadonlyFile implements ReadonlyFile<NfsReadonlyFile> {
+/* TODO: Implement detectServerDown() for NFS failures. */
+public class NfsReadonlyFile extends AbstractReadonlyFile<NfsReadonlyFile> {
+
   public static final String FILE_SYSTEM_TYPE = "nfs";
 
-  private final XFile delegate;
-  private static final Logger LOG = Logger.getLogger(NfsReadonlyFile.class.getName());
+  private final NfsFileDelegate delegate;
 
   /**
    * @param path see {@code com.sun.xfile.XFile} for path syntax.
    */
   public NfsReadonlyFile(String path) {
-    this.delegate = new XFile(path);
+    this(new NfsFileDelegate(path));
   }
 
-  /* @Override */
+  private NfsReadonlyFile(NfsFileDelegate delegate) {
+    super(delegate);
+    this.delegate = delegate;
+  }
+
+  @Override
+  protected NfsReadonlyFile newChild(String name) {
+    return new NfsReadonlyFile(new NfsFileDelegate(delegate, name));
+  }
+
+  @Override
   public String getFileSystemType() {
     return FILE_SYSTEM_TYPE;
   }
 
-  /* @Override */
+  @Override
   public String getPath() {
     return delegate.getAbsolutePath();
-  }
-
-  /* @Override */
-  public boolean isDirectory() {
-    return delegate.isDirectory();
-  }
-
-  /* @Override */
-  public boolean isRegularFile() {
-    return delegate.isFile();
-  }
-
-  /* @Override */
-  public long getLastModified() throws IOException {
-    return delegate.lastModified();
-  }
-
-  /* @Override */
-  public Acl getAcl() throws IOException {
-    // TODO: Figure out NFS ACL story.
-    return Acl.newPublicAcl();
-  }
-
-  /* @Override */
-  public boolean canRead() {
-    return delegate.canRead();
-  }
-
-  /* @Override */
-  public List<NfsReadonlyFile> listFiles() throws IOException, DirectoryListingException {
-    String fileNames[] = delegate.list();
-    if (fileNames == null) {
-      throw new DirectoryListingException("failed to list files in "+ getPath());
-    }
-    List<NfsReadonlyFile> result = new ArrayList<NfsReadonlyFile>(fileNames.length);
-    String delegateName = delegate.getAbsolutePath();
-    if (!delegateName.endsWith("/")) {
-      delegateName += "/";
-    }
-    for (int i = 0; i < fileNames.length; i++) {
-      result.add(new NfsReadonlyFile(delegateName + fileNames[i]));
-    }
-    Collections.sort(result, new Comparator<NfsReadonlyFile>() {
-      /* @Override */
-      public int compare(NfsReadonlyFile o1, NfsReadonlyFile o2) {
-        return o1.getPath().compareTo(o2.getPath());
-      }
-    });
-    return result;
-  }
-
-  /* @Override */
-  public InputStream getInputStream() throws IOException {
-    return new XFileInputStream(delegate);
-  }
-
-  /* @Override */
-  public String getDisplayUrl() {
-    return delegate.getAbsolutePath();
-  }
-
-  /* @Override */
-  public boolean acceptedBy(FilePatternMatcher matcher) {
-    return matcher.acceptName(delegate.getAbsolutePath());
-  }
-
-  /* @Override */
-  public long length() throws IOException {
-    if (isRegularFile()) {
-      return delegate.length();
-    } else {
-      return 0;
-    }
-  }
-
-  /* @Override */
-  public boolean supportsAuthn() {
-    return false;
-  }
-
-  /* @Override */
-  public boolean exists() {
-    return delegate.exists();
-  }
-
-  /* @Override */
-  public String getParent() {
-    return delegate.getParent();
   }
 }
