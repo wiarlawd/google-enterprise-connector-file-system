@@ -44,6 +44,7 @@ public class FileIterator {
   private final DocumentContext context;
   private final TraversalContext traversalContext;
   private final MimeTypeDetector mimeTypeDetector;
+  private final boolean returnDirectories;
 
   private boolean positioned;
 
@@ -64,6 +65,8 @@ public class FileIterator {
     this.traversalContext = traversalContext;
     this.traversalStateStack = Lists.newArrayList();
     this.mimeTypeDetector = context.getMimeTypeDetector();
+    this.returnDirectories =
+        context.isPushAcls() && !context.isMarkAllDocumentsPublic();
 
     this.positioned = false;
 
@@ -112,17 +115,19 @@ public class FileIterator {
           if (f.acceptedBy(filePatternMatcher)) {
             List<? extends ReadonlyFile<?>> files = listFiles(f);
             if (!files.isEmpty()) {
-              // Copy of the returned list because we modify our copy.
-              ArrayList<ReadonlyFile<?>> al = new ArrayList<ReadonlyFile<?>>();
-
-              // Add the proccessed dir to the top of the list for
-              // next method's immediate consumption.
-              al.add(f);
-              al.addAll(files);
-              traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(al));
-
-              positioned = true;
-              return;
+              if (returnDirectories) {
+                // Copy of the returned list because we modify our copy.
+                ArrayList<ReadonlyFile<?>> al = new ArrayList<ReadonlyFile<?>>();
+                // Add the proccessed dir to the top of the list for
+                // next method's immediate consumption.
+                al.add(f);
+                al.addAll(files);
+                traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(al));
+                positioned = true;
+                return;
+              } else {
+                traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(files));
+              }
             }
           } else {
             LOGGER.log(Level.FINEST,

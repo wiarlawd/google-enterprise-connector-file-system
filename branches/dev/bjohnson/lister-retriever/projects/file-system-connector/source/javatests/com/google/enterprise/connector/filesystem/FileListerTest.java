@@ -80,7 +80,7 @@ public class FileListerTest extends TestCase {
   /** Run the Lister and validate the results. */
   private void runLister(MockReadonlyFile root) throws RepositoryException {
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-              TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE);
+              TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, PUSH_ACLS);
   }
 
   /** Run the Lister and validate the results. */
@@ -88,18 +88,19 @@ public class FileListerTest extends TestCase {
       List<String> excludePatterns, TraversalContext traversalContext)
       throws RepositoryException {
     runLister(root, includePatterns, excludePatterns, traversalContext,
-              TRAVERSAL_SCHEDULE);
+              TRAVERSAL_SCHEDULE, PUSH_ACLS);
   }
 
   /** Run the Lister and validate the results. */
   private void runLister(MockReadonlyFile root, List<String> includePatterns,
       List<String> excludePatterns, TraversalContext traversalContext,
-      TraversalSchedule traversalSchedule) throws RepositoryException {
+      TraversalSchedule traversalSchedule, boolean pushAcls)
+      throws RepositoryException {
     FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        PUSH_ACLS, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        pushAcls, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
         MIME_TYPE_DETECTOR);
     System.out.println("Test " + getName() + " Expected = " + expectedFiles);//DEBUGGING
     // TODO: handle multiple startpoints.
@@ -172,7 +173,7 @@ public class FileListerTest extends TestCase {
      * @return true if the file is expected in the traversal results; false
      *     if the file is not expected to be included in the traversal results.
      */
-    public boolean configure(MockReadonlyFile file);
+    public boolean configure(MockReadonlyFile file) throws Exception;
   }
 
   /**
@@ -187,7 +188,7 @@ public class FileListerTest extends TestCase {
    * @return the directory
    */
   private MockReadonlyFile addDir(MockReadonlyFile parent, String dirName,
-                                  String... fileNames) {
+      String... fileNames) throws Exception {
     return addDir(CONFIGURE_FILE_ALL, parent, dirName, fileNames);
   }
 
@@ -203,7 +204,8 @@ public class FileListerTest extends TestCase {
    * @return the directory
    */
   private MockReadonlyFile addDir(ConfigureFile configureFile,
-      MockReadonlyFile parent, String dirName, String... fileNames) {
+      MockReadonlyFile parent, String dirName, String... fileNames)
+      throws Exception {
     MockReadonlyFile dir;
     if (parent == null) {
       dir = MockReadonlyFile.createRoot(dirName);
@@ -302,6 +304,28 @@ public class FileListerTest extends TestCase {
     addDir(d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
     assertNotExpected("/foo/bar/d2/d2d1", "/foo/bar/d2/d2d2");
     runLister(root);
+  }
+
+  public void testFeedNoDirectoriesIfNoAcls() throws Exception {
+    ConfigureFile configureFile = new ConfigureFile() {
+        public boolean configure(MockReadonlyFile file) throws Exception {
+          return file.isRegularFile();
+        }
+      };
+
+    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar");
+    addDir(configureFile, root, "d1", "d1f1");
+    MockReadonlyFile d2 = addDir(configureFile, root, "d2", "d2f1", "d2a2");
+    addDir(configureFile, d2, "d2d1");
+    addDir(configureFile, d2, "d2d2");
+    addDir(configureFile, d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
+    assertExpected("/foo/bar/d1/d1f1", "/foo/bar/d2/d2f1", "/foo/bar/d2/d2a2",
+        "/foo/bar/d2/d2d3/d2d3f1", "/foo/bar/d2/d2d3/d2d3a2",
+        "/foo/bar/d2/d2d3/d2d3f3");
+    assertNotExpected("/foo/bar", "/foo/bar/d1", "/foo/bar/d2",
+        "/foo/bar/d2/d2d1", "/foo/bar/d2/d2d2", "/foo/bar/d2/d2d3");
+    runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
+              TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, false);
   }
 
   public void testFilterTooBig() throws Exception {
@@ -562,7 +586,7 @@ public class FileListerTest extends TestCase {
         addDir(CONFIGURE_FILE_NONE, null, "/foo/bar", "f1", "f2");
     assertTrue(expectedFiles.isEmpty());
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-              TRAVERSAL_CONTEXT, schedule);
+              TRAVERSAL_CONTEXT, schedule, PUSH_ACLS);
   }
 
   public void testDocumentAcceptorException() throws Exception {
