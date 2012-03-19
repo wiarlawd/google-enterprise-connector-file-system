@@ -110,11 +110,14 @@ public class SmbReadonlyFile
     // Not 100% sure if identifying all server downs and only server downs.
     boolean badCommunication =
         SmbException.NT_STATUS_UNSUCCESSFUL == smbe.getNtStatus();
+    Throwable rootCause = smbe.getRootCause();
+    String rootCauseString =
+        (null == rootCause) ? "" : " " + smbe.getRootCause().getClass();
     boolean noTransport =
-        smbe.getRootCause() instanceof jcifs.util.transport.TransportException;
+        rootCause instanceof jcifs.util.transport.TransportException;
     boolean noConnection = ("" + smbe).contains("Failed to connect");
-    LOG.finest("server down variables:" + smbe.getNtStatus() + " "
-        + smbe.getRootCause().getClass() + " " + smbe.getMessage());
+    LOG.finest("server down variables:" + smbe.getNtStatus() + rootCauseString
+        + " " + smbe.getMessage());
     if (badCommunication && noTransport && noConnection) {
       throw new RepositoryException("Server down", smbe);
     }
