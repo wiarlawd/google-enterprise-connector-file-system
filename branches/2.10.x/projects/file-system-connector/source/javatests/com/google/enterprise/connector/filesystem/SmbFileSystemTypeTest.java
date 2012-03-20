@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2012 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,38 +14,17 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 
-import junit.framework.TestCase;
-
-import java.io.File;
-import java.util.Arrays;
-import java.util.List;
-
 /**
  */
-public class FilePatternMatcherTest extends TestCase {
-  Credentials credentials = new Credentials(null, "testUser", "foobar");
+public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
 
-  public void testBasics() throws RepositoryException {
-    List<String> include = Arrays.asList("smb://foo.com/", "/foo/bar/");
-    List<String> exclude = Arrays.asList("smb://foo.com/secret/", "/foo/bar/hidden/");
-    FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
-    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, getFetcher())
-        .acceptedBy(matcher));
-    assertTrue(new JavaReadonlyFile("/foo/bar/baz.txt")
-        .acceptedBy(matcher));
-    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, getFetcher())
-        .acceptedBy(matcher));
-    assertFalse(new SmbReadonlyFile("smb://foo.com/secret/private_key",
-        credentials, getFetcher()).acceptedBy(matcher));
-    assertFalse(new JavaReadonlyFile("/foo/bar/hidden/porn.png")
-        .acceptedBy(matcher));
-    assertFalse(new JavaReadonlyFile("/bar/foo/public/knowledge")
-        .acceptedBy(matcher));
+  @Override
+  protected FileSystemType getFileSystemType() {
+    return new SmbFileSystemType(getFetcher());
   }
 
   private SmbFileProperties getFetcher() {
@@ -68,4 +47,34 @@ public class FilePatternMatcherTest extends TestCase {
     };
   }
 
+  @Override
+  public void testIsPath() {
+    assertTrue(fst.isPath("smb://a/b"));
+    assertFalse(fst.isPath("/a/b"));
+    assertFalse(fst.isPath("nfs://a/b"));
+    assertFalse(fst.isPath("c:\\foo\\bar"));
+    assertFalse(fst.isPath("\\\\unc\\foo\\bar"));
+    assertFalse(fst.isPath(""));
+    assertFalse(fst.isPath(null));
+  }
+
+  @Override
+  public void testGetFileSystemType() {
+    assertEquals("smb", fst.getName());
+  }
+
+  @Override
+  public void testGetFile() throws Exception {
+    // TODO: Can not really do this without a real SMB connection.
+  }
+
+  @Override
+  public void testGetFileForDir() throws Exception {
+    // TODO: Can not really do this without a real SMB connection.
+  }
+
+  @Override
+  public void testUserPassowrdRequired() throws Exception {
+    assertTrue(fst.isUserPasswordRequired());
+  }
 }

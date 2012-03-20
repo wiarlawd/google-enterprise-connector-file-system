@@ -14,53 +14,47 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTime;
+import com.google.enterprise.connector.spi.RepositoryException;
+
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.logging.Logger;
 
 /**
- * An implementation of ReadonlyFile that delegates to an underlying
+ * An implementation of {@link ReadonlyFile} that delegates to an underlying
  * java.io.File object. This implementation is Windows specific since it tries
  * to call windows specific JNA calls to get / set the last access time of the
  * file.
  */
-public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
+/* TODO: Implement detectServerDown() for UNC paths. */
+public class WindowsReadonlyFile
+    extends AccessTimePreservingReadonlyFile<WindowsReadonlyFile> {
+
+  /** The delegate file implementation. */
+  private final WindowsFileDelegate delegate;
+
+  /** If true, preserve the last access time for the file. */
+  private final boolean accessTimeResetFlag;
+
   /**
    * Constant for this file system type
    */
   public static final String FILE_SYSTEM_TYPE = "windows";
-  /**
-   * Timestamp for the last accessed time of the file
-   */
-  private Timestamp lastAccessTimeOfFile;
-  /**
-   * Underlying java.io.File delegate
-   */
-  private final File delegate;
-  /**
-   * Flag to turn on / off the last access time reset feature
-   */
-  private final boolean accessTimeResetFlag;
-  private static final Logger LOG = Logger.getLogger(WindowsReadonlyFile.class.getName());
-
-  public WindowsReadonlyFile(File file, boolean accessTimeResetFlag) {
-    this.delegate = file;
-    this.accessTimeResetFlag = accessTimeResetFlag;
-    if (delegate.isFile() && lastAccessTimeOfFile == null) {
-      lastAccessTimeOfFile = this.getLastAccessTime(file.getAbsolutePath());
-      LOG.finest("Getting the last access time for " + file.getAbsolutePath()
-              + " as : " + lastAccessTimeOfFile);
-    }
-  }
 
   public WindowsReadonlyFile(String absolutePath, boolean accessTimeResetFlag) {
-    this(new File(absolutePath), accessTimeResetFlag);
+    this(new WindowsFileDelegate(absolutePath), accessTimeResetFlag);
+  }
+
+  private WindowsReadonlyFile(WindowsFileDelegate delegate,
+                              boolean accessTimeResetFlag) {
+    super(delegate, accessTimeResetFlag);
+    this.delegate = delegate;
+    this.accessTimeResetFlag = accessTimeResetFlag;
+  }
+
+  @Override
+  protected WindowsReadonlyFile newChild(String name) {
+    return new WindowsReadonlyFile(new WindowsFileDelegate(delegate, name),
+                                   accessTimeResetFlag);
   }
 
   /* @Override */
@@ -69,137 +63,8 @@ public class WindowsReadonlyFile implements ReadonlyFile<WindowsReadonlyFile> {
   }
 
   /* @Override */
-  public boolean canRead() {
-    return delegate.canRead();
-  }
-
-  /* @Override */
-  public Acl getAcl() {
-    // TODO: figure out what the ACLs really are.
-    return Acl.newPublicAcl();
-  }
-
-  /* @Override */
-  public InputStream getInputStream() throws IOException {
-    return new WindowsFileInputStream(delegate, lastAccessTimeOfFile,
-            accessTimeResetFlag);
-  }
-
-  /* @Override */
   public String getPath() {
-    if (delegate.isDirectory()) {
-      return delegate.getAbsolutePath() + File.separatorChar;
-    }
-    return delegate.getAbsolutePath();
-  }
-
-  /* @Override */
-  public String getDisplayUrl() {
-    return getPath();
-  }
-
-  /* @Override */
-  public boolean isDirectory() {
-    return delegate.isDirectory();
-  }
-
-  /* @Override */
-  public boolean isRegularFile() {
-    return delegate.isFile();
-  }
-
-  /* @Override */
-  public long length() {
-    return delegate.isFile() ? delegate.length() : 0L;
-  }
-
-  /* @Override */
-  public List<WindowsReadonlyFile> listFiles() throws IOException {
-    File[] files = delegate.listFiles();
-    if (files == null) {
-      throw new IOException("failed to list files in " + getPath());
-    }
-    List<WindowsReadonlyFile> result = new ArrayList<WindowsReadonlyFile>(
-            files.length);
-    for (int k = 0; k < files.length; ++k) {
-      result.add(new WindowsReadonlyFile(files[k], this.accessTimeResetFlag));
-    }
-    Collections.sort(result, new Comparator<WindowsReadonlyFile>() {
-      /* @Override */
-      public int compare(WindowsReadonlyFile o1, WindowsReadonlyFile o2) {
-        return o1.getPath().compareTo(o2.getPath());
-      }
-
-    });
-    return result;
-  }
-
-  /* @Override */
-  public long getLastModified() throws IOException {
-    long lastModified = delegate.lastModified();
-    if (lastModified == 0) {
-      throw new IOException("failed to get last-modified time for " + getPath());
-    }
-    return lastModified;
-  }
-
-  /* @Override */
-  public boolean supportsAuthn() {
-    return false;
-  }
-
-  @Override
-  public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
-    return result;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (!(obj instanceof WindowsReadonlyFile)) {
-      return false;
-    }
-    WindowsReadonlyFile other = (WindowsReadonlyFile) obj;
-    if (delegate == null) {
-      if (other.delegate != null) {
-        return false;
-      }
-    } else if (!delegate.equals(other.delegate)) {
-      return false;
-    }
-    return true;
-  }
-
-  public boolean acceptedBy(FilePatternMatcher matcher) {
-    return matcher.acceptName(getPath());
-  }
-
-  /**
-   * Method to get the last access time of the file. If for some reason, the
-   * last access time is not fetched, null is returned and in that case, the
-   * access time is not set to the file.
-   * 
-   * @param absolutePath File name
-   * @return Last access time if it is successfully fetched, null otherwise.
-   */
-  private Timestamp getLastAccessTime(String absolutePath) {
-    Timestamp ts = new Timestamp(0);
-    if (!WindowsFileTimeUtil.getFileAccessTime(absolutePath, ts)) {
-      ts = null;
-    }
-    return ts;
-  }
-
-  /* @Override */
-  public boolean exists() {
-    return delegate.exists();
+    String path = delegate.getAbsolutePath();
+    return (delegate.isDirectory()) ? path + File.separatorChar : path;
   }
 }

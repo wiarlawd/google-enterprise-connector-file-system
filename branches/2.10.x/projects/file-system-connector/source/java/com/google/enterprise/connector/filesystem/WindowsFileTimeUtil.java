@@ -1,11 +1,11 @@
 // Copyright 2010 Google Inc.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //      http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,14 +13,16 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTime;
+
 import com.sun.jna.Native;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.WinBase;
 import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.win32.W32APIOptions;
 
-import java.sql.Timestamp;
-import java.util.Date;
+import java.io.IOException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -35,14 +37,17 @@ class WindowsFileTimeUtil {
    * Windows specific standard code for generic read access of a file
    */
   private static final int GENERIC_READ = 0x80000000;
-  private static final Logger LOG = Logger.getLogger(WindowsFileTimeUtil.class.getName());
+  private static final Logger LOG =
+      Logger.getLogger(WindowsFileTimeUtil.class.getName());
 
   /**
    * Windows specific Kernel implementation and declarations of the methods
    * used.
    */
   private interface WindowsKernel32 extends Kernel32 {
-    static final WindowsKernel32 instance = (WindowsKernel32) Native.loadLibrary("kernel32", WindowsKernel32.class, W32APIOptions.DEFAULT_OPTIONS);
+    static final WindowsKernel32 instance =
+        (WindowsKernel32) Native.loadLibrary("kernel32", WindowsKernel32.class,
+                                             W32APIOptions.DEFAULT_OPTIONS);
 
     boolean GetFileTime(WinNT.HANDLE hFile, WinBase.FILETIME lpCreationTime,
             WinBase.FILETIME lpLastAccessTime, WinBase.FILETIME lpLastWriteTime);
@@ -63,100 +68,85 @@ class WindowsFileTimeUtil {
     try {
       win32 = WindowsKernel32.instance;
     } catch (Throwable t) {
-      LOG.finest("Error while setting the win32 instance. Probably this is not a windows environment.");
+      LOG.finest("Error while setting the win32 instance. "
+                 + "Probably this is not a windows environment.");
     }
   }
 
+  /** A FileTime that encapsulates a WinBase.FILETIME. */
+  private static class WindowsFileTime extends WinBase.FILETIME
+    implements FileTime {}
+
   /**
    * Method to get the last access time of a WINDOWS file.
-   * 
+   *
    * @param fileName Name of the file whose time is to be fetched
-   * @param lastAccessTime Instance where the last access time is to be set.
-   * @return true if the time is set; false if for any reason method is not able
-   *         to set the time
+   * @return a FileTime representing the last access time of the file,
+   *         or null if the filetime can not be retrieved
    */
-  static boolean getFileAccessTime(String fileName, Date lastAccessTime) {
-    WinBase.FILETIME windowsLastAccssTime = new WinBase.FILETIME();
+  static FileTime getFileAccessTime(String fileName) throws IOException {
     if (win32 == null) {
-      return false;
+      throw new IOException("Not a native Windows environment.");
     }
     WinNT.HANDLE file = openFile(fileName, GENERIC_READ);
-    if (file == WinBase.INVALID_HANDLE_VALUE)
-      return false;
-    boolean success = win32.GetFileTime(file, null, windowsLastAccssTime, null);
-    if (success) {
-      if (lastAccessTime != null)
-        lastAccessTime.setTime(windowsLastAccssTime.toLong());
-    } else {
-      int errorCode = win32.GetLastError();
-      LOG.finest("Error while getting the last access time for file : "
-              + fileName + " Error code : " + errorCode);
+    try {
+      WindowsFileTime lastAccessTime = new WindowsFileTime();
+      if (win32.GetFileTime(file, null, lastAccessTime, null)) {
+        return lastAccessTime;
+      } else {
+        int errorCode = win32.GetLastError();
+        throw new IOException("Error code " + errorCode + " returned while "
+            + "getting the last access time for file " + fileName);
+      }
+    } finally {
+      // TODO: Figure out whether we need to do this.
+      win32.CloseHandle(file);
     }
-    // TODO Figure out whether we need to do this.
-    win32.CloseHandle(file);
-    return success;
   }
 
   /**
    * Method to set the last access time of the file.
-   * 
+   *
    * @param fileName Name of the file whose time is to be set
-   * @param lastAccessTime time to be set
-   * @return true if the time is set successfully; false otherwise
+   * @param accessTime time to be set
    */
-  static boolean setFileAccessTime(String fileName,
-          final Timestamp lastAccessTime) {
+  static void setFileAccessTime(String fileName,
+                                FileTime accessTime) throws IOException {
     if (win32 == null) {
-      return false;
+      throw new IOException("Not a native Windows environment.");
     }
-    LOG.finest("Setting the last time for : " + fileName
-            + "Last access time : " + lastAccessTime);
-    WinNT.HANDLE file = openFile(fileName, WinNT.FILE_ATTRIBUTE_TEMPORARY);
-    if (file == WinBase.INVALID_HANDLE_VALUE)
-      return false;
-    WinBase.FILETIME windowsLastAccessTime = ConvertDateToFILETIME(lastAccessTime);
-    boolean success = win32.SetFileTime(file, null, windowsLastAccessTime, null);
-    if (!success) {
-      int errorCode = win32.GetLastError();
-      LOG.finest("Error while setting the last access time for file : "
-              + fileName + " Error code : " + errorCode);
-    }
-    // TODO Figure out whether we need to do this.
-    win32.CloseHandle(file);
-    return success;
-  }
+    WindowsFileTime windowsAccessTime = (WindowsFileTime) accessTime;
+    LOG.log(Level.FINEST, "Setting the last time to {0} for file {1}",
+            new Object[] { windowsAccessTime, fileName });
 
-  /**
-   * Converts the java date into windows file time.
-   * 
-   * @param date
-   * @param ft
-   */
-  private static WinBase.FILETIME ConvertDateToFILETIME(Date date) {
-    WinBase.FILETIME windowsLastAccessTime = null;
-    if (date != null) {
-      long iFileTime = 0;
-      windowsLastAccessTime = new WinBase.FILETIME();
-      iFileTime = WinBase.FILETIME.dateToFileTime(date);
-      windowsLastAccessTime.dwHighDateTime = (int) ((iFileTime >> 32) & 0xFFFFFFFFL);
-      windowsLastAccessTime.dwLowDateTime = (int) (iFileTime & 0xFFFFFFFFL);
+    WinNT.HANDLE file = openFile(fileName, WinNT.FILE_ATTRIBUTE_TEMPORARY);
+    try {
+      if (!win32.SetFileTime(file, null, windowsAccessTime, null)) {
+        int errorCode = win32.GetLastError();
+        throw new IOException("Error code " + errorCode + " returned while "
+            + "setting the last access time for file " + fileName);
+      }
+    } finally {
+      // TODO Figure out whether we need to do this.
+      win32.CloseHandle(file);
     }
-    return windowsLastAccessTime;
   }
 
   /**
    * Method to open the file. Takes fileName and level of access as parameters.
-   * 
+   *
    * @param fileName File name for the file to open
    * @param dwDesiredAccess Access level in Windows specific code
    * @return File handle
    */
-  private static WinNT.HANDLE openFile(String fileName, int dwDesiredAccess) {
-    WinNT.HANDLE hFile = win32.CreateFile(fileName, dwDesiredAccess, 0, null, WinNT.OPEN_EXISTING, 0, null);
+  private static WinNT.HANDLE openFile(String fileName, int dwDesiredAccess)
+      throws IOException {
+    WinNT.HANDLE hFile = win32.CreateFile(fileName, dwDesiredAccess, 0, null,
+                                          WinNT.OPEN_EXISTING, 0, null);
     if (hFile == WinBase.INVALID_HANDLE_VALUE) {
       int errorCode = win32.GetLastError();
-      LOG.finest("Error while opening the file : " + fileName
-              + " Error code : " + errorCode);
+      throw new IOException("Error code " + errorCode
+                            + " returned while opening file " + fileName);
     }
     return hFile;
   }

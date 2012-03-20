@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2012 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,27 @@
 
 package com.google.enterprise.connector.filesystem;
 
-/** FileSystemType for Java java.io.File file systems. */
-public class JavaFileSystemType
-    extends AbstractFileSystemType<JavaReadonlyFile> {
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.IOException;
 
-  @Override
-  public JavaReadonlyFile getFile(String path, Credentials credentials) {
-    return new JavaReadonlyFile(path);
+/**
+ * An implementation of {@link FileDelegate} that wraps {@code java.io.File}.
+ */
+public class JavaFileDelegate extends File implements FileDelegate {
+
+  public JavaFileDelegate(String path) {
+    super(path);
   }
 
-  @Override
-  public String getName() {
-    return JavaReadonlyFile.FILE_SYSTEM_TYPE;
+  public JavaFileDelegate(File f, String name) {
+    super(f, name);
+  }
+
+  /* @Override */
+  public InputStream getInputStream() throws IOException {
+    return new BufferedInputStream(new FileInputStream(this));
   }
 }

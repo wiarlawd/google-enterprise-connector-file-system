@@ -19,7 +19,6 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import jcifs.Config;
-import jcifs.smb.SmbException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,9 +27,8 @@ import java.util.logging.Logger;
 
 /**
  * An implementation of FileSystemType for SMB file systems.
- *
  */
-public class SmbFileSystemType implements FileSystemType {
+public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
   /**
    * Name of the jcifsConfiguration.properties resource. Users configure
    * jcifs by editing this file.
@@ -84,15 +82,16 @@ public class SmbFileSystemType implements FileSystemType {
     this.propertyFetcher = propertyFetcher;
   }
 
-  /* @Override */
+  @Override
   public SmbReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryException {
     return new SmbReadonlyFile(path, credentials, propertyFetcher);
   }
 
-  /* @Override */
+  @Override
   public boolean isPath(String path) {
-    return path.startsWith(SMB_PATH_PREFIX);
+    return (path != null && path.trim().length() > 0
+            && path.startsWith(SMB_PATH_PREFIX));
   }
 
   /**
@@ -107,7 +106,7 @@ public class SmbFileSystemType implements FileSystemType {
    * </pre>
    *
    * @throws RepositoryException if repository is inaccessible.
-   * @throws RepositoryDocumentException if {@code path} is valid.
+   * @throws RepositoryDocumentException if {@code path} is not valid.
    * @throws IllegalArgumentException if {@link #isPath} returns false for
    * path.
    */
@@ -115,15 +114,8 @@ public class SmbFileSystemType implements FileSystemType {
   public SmbReadonlyFile getReadableFile(final String smbStylePath,
       final Credentials credentials)
       throws RepositoryException, WrongSmbTypeException {
-    if (!isPath(smbStylePath)) {
-      throw new IllegalArgumentException("Invalid path " + smbStylePath);
-    }
+    SmbReadonlyFile result = super.getReadableFile(smbStylePath, credentials);
     try {
-      SmbReadonlyFile result = getFile(smbStylePath, credentials);
-      if (!result.exists()) {
-        throw new NonExistentResourceException(
-            "This resource path does not exist: " + smbStylePath);
-      }
       if (!result.isTraversable()) {
         throw new WrongSmbTypeException("Wrong SMB type", null);
       }
@@ -134,12 +126,12 @@ public class SmbFileSystemType implements FileSystemType {
     }
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return SmbReadonlyFile.FILE_SYSTEM_TYPE;
   }
 
-  /* @Override */
+  @Override
   public boolean isUserPasswordRequired() {
     return true;
   }
@@ -155,5 +147,4 @@ public class SmbFileSystemType implements FileSystemType {
      */
     boolean isLastAccessResetFlagForSmb();
   }
-
 }

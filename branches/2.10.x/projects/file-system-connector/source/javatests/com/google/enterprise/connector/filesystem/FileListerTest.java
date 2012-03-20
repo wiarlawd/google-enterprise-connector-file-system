@@ -213,7 +213,8 @@ public class FileListerTest extends TestCase {
     MockReadonlyFile root = MockReadonlyFile.createRoot("/foo/bar");
     MockReadonlyFile f1 = root.addFile("f1", "f1d");
     MockReadonlyFile fail1 = root.addFile("fail1", "iExpectToFail");
-    fail1.setLengthException(new IOException("Expected IOException"));
+    fail1.setException(MockReadonlyFile.Where.LENGTH,
+                      new IOException("Expected IOException"));
     MockReadonlyFile f2 = root.addFile("f2", "f2d");
     RecordingDocumentAcceptor acceptor = new RecordingDocumentAcceptor();
     runLister(root, acceptor);
