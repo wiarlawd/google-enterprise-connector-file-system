@@ -384,4 +384,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   public void setExists(boolean exists) {
     this.exists = exists;
   }
+
+  @Override
+  public Acl getShareAcl() throws IOException {
+    return null;
+  }
 }

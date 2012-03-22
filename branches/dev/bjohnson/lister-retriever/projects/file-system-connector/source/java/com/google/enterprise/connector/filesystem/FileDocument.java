@@ -42,15 +42,23 @@ public class FileDocument implements Document {
   private static final Logger LOGGER =
       Logger.getLogger(FileDocument.class.getName());
 
+  public static final String SHARE_ACL_DOCID = "shareAcl";
   private final ReadonlyFile<?> file;
   private final DocumentContext context;
   private final Map<String, List<Value>> properties;
+  private final boolean isRoot;
 
   FileDocument(ReadonlyFile<?> file, DocumentContext context)
+      throws RepositoryException {
+    this(file, context, false);
+  }
+
+  FileDocument(ReadonlyFile<?> file, DocumentContext context, boolean isRoot)
       throws RepositoryException {
     this.file = file;
     this.context = context;
     this.properties = Maps.newHashMap();
+    this.isRoot = isRoot;
     fetchProperties();
   }
 
@@ -148,9 +156,13 @@ public class FileDocument implements Document {
               addProperty(SpiConstants.PROPNAME_ISPUBLIC,
                           Boolean.TRUE.toString());
             } else {
-              //TODO: handle root parent pointing to share ACL for share
-              addProperty(SpiConstants.PROPNAME_ACLINHERITFROM,
-                  file.getParent());
+              if (isRoot) {
+                addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
+                    getRootShareAclId(file));
+              } else {
+                addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
+                    file.getParent());
+              }
               addProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
               addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
             }
@@ -168,6 +180,12 @@ public class FileDocument implements Document {
     }
   }
 
+  public static String getRootShareAclId(ReadonlyFile<?> root) {
+    String rootPath = root.getPath();
+    //TODO: unique name for the share
+    String docId = rootPath + SHARE_ACL_DOCID;
+    return docId;
+  }
 
   /**
    * Adds a property to the property map. If the property

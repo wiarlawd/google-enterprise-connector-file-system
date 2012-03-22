@@ -16,7 +16,6 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.spi.TraversalContext;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 

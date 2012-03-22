@@ -171,6 +171,12 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   }
 
   /* @Override */
+  public Acl getShareAcl() throws IOException {
+    // TODO: figure out what the share ACLs really are.
+    return null;
+  }
+
+  /* @Override */
   public boolean supportsAuthn() {
     return false;
   }

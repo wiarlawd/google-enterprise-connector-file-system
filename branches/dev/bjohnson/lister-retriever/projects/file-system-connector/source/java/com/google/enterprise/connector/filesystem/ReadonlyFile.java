@@ -103,6 +103,13 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   public Acl getAcl() throws IOException, RepositoryException;
 
   /**
+   * Returns share level ACL.  (The getAcl method return file level ACL).
+   * Returns null for non-windows share.
+   * @throws IOException
+   */
+  public Acl getShareAcl() throws IOException;
+
+  /**
    * @return true if the file exists and can be read; false otherwise
    */
   public boolean canRead() throws RepositoryException;

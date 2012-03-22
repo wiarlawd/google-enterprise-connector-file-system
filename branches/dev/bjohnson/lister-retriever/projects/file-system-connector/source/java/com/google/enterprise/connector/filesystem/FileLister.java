@@ -20,6 +20,7 @@ import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
 import com.google.enterprise.connector.spi.Lister;
+import com.google.enterprise.connector.spi.SecureDocument;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalContextAware;
@@ -27,12 +28,16 @@ import com.google.enterprise.connector.spi.TraversalSchedule;
 import com.google.enterprise.connector.spi.TraversalScheduleAware;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.Value;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -254,6 +259,14 @@ class FileLister implements Lister, TraversalContextAware,
       try {
         FileIterator iter =
           new FileIterator(root, filePatternMatcher, context, traversalContext);
+        try {
+          Document rootShareAclDoc = createRootShareAcl(root);
+          if(rootShareAclDoc != null)
+            documentAcceptor.take(rootShareAclDoc);
+        } catch (IOException e) {
+          LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
+              + root.getPath(), e);
+        }
         while (notShutdown() && iter.hasNext()) {
           String path = "";
           try {
@@ -268,6 +281,40 @@ class FileLister implements Lister, TraversalContextAware,
         LOGGER.fine("End traversal: " + startPath);
         documentAcceptor.flush();
       }
+    }
+
+    /*
+     * Create and return share ACL as secure document for the root
+     *
+     * @throws IOException
+     */
+    private Document createRootShareAcl(ReadonlyFile<?> root) 
+        throws IOException {
+      Acl shareAcl = root.getShareAcl();
+      if (shareAcl != null) {
+        Map<String, List<Value>> aclValues = new HashMap<String, List<Value>>();
+        aclValues.put(SpiConstants.PROPNAME_ACLUSERS, 
+            getStringValueList(shareAcl.getUsers()));
+        aclValues.put(SpiConstants.PROPNAME_ACLGROUPS, 
+            getStringValueList(shareAcl.getGroups()));
+        aclValues.put(SpiConstants.PROPNAME_DOCID,
+            Collections.singletonList(Value.getStringValue(
+                FileDocument.getRootShareAclId(root))));
+        return SecureDocument.createAcl(aclValues);
+      } else {
+        return null;
+      }
+    }
+
+    /*
+     * Creates a value list carrying a String values.
+     */
+    private List<Value> getStringValueList(List<String> strValues) {
+      List<Value> valueList = new ArrayList<Value>();
+      for (String str : strValues) {
+        valueList.add(Value.getStringValue(str));
+      }
+      return valueList;
     }
   }
 }

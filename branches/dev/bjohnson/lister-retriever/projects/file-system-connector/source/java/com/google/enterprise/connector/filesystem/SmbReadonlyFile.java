@@ -186,6 +186,12 @@ public class SmbReadonlyFile
   }
 
   @Override
+  public Acl getShareAcl() throws IOException {
+    SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
+    return builder.getShareAcl();
+  }
+
+  @Override
   public boolean isDirectory() throws RepositoryException {
     // There appears to be a bug in (at least) v1.2.13 that causes
     // non-existent paths to return true.
