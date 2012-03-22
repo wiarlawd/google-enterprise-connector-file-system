@@ -16,9 +16,9 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.SmbAclBuilder.SmbAclProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 import jcifs.Config;
-import jcifs.smb.SmbException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,9 +27,8 @@ import java.util.logging.Logger;
 
 /**
  * An implementation of FileSystemType for SMB file systems.
- *
  */
-public class SmbFileSystemType implements FileSystemType {
+public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
   /**
    * Name of the jcifsConfiguration.properties resource. Users configure
    * jcifs by editing this file.
@@ -70,17 +69,12 @@ public class SmbFileSystemType implements FileSystemType {
             + JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME
             + ". Accepting default jcifs configuration.", ioe);
       } finally {
-        close(is);
+        try {
+          is.close();
+        } catch (IOException ioe) {
+          LOG.log(Level.WARNING, "Failed to close input stream.", ioe);
+        }
       }
-    }
-
-  }
-
-  private static void close(InputStream is) {
-    try {
-      is.close();
-    } catch (IOException ioe) {
-      LOG.log(Level.WARNING, "Failed to close input stream.", ioe);
     }
   }
 
@@ -88,15 +82,16 @@ public class SmbFileSystemType implements FileSystemType {
     this.propertyFetcher = propertyFetcher;
   }
 
-  /* @Override */
+  @Override
   public SmbReadonlyFile getFile(String path, Credentials credentials)
-      throws RepositoryDocumentException {
+      throws RepositoryException {
     return new SmbReadonlyFile(path, credentials, propertyFetcher);
   }
 
-  /* @Override */
+  @Override
   public boolean isPath(String path) {
-    return path.startsWith(SMB_PATH_PREFIX);
+    return (path != null && path.trim().length() > 0
+            && path.startsWith(SMB_PATH_PREFIX));
   }
 
   /**
@@ -110,78 +105,46 @@ public class SmbFileSystemType implements FileSystemType {
    *   smb://host/path
    * </pre>
    *
-   * The CIFS library is very picky about trailing slashes: directories must
-   * end in slash and regular files must not. This parser is much less picky:
-   * it tries both and uses whichever yields a readable file.
-   *
-   * @throws RepositoryDocumentException if {@code path} is valid.
+   * @throws RepositoryException if repository is inaccessible.
+   * @throws RepositoryDocumentException if {@code path} is not valid.
    * @throws IllegalArgumentException if {@link #isPath} returns false for
    * path.
    */
   /* @Override */
   public SmbReadonlyFile getReadableFile(final String smbStylePath,
       final Credentials credentials)
-          throws RepositoryDocumentException, WrongSmbTypeException {
-    if (!isPath(smbStylePath)) {
-      throw new IllegalArgumentException("Invalid path " + smbStylePath);
-    }
-    SmbReadonlyFile result = getReadableFileHelper(smbStylePath, credentials);
-    if (null == result) {
-      throw new RepositoryDocumentException("failed to open file: " 
-          + smbStylePath);
-    } else if (!result.isTraversable()) {
-      throw new WrongSmbTypeException("Wrong smb type", null);
-    } else {
-      return result;
-    }
-  }
-
-  private SmbReadonlyFile getReadableFileHelper(String path,
-      Credentials credentials) throws FilesystemRepositoryDocumentException {
-    SmbReadonlyFile result = null;
+      throws RepositoryException, WrongSmbTypeException {
+    SmbReadonlyFile result = super.getReadableFile(smbStylePath, credentials);
     try {
-      result = new SmbReadonlyFile(path, credentials, propertyFetcher);
-      if (!result.exists()) {
-        throw new NonExistentResourceException(
-            "This resource path does not exist: " + path);
+      if (!result.isTraversable()) {
+        throw new WrongSmbTypeException("Wrong SMB type", null);
       }
+      return result;
     } catch (FilesystemRepositoryDocumentException e) {
       LOG.info("Validation error occured: " + e.getMessage());
       throw e;
-    } catch(RepositoryDocumentException rde) {
-      result = null;
-      if (rde.getCause() instanceof SmbException) {
-        SmbException smbe = (SmbException)rde.getCause();
-        if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-          throw new InsufficientAccessException("access denied", smbe); 
-        } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
-          throw new NonExistentResourceException("Path does not exist", smbe);                    
-        }
-      }
     }
-    return result;
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return SmbReadonlyFile.FILE_SYSTEM_TYPE;
   }
-  
-  /* @Override */
+
+  @Override
   public boolean isUserPasswordRequired() {
     return true;
   }
-  
+
   /**
-   * Interface to retrieve the properties required for Smb crawling. 
+   * Interface to retrieve the properties required for Smb crawling.
    */
   public static interface SmbFileProperties extends SmbAclProperties {
-      
+
     /**
      * Gets the lastAccessTimeResetFlag
      * @return Flag to decide whether or not to reset the last access time of file.
      */
     boolean isLastAccessResetFlagForSmb();
   }
-  
 }

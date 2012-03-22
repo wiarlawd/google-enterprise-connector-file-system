@@ -2,23 +2,23 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
-  
-  <bean id = "java-file-system-type"
-        class = "com.google.enterprise.connector.filesystem.JavaFileSystemType">
+
+  <bean id="java-file-system-type"
+        class="com.google.enterprise.connector.filesystem.JavaFileSystemType">
   </bean>
 
-  <bean id = "windows-file-system-type"
-        class = "com.google.enterprise.connector.filesystem.WindowsFileSystemType">
+  <bean id="windows-file-system-type"
+        class="com.google.enterprise.connector.filesystem.WindowsFileSystemType">
     <constructor-arg ref="filesystem-property-manager" />
   </bean>
 
-  <bean id = "smb-file-system-type"
-        class = "com.google.enterprise.connector.filesystem.SmbFileSystemType">
+  <bean id="smb-file-system-type"
+        class="com.google.enterprise.connector.filesystem.SmbFileSystemType">
     <constructor-arg ref="filesystem-property-manager" />
   </bean>
-  
-  <bean id = "nfs-file-system-type"
-        class = "com.google.enterprise.connector.filesystem.NfsFileSystemType">
+
+  <bean id="nfs-file-system-type"
+        class="com.google.enterprise.connector.filesystem.NfsFileSystemType">
   </bean>
 
   <bean id="file-system-type-registry"
@@ -33,97 +33,33 @@
     </constructor-arg>
   </bean>
 
-  <bean id="path-parser" class = "com.google.enterprise.connector.filesystem.PathParser">
+  <bean id="path-parser" class="com.google.enterprise.connector.filesystem.PathParser">
      <constructor-arg ref="file-system-type-registry"/>
   </bean>
-  
-  <bean id="mime-type-finder" 
-        class = "com.google.enterprise.connector.filesystem.MimeTypeFinder"/>
-  
-  <!-- 
-  Dummy bean to overcome backward compatibility of connectorInstance.xml
-   -->
-  <bean id="file-fetcher" class="java.lang.Object"/>
 
-  <bean id = "change-queue"
-        class = "com.google.enterprise.connector.util.diffing.ChangeQueue">
-    <constructor-arg ref="filesystem-property-manager"/>
-    <constructor-arg ref="activity-logger"/>
-  </bean>
+  <bean id="mime-type-finder"
+        class="com.google.enterprise.connector.util.MimeTypeDetector"/>
 
-  <bean id = "activity-logger"
-        class = "com.google.enterprise.connector.util.diffing.ChangeQueue$DefaultCrawlActivityLogger"
-        singleton = "false">
-  </bean>
-
-  <bean id = "queue-dir"
-        class = "java.io.File"
-        singleton = "false">
-    <constructor-arg index="0" value="${googleConnectorWorkDir}/queue"/>
-  </bean>
-
-  <bean id = "snapshot-dir"
-        class = "java.io.File"
-        singleton = "false">
-    <constructor-arg index="0" value="${googleConnectorWorkDir}/snapshots"/>
-  </bean>
-  
-  <bean id = "internal-document-handle-factory"
-        class = "com.google.enterprise.connector.filesystem.FileDeleteDocumentHandleFactory"
-        singleton = "true">
-  </bean>
-  
-  <bean id = "traversal-context-manager"
-        class = "com.google.enterprise.connector.util.diffing.TraversalContextManager"
-        singleton = "true">
-  </bean>
-  
-  <bean id = "document-context"
-        class = "com.google.enterprise.connector.filesystem.FileDocumentHandle$DocumentContext"
-        singleton = "true">
+  <bean id="document-context"
+        class="com.google.enterprise.connector.filesystem.DocumentContext"
+        singleton="true">
     <constructor-arg ref="file-system-type-registry"/>
     <constructor-arg value="${domain}"/>
     <constructor-arg value="${user}"/>
     <constructor-arg value="${password}"/>
     <constructor-arg ref="mime-type-finder"/>
-    <constructor-arg ref="traversal-context-manager"/>
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
 
-  <bean id = "client-document-handle-factory"
-        class = "com.google.enterprise.connector.filesystem.FileDocumentHandleFactory"
-        singleton = "true">
-    <constructor-arg ref="document-context"/>
-  </bean>
-  
-  <bean id = "checkpoint-and-change-queue"
-        class = "com.google.enterprise.connector.util.diffing.CheckpointAndChangeQueue">
-    <constructor-arg ref="change-queue"/>
-    <constructor-arg ref="queue-dir"/>
-    <constructor-arg ref="internal-document-handle-factory"/>
-    <constructor-arg ref="client-document-handle-factory"/>
-  </bean>
-
-  <bean id = "checksum-generator"
-        class = "com.google.enterprise.connector.util.BasicChecksumGenerator">
-    <constructor-arg index="0" value="SHA1"/>
-  </bean>
-
-  <bean id = "authz"
-        class = "com.google.enterprise.connector.filesystem.FileAuthorizationManager"
-        singleton = "false">
+  <bean id="authz"
+        class="com.google.enterprise.connector.filesystem.FileAuthorizationManager"
+        singleton="false">
     <constructor-arg ref="path-parser"/>
   </bean>
 
-  <!-- 
-  Dummy bean to overcome backward compatibility of connectorInstance.xml
-   -->
-  <bean id = "filesystem-monitor-manager" class = "java.lang.Object"/>
-
-  <bean id = "file-document-snapshot-repository-list"
-       class = "com.google.enterprise.connector.filesystem.FileDocumentSnapshotRepositoryList"
-       singleton = "true">
-    <constructor-arg ref="checksum-generator"/>
+  <bean id="file-lister"
+       class="com.google.enterprise.connector.filesystem.FileLister"
+       singleton="true">
     <constructor-arg ref="path-parser"/>
     <constructor-arg>
       <list>
@@ -211,44 +147,47 @@
     </constructor-arg>
     <constructor-arg ref="document-context"/>
   </bean>
-  
-  <bean id = "file-document-snapshot-factory"
-        class = "com.google.enterprise.connector.filesystem.FileDocumentSnapshotFactory"
-        singleton = "true">
+
+  <bean id="file-retriever"
+        class="com.google.enterprise.connector.filesystem.FileRetriever">
+    <constructor-arg ref="path-parser"/>
+    <constructor-arg ref="document-context"/>
   </bean>
 
-  <bean id = "monitor-manager"
-        class = "com.google.enterprise.connector.util.diffing.DocumentSnapshotRepositoryMonitorManagerImpl"
-        singleton = "true">
-    <constructor-arg ref="file-document-snapshot-repository-list"/>
-    <constructor-arg ref="file-document-snapshot-factory"/>
-    <constructor-arg ref="snapshot-dir"/>
-    <constructor-arg ref="checksum-generator"/>
-    <constructor-arg ref="change-queue"/>
-    <constructor-arg ref="checkpoint-and-change-queue"/>     
- </bean>
-
-  <bean id = "filesystem-property-manager-defaults"
-        singleton = "false">
+  <bean id="filesystem-property-manager-defaults">
     <property name="aceSecurityLevel" value="FILEANDSHARE"/>
     <property name="markDocumentPublicFlag" value="false"/>
     <property name="lastAccessResetFlagForSmb" value="true"/>
     <property name="lastAccessResetFlagForLocalWindows" value="true"/>
     <property name="pushAclFlag" value="true"/>
-    <property name="delayBetweenTwoScansInMillis" value="60000"/>
-    <property name="queueSize" value="1000"/>
-    <property name="introduceDelayAfterEveryScan" value="false"/>
     <property name="groupAclFormat" value="group"/>
     <property name="userAclFormat" value="user"/>
   </bean>
 
-
-  <bean id = "file-connector"
-        class = "com.google.enterprise.connector.filesystem.FileConnector"
-        singleton = "false">
+  <bean id="file-connector"
+        class="com.google.enterprise.connector.filesystem.FileConnector">
     <constructor-arg ref="authz"/>
-    <constructor-arg ref="monitor-manager"/>
-    <constructor-arg ref="traversal-context-manager"/>
+    <constructor-arg ref="file-lister"/>
+    <constructor-arg ref="file-retriever"/>
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
+
+  <!--
+    Dummy beans to overcome backward compatibility of connectorInstance.xml
+  -->
+  <bean id="activity-logger" class="java.lang.Object"/>
+  <bean id="change-queue" class="java.lang.Object"/>
+  <bean id="checkpoint-and-change-queue" class="java.lang.Object"/>
+  <bean id="checksum-generator" class="java.lang.Object"/>
+  <bean id="client-document-handle-factory" class="java.lang.Object"/>
+  <bean id="file-document-snapshot-factory" class="java.lang.Object"/>
+  <bean id="file-document-snapshot-repository-list" class="java.lang.Object"/>
+  <bean id="file-fetcher" class="java.lang.Object"/>
+  <bean id="filesystem-monitor-manager" class="java.lang.Object"/>
+  <bean id="internal-document-handle-factory" class="java.lang.Object"/>
+  <bean id="monitor-manager" class="java.lang.Object"/>
+  <bean id="queue-dir" class="java.lang.Object"/>
+  <bean id="snapshot-dir" class="java.lang.Object"/>
+  <bean id="traversal-context-manager" class="java.lang.Object"/>
+
 </beans>

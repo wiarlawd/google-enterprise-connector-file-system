@@ -10,6 +10,8 @@
   <property name="COMPILE_TARGET" value="1.5" />
   <property name="COMPILE_BOOTCLASSPATH" value="${build.bootclasspath}" />
 
+  <property name="svn.base.dir" value="../.." />
+
   <property name="build.dir" value="build" />
   <property name="build-prod.dir" value="${build.dir}/prod" />
   <property name="build-prod-config.dir" value="${build-prod.dir}/config" />
@@ -82,25 +84,21 @@
   </path>
 
   <!-- =========================== TASKS =============================== -->
+  <include file="${connector-manager-projects.dir}/svnbuild.xml" as="svn"/>
+
   <target name="build" depends="init,compile_prod,run_tests,jar_prod">
   </target>
 
-  <target name="init">
+  <target name="init" depends="svn.svn-status,svn.svn-branch-version">
     <tstamp />
-    <exec executable="svn"
-      failifexecutionfails="false"
-      resultproperty="svn-status-result">
-      <arg line="status"/>
-      <redirector outputproperty="svn-status"
-                  logError="true">
-     </redirector>
-    </exec>
 
-    <echo message="Note 'svn status' must return no changes to indicate a client with" />
-    <echo message="no changes to set svn-version in ${jar-prod.file}" />
-    <echo message="and in ${connector-filesystem-src.zip}." />
-    <echo message="svn status returned: " />
-    <echo message="${svn-status}" />
+    <echo message="Note 'svn status' should return no changes to indicate" />
+    <echo message="a client with no changes when building ${jar-prod.file}" />
+    <echo message="and ${connector-filesystem-src.zip} that will be given." />
+    <echo message="to customers.  svn status returned: " />
+    <echo message="${svn.status}" />
+
+    <echo message="svn.branch.version set to '${svn.branch.version}'" />
 
     <mkdir dir="${build.dir}" />
     <mkdir dir="${build-tests.dir}" />
@@ -125,51 +123,6 @@
     <mkdir dir="${javadoc-prod.dir}" />
 
     <mkdir dir="${tests_out.dir}" />
-
-    <exec executable="svn"
-      failifexecutionfails="false"
-      resultproperty="svn-url-result" >
-      <arg line="info" />
-      <redirector outputproperty="svn-url"
-                  logError="true" >
-        <outputfilterchain>
-      <linecontains>
-        <contains value="URL: "/>
-      </linecontains>
-          <replacestring from="URL: "/>
-        </outputfilterchain>
-      </redirector>
-    </exec>
-
-    <exec executable="svn"
-      failifexecutionfails="false"
-      resultproperty="svn-revision-result" >
-      <arg line="info"/>
-      <redirector outputproperty="svn-revision"
-                  logError="true">
-        <outputfilterchain>
-      <linecontains>
-        <contains value="Revision: " />
-      </linecontains>
-          <replacestring from="Revision: " />
-          <trim/>
-        </outputfilterchain>
-      </redirector>
-    </exec>
-
-    <condition property="svn-version"
-           value="${svn-revision} (${svn-url})"
-           else="?? Unknown svn version">
-      <and>
-         <equals arg1="0" arg2="${svn-url-result}" />
-         <equals arg1="0" arg2="${svn-revision-result}" />
-         <equals arg1="0" arg2="${svn-status-result}" />
-     <length string="${svn-status}" trim="true" length="0" />
-      </and>
-    </condition>
-
-    <echo message="svn-version set to '${svn-version}'" />
-
   </target>
 
   <target name="compile_prod" depends="init">
@@ -244,10 +197,7 @@
       <classpath>
         <pathelement location="${classes-tests.dir}" />
         <fileset dir="${connector-manager-thirdparty-prod-jar.dir}">
-          <include name="**/spring.jar" />
-          <include name="**/guava*.jar" />
-          <include name="**/json.jar" />
-          <include name="**/commons-logging.jar" />
+          <include name="**/*.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
           <include name="**/junit.jar" />
@@ -299,7 +249,8 @@
       <fileset dir="${build-prod.dir}" includes="*.properties"/>
       <manifest>
         <attribute name="Implementation-Title" value="File System Connector"/>
-        <attribute name="Implementation-Version" value="${version} (${svn-version}) ${TODAY}"/>
+        <attribute name="Implementation-Version"
+                   value="${version} (${svn.branch.version}) ${TODAY}"/>
         <attribute name="Implementation-Vendor" value="Google Inc."/>
         <attribute name="Specification-Title" value="Connector Manager SPI"/>
         <attribute name="Specification-Version" value="${version.spi}"/>
@@ -310,7 +261,8 @@
     </jar>
   </target>
 
-  <target name="javadoc_prod" depends="compile_prod" description="Create component Javadoc documentation">
+  <target name="javadoc_prod" depends="compile_prod"
+          description="Create component Javadoc documentation">
       <javadoc sourcepath   ="${src-prod.dir}"
                destdir      ="${javadoc.dir}"
                packagenames ="com.google.enterprise.connector.filesystem"
@@ -331,11 +283,12 @@
           description="Build distribution zip files.">
     <copy file="${release-notes.file}" tofile="${release-notes-zip-src.file}" >
        <filterchain>
-         <replacestring from="__SVN_VERSION__" to="r${svn-version} ${TODAY}"/>
+         <replacestring from="__SVN_VERSION__" to="r${svn.branch.version} ${TODAY}"/>
       </filterchain>
     </copy>
     <zip destfile="${connector-filesystem-src.zip}" >
-      <zipfileset dir="." prefix="connector-filesystem-${version}/projects/file-system-connector"
+      <zipfileset dir="."
+        prefix="connector-filesystem-${version}/projects/file-system-connector"
         includes="${readme.file}, ${copying.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
       <zipfileset dir="${zip-src.dir}" />
     </zip>
@@ -383,7 +336,7 @@
     <mkdir dir="${coverage.html.dir}" />
   </target>
 
-  <target name="compile_code_coverage" 
+  <target name="compile_code_coverage"
           depends="init_code_coverage,compile_prod,compile_tests" />
 
   <target name="instrument" depends="compile_code_coverage">
@@ -432,7 +385,8 @@
     </cobertura-report>
   </target>
 
-  <target name="clean_code_coverage" description="Remove all files created by the build/test process.">
+  <target name="clean_code_coverage"
+          description="Remove all files created by the build/test process.">
     <delete dir="${classes.dir}" />
     <delete dir="${instrumented.dir}" />
     <delete dir="${reports.dir}" />
@@ -440,8 +394,9 @@
     <delete file="cobertura.ser" />
   </target>
 
-  <target name="run_code_coverage" depends="run_tests,coverage-report,alternate-coverage-report" description="Compile, instrument ourself, run the tests and generate JUnit and coverage reports."/>
-
+  <target name="run_code_coverage"
+          depends="run_tests,coverage-report,alternate-coverage-report"
+          description="Compile, instrument ourself, run the tests and generate JUnit and coverage reports."/>
 
 </project>
 

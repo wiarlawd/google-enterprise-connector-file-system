@@ -53,8 +53,6 @@ public class FileConnectorTypeTest extends TestCase {
   private static final ResourceBundle US_BUNDLE =
       ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME, Locale.US);
 
-  private File snapshotDir;
-  private File persistDir;
   private HashMap<String, String> config;
   private FileConnectorType type;
 
@@ -92,14 +90,12 @@ public class FileConnectorTypeTest extends TestCase {
   @Override
   public void setUp() throws IOException {
     FileSystemTypeRegistry fileSystemTypeRegistry =
-      new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType()));
+        new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType()));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
 
     type = new FileConnectorType(pathParser);
 
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
-    snapshotDir = testDirectoryManager.makeDirectory("snapshots");
-    persistDir = testDirectoryManager.makeDirectory("queue");
 
     // Create a complete configuration. For now, most of the values are nonsense.
     config = new HashMap<String, String>();
@@ -170,9 +166,8 @@ public class FileConnectorTypeTest extends TestCase {
 
   public void testValidateGoodConfig() {
     // Make sure the complete configuration is valid.
-    ConfigureResponse r =
-        type.validateConfig(config, Locale.getDefault(),
-        new MockFileConnectorFactory(snapshotDir, persistDir));
+    ConfigureResponse r = type.validateConfig(config, Locale.getDefault(),
+                                              new MockFileConnectorFactory());
     assertNull(r);
   }
 
@@ -191,9 +186,8 @@ public class FileConnectorTypeTest extends TestCase {
           it.remove();
         }
       }
-      ConfigureResponse response =
-          type.validateConfig(config, Locale.getDefault(), new MockFileConnectorFactory(
-              snapshotDir, persistDir));
+      ConfigureResponse response = type.validateConfig(config,
+          Locale.getDefault(), new MockFileConnectorFactory());
       assertNotNull(response);
       assertEquals(US_BUNDLE.getString(FileSystemConnectorErrorMessages.MISSING_FIELDS.name()),
           response.getMessage());
@@ -206,7 +200,7 @@ public class FileConnectorTypeTest extends TestCase {
   public void testEmptyConfig() {
     config.clear();
     ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
-        new MockFileConnectorFactory(snapshotDir, persistDir));
+        new MockFileConnectorFactory());
     assertNotNull(response);
     assertEquals(US_BUNDLE.getString(FileSystemConnectorErrorMessages.MISSING_FIELDS.name()),
         response.getMessage());
@@ -230,7 +224,7 @@ public class FileConnectorTypeTest extends TestCase {
     config.put("start_2", "/foo/bar/baz");
 
     ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
-        new MockFileConnectorFactory(snapshotDir, persistDir));
+        new MockFileConnectorFactory());
     assertNotNull(response);
     assertTrue(response.getMessage().contains("/foo/bar/baz"));
     String snippet = response.getFormSnippet();
@@ -245,7 +239,7 @@ public class FileConnectorTypeTest extends TestCase {
     config.put("start_3", path3);
 
     ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
-        new MockFileConnectorFactory(snapshotDir, persistDir));
+        new MockFileConnectorFactory());
     assertNotNull(response);
     assertTrue(response.getMessage().contains(XML.escape(path2)));
     assertTrue(response.getMessage().contains(XML.escape(path3)));
@@ -256,8 +250,8 @@ public class FileConnectorTypeTest extends TestCase {
 
   public void testStartPathEliminatedByPatterns() {
     config.put("exclude_3", config.get("start_1"));
-    ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
-        new MockFileConnectorFactory(snapshotDir, persistDir));
+    ConfigureResponse response = type.validateConfig(config,
+        Locale.getDefault(), new MockFileConnectorFactory());
     assertNotNull(response);
     String errorMessage = "Error: patterns eliminated start path";
     assertTrue(response.getMessage().contains(errorMessage));
@@ -320,8 +314,8 @@ public class FileConnectorTypeTest extends TestCase {
   public void testUncDetectedAndSuggestionProvided() {
     String uncPath = "\\\\UNC\\AM\\I\\";
     config.put("start_3", uncPath);
-    ConfigureResponse response = type.validateConfig(config, Locale.getDefault(),
-        new MockFileConnectorFactory(snapshotDir, persistDir));
+    ConfigureResponse response = type.validateConfig(config,
+        Locale.getDefault(), new MockFileConnectorFactory());
     String suggestedPath = "smb://UNC/AM/I/";
     String errorMessage = "Convert UNC style path " + uncPath
         + " to SMB URL: " + suggestedPath + ", please.";
@@ -354,7 +348,7 @@ public class FileConnectorTypeTest extends TestCase {
         "<input name=\"exclude_3\" id=\"exclude_3\" "
             + "size=\"80\" value=\"&amp;&lt;>.\">"));
     }
-  
+
   public void testNoCredentialswhereRequired() {
     FileSystemType mockFileType = createMock(FileSystemType.class);
     expect(mockFileType.getName()).andReturn("mock");
@@ -362,7 +356,7 @@ public class FileConnectorTypeTest extends TestCase {
     expect(mockFileType.isUserPasswordRequired()).andReturn(true);
     replay(mockFileType);
 
-    FileSystemTypeRegistry fileSystemTypeRegistry = 
+    FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(mockFileType));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
 
@@ -372,9 +366,10 @@ public class FileConnectorTypeTest extends TestCase {
         Locale.getDefault());
     assertEquals("", response.getMessage());
     assertBalancedTags(response.getFormSnippet());
-    
-    response = type.validateConfig(config, Locale.getDefault(), new MockFileConnectorFactory(snapshotDir, persistDir));
-    
+
+    response = type.validateConfig(config, Locale.getDefault(),
+                                   new MockFileConnectorFactory());
+
     assertTrue(response.getMessage().contains("missing fields"));
     verify(mockFileType);
   }

@@ -15,7 +15,6 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import junit.framework.TestCase;
 
@@ -23,61 +22,67 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * Note that NfsFileSystemTypeTest and WindowsFileSystemTypeTest
+ * extend this test class merely for the convenience of
+ * sharing setup, teardown, and one or two tests; since they
+ * all work with local filesystem paths.
  */
 public class JavaFileSystemTypeTest extends TestCase {
-  private static final String FILE_ONE_CONTENTS = "contents of file 1";
-
-  private File dir;
-  private File file;
-  private final JavaFileSystemType fst = new JavaFileSystemType();
+  protected File dir;
+  protected File file;
+  protected FileSystemType fst;
 
   @Override
   public void setUp() {
     try {
       TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
       dir = testDirectoryManager.makeDirectory("root");
-      file = testDirectoryManager.writeFile("root/file1", FILE_ONE_CONTENTS);
+      file = testDirectoryManager.writeFile("root/file1", "file1_data");
     } catch (IOException e) {
       fail("failed to set up file system: " + e.getMessage());
     }
+    fst = getFileSystemType();
   }
 
-  public void testGetFile() {
-    ReadonlyFile<?> reconstructedDir = fst.getFile(dir.getAbsolutePath(), null);
-    assertEquals(dir.getAbsolutePath() + "/", reconstructedDir.getPath());
+  @Override
+  public void tearDown() throws Exception {
+    file.delete();
+    dir.delete();
+  }
 
-    ReadonlyFile<?>  reconstructedFile = fst.getFile(file.getAbsolutePath(), null);
-    assertEquals(file.getAbsolutePath(), reconstructedFile.getPath());
+  protected FileSystemType getFileSystemType() {
+    return new JavaFileSystemType();
   }
 
   public void testIsPath() {
     assertTrue(fst.isPath("/a/b"));
     assertFalse(fst.isPath("a/b"));
+    assertFalse(fst.isPath(""));
+    assertFalse(fst.isPath(null));
+    assertFalse(fst.isPath("smb://foo/bar"));
+    assertFalse(fst.isPath("nfs://foo/bar"));
+    assertFalse(fst.isPath("c:\\foo\\bar"));
+    assertFalse(fst.isPath("\\\\unc\\foo\\bar"));
   }
 
   public void testGetFileSystemType() {
     assertEquals("java", fst.getName());
   }
 
-  public void testGetReadonlyFile() throws Exception {
-    JavaReadonlyFile f = fst.getReadableFile(dir.getAbsolutePath(), null);
+  public void testGetFile() throws Exception {
+    ReadonlyFile f = fst.getFile(file.getAbsolutePath(), null);
+    assertTrue(f.isRegularFile());
     assertTrue(f.canRead());
-    try {
-      f = fst.getReadableFile(dir.getAbsolutePath() + "/missing", null);
-      fail("getReadbale should throw an Exception here");
-    } catch  (NonExistentResourceException rde){
-      // Expected.
-      assertTrue(rde.getMessage().contains("Path doesn't exist: " + dir.getAbsolutePath() + "/missing"));
-    } catch (Exception e) {
-      fail("Expecting NonExistentResourceException but got a different one");
-    }
-    try {
-      f = fst.getReadableFile("NotASlash/foo/bar.txt", null);
-      fail("getReadbale should throw an Exception here");
-    } catch  (IllegalArgumentException iae){
-      // Expected.
-      assertTrue(iae.getMessage().contains("Invalid path NotASlash/foo/bar.txt"));
-    }
+    assertEquals(file.getAbsolutePath(), f.getPath());
   }
 
+  public void testGetFileForDir() throws Exception {
+    ReadonlyFile f = fst.getFile(dir.getAbsolutePath(), null);
+    assertTrue(f.isDirectory());
+    assertTrue(f.canRead());
+  }
+
+  public void testUserPassowrdRequired() throws Exception {
+    assertFalse(fst.isUserPasswordRequired());
+  }
 }

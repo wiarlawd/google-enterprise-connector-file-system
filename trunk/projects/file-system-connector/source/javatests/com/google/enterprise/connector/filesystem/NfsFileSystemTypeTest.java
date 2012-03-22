@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2012 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,28 +16,33 @@ package com.google.enterprise.connector.filesystem;
 
 /**
  */
-public class WindowsFileSystemTypeTest extends JavaFileSystemTypeTest {
+public class NfsFileSystemTypeTest extends JavaFileSystemTypeTest {
 
   @Override
   protected FileSystemType getFileSystemType() {
-    return new WindowsFileSystemType(false);
+    return new NfsFileSystemType();
   }
 
+  @Override
   public void testIsPath() {
-    assertTrue(fst.isPath("c://"));
-    assertTrue(fst.isPath("c:\\foo\\bar"));
-    assertFalse(fst.isPath("aa://b"));
-    assertFalse(fst.isPath("3://b/f"));
+    assertTrue(fst.isPath("nfs://a/b"));
+    assertTrue(fst.isPath("NFS://a/b"));
+    assertFalse(fst.isPath("smb://a/b"));
+    assertFalse(fst.isPath("\\\\unc\\foo\\bar"));
+    assertFalse(fst.isPath("c:/a/b"));
+    assertFalse(fst.isPath("c:\\a\\b"));
+    assertFalse(fst.isPath("/a/b"));
     assertFalse(fst.isPath(""));
     assertFalse(fst.isPath(null));
-    assertFalse(fst.isPath("smb://foo/bar"));
-    assertFalse(fst.isPath("nfs://foo/bar"));
-    assertFalse(fst.isPath("/a/b"));
-    assertFalse(fst.isPath("a/b"));
-    assertFalse(fst.isPath("\\\\unc\\foo\\bar"));
   }
 
+  @Override
   public void testGetFileSystemType() {
-    assertEquals("windows", fst.getName());
+    assertEquals("nfs", fst.getName());
+  }
+
+  @Override
+  public void testUserPassowrdRequired() throws Exception {
+    assertTrue(fst.isUserPasswordRequired());
   }
 }

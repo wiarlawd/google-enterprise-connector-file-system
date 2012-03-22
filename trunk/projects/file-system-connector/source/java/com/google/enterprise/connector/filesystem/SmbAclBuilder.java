@@ -258,6 +258,22 @@ class SmbAclBuilder {
         new ArrayList<String>(groups));
   }
 
+  public Acl getShareAcl() throws IOException {
+    //getShareSecurity with true argument of SmbFile attempts to resolve 
+    //the SIDs within each ACE form
+    ACE[] shareAces = file.getShareSecurity(true);
+    //TODO: Extract a helper method to go from ACE[] to 
+    // Acl object here and in build().
+    Set<String> users = new TreeSet<String>();
+    Set<String> groups = new TreeSet<String>();
+    for (ACE finalAce : shareAces) {
+      addAceToSet(users, groups, finalAce);
+    }
+
+    return Acl.newAcl(new ArrayList<String>(users), 
+        new ArrayList<String>(groups));
+  }
+
   /**
    * Adds the ACE to appropriate set by checking whether
    * it is a user ACE or group ACE.
@@ -491,7 +507,8 @@ class SmbAclBuilder {
    * applies to contained objects but not this one.
    */
   private boolean isInheritOnlyAce(int aceFlags) {
-    return (aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY;
+    return (((aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY) 
+        || ((aceFlags & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED));
   }
 
   /**

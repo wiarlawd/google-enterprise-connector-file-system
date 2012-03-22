@@ -7,8 +7,8 @@
         class = "com.google.enterprise.connector.filesystem.FileSystemPropertyManager"
         parent = "filesystem-property-manager-defaults"
         singleton = "false">
-        
-    <!--   
+
+    <!--
     Security level to be considered for fetching ACL for a file
     There are 4 possible values for this parameter. These are in the order of
     Stronger to weaker security levels.
@@ -22,68 +22,41 @@
     <!--
       <property name="aceSecurityLevel" value="FILEANDSHARE"/>
     -->
-    
-    <!-- 
+
+    <!--
     Flag to mark all crawled documents as 'public'.
     -->
     <!--
     <property name="markDocumentPublicFlag" value="false"/>
     -->
-    
-    <!-- 
+
+    <!--
+    Flag to reset the last access time of a SMB file after crawling.
+    This should be used when the start path of the url starts with "smb://".
+    -->
+    <!--
+    <property name="lastAccessResetFlagForSmb" value="false"/>
+    -->
+
+    <!--
     Flag to reset the last access time of a local windows file after crawling.
-    This should be used when the start path of the url is a windows style 
-    file path. E.g. "c://share/data"
+    This should be used when the start path of the url is a windows
+    style file path. E.g. "c://share/data"
+    -->
+    <!--
+    <property name="lastAccessResetFlagForLocalWindows" value="false"/>
+    -->
+
+    <!--
+    Flag to decide whether or not to include ACLs in the feed.
     -->
     <!--
     <property name="pushAclFlag" value="true"/>
     -->
-  
-    <!-- 
-    Flag to reset the last access time of a SMB file after crawling.
-    This should be used when the start path of the url starts with "smb://".
-    -->
-    <!--  
-    <property name="lastAccessResetFlagForSmb" value="false"/>
-    -->
-    
-    <!-- 
-    Flag to reset the last access time of a local windows file after crawling.
-    This should be used when the start path of the url is a windows 
-    style file path. E.g. "c://share/data"
-    -->
-    <!-- 
-    <property name="lastAccessResetFlagForLocalWindows" value="false"/>
-    -->
 
-    <!-- 
-    No. of milliseconds to sleep after a scan
-    When this delay is applied depends on the 'introduceDelayAfterEveryScan'
-    parameter described below.
-    -->
     <!--
-    <property name="delayBetweenTwoScansInMillis" value="60000"/>
-    -->
-  
-    <!-- 
-    Size of the queue that holds the changes detected by the file system
-    connector. 
-    -->
-    <!--
-    <property name="queueSize" value="1000"/>
-    -->
-
-    <!-- 
-    Flag that decides whether to add delay after every scan or only after scan
-    that results in no changes. 
-    -->
-    <!--
-    <property name="introduceDelayAfterEveryScan" value="false"/>
-    -->
-  
-    <!-- 
     Represents the format in which ACE entries should be fed to GSA for groups
-    Possible values are 
+    Possible values are
     1.group@domain
     2.domain\group
     3.group   (only group name without domain information)
@@ -92,9 +65,9 @@
     <property name="groupAclFormat" value="group"/>
     -->
 
-    <!-- 
+    <!--
     Represents the format in which ACE entries should be fed to GSA for users
-    Possible values are 
+    Possible values are
     1.user@domain
     2.domain\user
     3.user   (only user name without domain information)

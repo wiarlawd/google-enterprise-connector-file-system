@@ -14,6 +14,16 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.ConfigureResponse;
+import com.google.enterprise.connector.spi.ConnectorFactory;
+import com.google.enterprise.connector.spi.ConnectorType;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.RepositoryLoginException;
+import com.google.enterprise.connector.spi.XmlUtils;
+
+import org.json.XML;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,15 +34,6 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.json.XML;
-
-import com.google.enterprise.connector.spi.ConfigureResponse;
-import com.google.enterprise.connector.spi.ConnectorFactory;
-import com.google.enterprise.connector.spi.ConnectorType;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.XmlUtils;
 
 /**
  * Facilitates creating a FileConnector by providing an HTML web form
@@ -566,6 +567,10 @@ public class FileConnectorType implements ConnectorType {
           addErrorToBuffer(buf, e.getMessage(), path, e, e.getErrorMessage());
         } catch (RepositoryDocumentException e) {
           addErrorToBuffer(buf, "failed to list start path: ", path, e, FileSystemConnectorErrorMessages.READ_START_PATH_FAILED);
+        } catch (RepositoryLoginException e) {
+          addErrorToBuffer(buf, "failed to access start path: ", path, e, FileSystemConnectorErrorMessages.INVALID_USER);
+        } catch (RepositoryException e) {
+          addErrorToBuffer(buf, "failed to access start path: ", path, e, FileSystemConnectorErrorMessages.READ_START_PATH_FAILED);
         } catch (IOException e) {
           addErrorToBuffer(buf, "failed to list start path: ", path, e, FileSystemConnectorErrorMessages.READ_START_PATH_FAILED);
         } catch (DirectoryListingException e) {
@@ -578,7 +583,7 @@ public class FileConnectorType implements ConnectorType {
     /**
      * Add the error message to the buffer along with path information for
      * which the error occured.
-     * @param buf Buffer 
+     * @param buf Buffer
      * @param path path of the file for which the error occured
      * @param e Exception with which the error occured
      */
@@ -612,9 +617,9 @@ public class FileConnectorType implements ConnectorType {
                 path));
             buf.append("\n");
           }
-        } catch (RepositoryDocumentException e1) {
+        } catch (RepositoryException e1) {
           // highly unexpected given assureStartPathsReadable() was called
-          LOG.warning("start path not readable: " + path);
+          LOG.log(Level.WARNING, "start path not readable: " + path, e1);
         }
       }
       return XML.escape(buf.toString());

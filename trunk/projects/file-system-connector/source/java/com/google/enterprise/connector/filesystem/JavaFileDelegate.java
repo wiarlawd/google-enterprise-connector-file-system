@@ -1,4 +1,4 @@
-// Copyright 2009 Google Inc.
+// Copyright 2012 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,27 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import java.io.IOException;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.IOException;
 
 /**
- * Factory for lazy construction of input streams for reading a
- * {@link FileInfo}.
+ * An implementation of {@link FileDelegate} that wraps {@code java.io.File}.
  */
-class FileInfoInputStreamFactory implements InputStreamFactory {
-  private final FileInfo file;
+public class JavaFileDelegate extends File implements FileDelegate {
 
-  FileInfoInputStreamFactory(FileInfo file) {
-    this.file = file;
+  public JavaFileDelegate(String path) {
+    super(path);
   }
+
+  public JavaFileDelegate(File f, String name) {
+    super(f, name);
+  }
+
+  /* @Override */
   public InputStream getInputStream() throws IOException {
-    return file.getInputStream();
+    return new BufferedInputStream(new FileInputStream(this));
   }
 }

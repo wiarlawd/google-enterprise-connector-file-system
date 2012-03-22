@@ -14,11 +14,11 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.util.diffing.DocIdUtil;
 import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,6 +27,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Implementation of the SPI {@link AuthorizationManager} interface
+ * for the file system connector.
  */
 public class FileAuthorizationManager implements AuthorizationManager {
   private static final Logger LOG =
@@ -42,7 +44,8 @@ public class FileAuthorizationManager implements AuthorizationManager {
    * passed in identity has permission to read the document with the
    * passed in docId and false otherwise.
    */
-  private boolean canRead(String docId, AuthenticationIdentity identity) {
+  private boolean canRead(String docId, AuthenticationIdentity identity)
+      throws RepositoryException {
     Credentials credentials =
         FileConnectorType.newCredentials(identity.getDomain(),
             identity.getUsername(), identity.getPassword());
@@ -51,14 +54,13 @@ public class FileAuthorizationManager implements AuthorizationManager {
       return false;
     }
     try {
-      String path = DocIdUtil.idToPath(docId);
-      ReadonlyFile<?> file = pathParser.getFile(path, credentials);
+      ReadonlyFile<?> file = pathParser.getFile(docId, credentials);
       if (file.supportsAuthn()) {
         return file.canRead();
       } else {
         return false;
       }
-    } catch (RepositoryDocumentException re) {
+    } catch (RepositoryException re) {
       LOG.log(Level.FINE,
           "Exception during authorization check for document id "
           + docId, re);
@@ -74,7 +76,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
   // TODO: This will require work for non-SMB files.
   /* @Override */
   public List<AuthorizationResponse> authorizeDocids(Collection<String> docIds,
-      AuthenticationIdentity identity) {
+      AuthenticationIdentity identity) throws RepositoryException {
     LOG.info("User name passed is : " + getShowString(identity.getUsername(),
         false) + " password is :"
         + getShowString(identity.getPassword(), true) + " domain is : "
@@ -102,8 +104,8 @@ public class FileAuthorizationManager implements AuthorizationManager {
   /**
    * @param arg String to show
    * @param isPassword Whether the string to show is password or not
-   * @return checks whether the input is null or blank, if yes then returns "blank or null", 
-   * If the input is not null or blank, then if it is a password then it returns "is not blank or null" 
+   * @return checks whether the input is null or blank, if yes then returns "blank or null",
+   * If the input is not null or blank, then if it is a password then it returns "is not blank or null"
    * if it is not password and not blank or null then returns the input as it is.
    */
   private String getShowString(String arg, boolean isPassword) {

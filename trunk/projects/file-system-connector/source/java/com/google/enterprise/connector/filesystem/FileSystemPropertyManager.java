@@ -2,62 +2,44 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.FileDocumentHandle.DocumentSecurityProperties;
+import com.google.enterprise.connector.filesystem.DocumentContext.DocumentSecurityProperties;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.filesystem.WindowsFileSystemType.WindowsFileProperties;
-import com.google.enterprise.connector.util.diffing.ChangeQueue.QueuePropertyFetcher;
 
 /**
  * Represents all the configurable properties for filesystem connector.
  * Individual components can fetch the required properties from this class.
  */
 public class FileSystemPropertyManager implements SmbFileProperties,
-    WindowsFileProperties, DocumentSecurityProperties, QueuePropertyFetcher {
- 
+    WindowsFileProperties, DocumentSecurityProperties {
+
   /**
    * Represents security level while getting the final ACL for a file.
    */
   private String aceSecurityLevel;
-  
+
   /**
    * Represents the flag to mark all crawled documents
-   * as public.  
+   * as public.
    */
   private boolean markDocumentPublicFlag;
-  
+
   /**
    * Represents the flag to feed ACL with the document.
    */
   private boolean pushAclFlag;
-  
+
   /**
-   * Represents the flag to reset last access time 
+   * Represents the flag to reset last access time
    * for SMB files.
    */
   private boolean lastAccessResetFlagForSmb;
-  
+
   /**
-   * Represents the flag to reset the last access time for 
+   * Represents the flag to reset the last access time for
    * local windows files.
    */
   private boolean lastAccessResetFlagForLocalWindows;
-  
-  /**
-   * Represents the delay that should be added after each scan
-   * that resulted into 0 changes.
-   */
-  private long delayBetweenTwoScansInMillis;
-  
-  /**
-   * Represents the ChangeQueue size.
-   */
-  private int queueSize;
-  
-  /**
-   * Represents the flag that decides whether to introduce delay
-   * after every scan or only after scans with no changes found.
-   */
-  private boolean introduceDelayAfterEveryScan;
 
   /**
    * Represents the ACLformat for the group ACEs.
@@ -83,34 +65,6 @@ public class FileSystemPropertyManager implements SmbFileProperties,
     this.aceSecurityLevel = aceSecurityLevel;
   }
 
-  /**
-   * @return the delayBetweenTwoScans
-   */
-  public long getDelayBetweenTwoScansInMillis() {
-    return delayBetweenTwoScansInMillis;
-  }
-
-  /**
-   * @param delayBetweenTwoScans the delayBetweenTwoScans to set
-   */
-  public void setDelayBetweenTwoScansInMillis(long delayBetweenTwoScans) {
-    this.delayBetweenTwoScansInMillis = delayBetweenTwoScans;
-  }
-
-  /**
-   * @return the queueSize
-   */
-  public int getQueueSize() {
-    return queueSize;
-  }
-
-  /**
-   * @param queueSize the queueSize to set
-   */
-  public void setQueueSize(int queueSize) {
-    this.queueSize = queueSize;
-  }
-  
   /**
    * @return the lastAccessResetFlagForSmb
    */
@@ -139,7 +93,7 @@ public class FileSystemPropertyManager implements SmbFileProperties,
       boolean lastAccessResetFlagForLocalWindows) {
     this.lastAccessResetFlagForLocalWindows = lastAccessResetFlagForLocalWindows;
   }
-  
+
   /**
    * @return the markDocumentPublicFlag
    */
@@ -166,22 +120,6 @@ public class FileSystemPropertyManager implements SmbFileProperties,
    */
   public void setPushAclFlag(boolean pushAclFlag) {
     this.pushAclFlag = pushAclFlag;
-  }
-
-  /**
-   * @return the introduceDelayAfterEveryScan
-   */
-  public boolean isIntroduceDelayAfterEveryScan() {
-      return introduceDelayAfterEveryScan;
-  }
-
-  /**
-   * @param introduceDelayAfterEveryScan the introduceDelayAfterEveryScan to
-   * set
-   */
-  public void setIntroduceDelayAfterEveryScan(
-      boolean introduceDelayAfterEveryScan) {
-    this.introduceDelayAfterEveryScan = introduceDelayAfterEveryScan;
   }
 
   /**
@@ -212,4 +150,8 @@ public class FileSystemPropertyManager implements SmbFileProperties,
     this.userAclFormat = userAclFormat;
   }
 
+  /* Obsolete properties. */
+  public void setDelayBetweenTwoScansInMillis(long ignored) {}
+  public void setIntroduceDelayAfterEveryScan(boolean ignored) {}
+  public void setQueueSize(int ignored) {}
 }
