@@ -19,7 +19,6 @@ import jcifs.smb.SmbFile;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.UnknownHostException;
 import java.util.Date;
 
 /**
@@ -34,12 +33,7 @@ public class SmbFileDelegate extends SmbFile
     super(path, auth);
   }
 
-  public SmbFileDelegate(SmbFile f, String name)
-      throws MalformedURLException, UnknownHostException {
-    super(f, name);
-  }
-
-  /* @Override */
+  @Override
   public FileTime getLastAccessTime() throws IOException {
     return new SmbFileTime(lastAccess());
   }
@@ -48,7 +42,7 @@ public class SmbFileDelegate extends SmbFile
    * This method sets the last access time back to the file,
    * using the API from the modified JCIFS jar file.
    */
-  /* @Override */
+  @Override
   public void setLastAccessTime(FileTime accessTime) throws IOException {
     setLastAccess(((SmbFileTime) accessTime).fileTime);
   }

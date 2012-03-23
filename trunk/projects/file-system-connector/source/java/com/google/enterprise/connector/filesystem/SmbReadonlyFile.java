@@ -35,6 +35,10 @@ import java.util.logging.Logger;
  *
  * @see PathParser
  */
+/* TODO: This class should be made easier to test - perhaps somehow
+ * mock an SMB connection or SmbFileDelegate (but adding yet another
+ * mockable layer here just seems odd).
+ */
 public class SmbReadonlyFile
     extends AccessTimePreservingReadonlyFile<SmbReadonlyFile> {
 
@@ -45,6 +49,9 @@ public class SmbReadonlyFile
 
   /** The delegate file implementation. */
   private final SmbFileDelegate delegate;
+
+  /** The Credentials used to access the SMB share. */
+  private final Credentials credentials;
 
   /**
    * Implementation of {@link SmbFileProperties} that gives the
@@ -61,28 +68,40 @@ public class SmbReadonlyFile
    */
   public SmbReadonlyFile(String path, Credentials credentials,
       SmbFileProperties propertyFetcher) throws RepositoryException {
-    this(newDelegate(path, credentials), propertyFetcher);
+    this(newDelegate(path, credentials), credentials, propertyFetcher);
   }
 
   /**
    * Create a ReadonlyFile that delegates to {@code smbFile}.
    *
    * @param delegate a SmbFileDelegate instance
+   * @param credentials
    * @param propertyFetcher Fetcher object that gives the required properties
    *        for SMB crawling.
    * @throws RepositoryDocumentException
    */
   private SmbReadonlyFile(SmbFileDelegate delegate,
-        SmbFileProperties propertyFetcher) {
+      Credentials credentials, SmbFileProperties propertyFetcher) {
     super(delegate, propertyFetcher.isLastAccessResetFlagForSmb());
     this.delegate = delegate;
+    this.credentials = credentials;
     this.smbPropertyFetcher = propertyFetcher;
   }
 
   private static SmbFileDelegate newDelegate(String path,
       Credentials credentials) throws RepositoryException {
     try {
-      return new SmbFileDelegate(path, credentials.getNtlmAuthorization());
+      SmbFileDelegate delegate =
+          new SmbFileDelegate(path, credentials.getNtlmAuthorization());
+      // Directories must end in "/", or listFiles() fails.
+      if ((path.lastIndexOf('/') != (path.length() - 1))
+          && delegate.isDirectory()) {
+        delegate =
+            new SmbFileDelegate(path + "/", credentials.getNtlmAuthorization());
+      }
+      return delegate;
+    } catch (SmbException e) {
+      throw new RepositoryDocumentException(e);
     } catch (MalformedURLException e) {
       throw new IncorrectURLException("Malformed SMB path: " + path, e);
     }
@@ -90,15 +109,8 @@ public class SmbReadonlyFile
 
   @Override
   protected SmbReadonlyFile newChild(String name) throws RepositoryException {
-    try {
-      return new SmbReadonlyFile(new SmbFileDelegate(delegate, name),
-                                 smbPropertyFetcher);
-    } catch (MalformedURLException e) {
-      throw new IncorrectURLException("Malformed SMB path: " + name, e);
-    } catch (UnknownHostException e) {
-      throw new IncorrectURLException("Unknown SMB host: " + delegate.getPath(),
-                                      e);
-    }
+    String path = delegate.getPath() + name;
+    return new SmbReadonlyFile(path, credentials, smbPropertyFetcher);
   }
 
   /** If repository cannot be contacted throws RepositoryException. */
