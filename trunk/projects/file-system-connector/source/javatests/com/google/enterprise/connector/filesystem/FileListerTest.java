@@ -15,6 +15,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.enterprise.connector.filesystem.MockDirectoryBuilder.ConfigureFile;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
@@ -31,7 +32,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
@@ -50,18 +50,6 @@ public class FileListerTest extends TestCase {
   private static final Credentials CREDENTIALS = null;
   private static final boolean PUSH_ACLS = true;
   private static final boolean MARK_ALL_DOCUMENTS_PUBLIC = false;
-  private static final ConfigureFile CONFIGURE_FILE_ALL = new ConfigureFile() {
-        public boolean configure(MockReadonlyFile file) {
-          // Do not alter file configuration, add it to expected results.
-          return true;
-        }
-      };
-  private static final ConfigureFile CONFIGURE_FILE_NONE = new ConfigureFile() {
-        public boolean configure(MockReadonlyFile file) {
-          // Do not alter file configuration, do not add it to expected results.
-          return false;
-        }
-      };
 
   static {
     MIME_TYPE_DETECTOR.setTraversalContext(TRAVERSAL_CONTEXT);
@@ -69,12 +57,12 @@ public class FileListerTest extends TestCase {
 
   /** Common objects used by most of the tests. */
   RecordingDocumentAcceptor documentAcceptor;
-  List<MockReadonlyFile> expectedFiles;
+  MockDirectoryBuilder builder;
 
   @Override
   public void setUp() throws Exception {
     documentAcceptor = new RecordingDocumentAcceptor();
-    expectedFiles = Lists.newArrayList();
+    builder = new MockDirectoryBuilder();
   }
 
   /** Run the Lister and validate the results. */
@@ -102,7 +90,6 @@ public class FileListerTest extends TestCase {
     DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
         pushAcls, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
         MIME_TYPE_DETECTOR);
-    System.out.println("Test " + getName() + " Expected = " + expectedFiles);//DEBUGGING
     // TODO: handle multiple startpoints.
     List<String> startPoints = Collections.singletonList(root.getPath());
     final FileLister lister = new FileLister(pathParser, startPoints,
@@ -129,15 +116,9 @@ public class FileListerTest extends TestCase {
     timer.cancel();
 
     // Validate the acceptor got the expected results.
-    Collections.sort(expectedFiles, new Comparator<MockReadonlyFile>() {
-      /* @Override */
-      public int compare(MockReadonlyFile o1, MockReadonlyFile o2) {
-        return o1.getPath().compareTo(o2.getPath());
-      }
-    });
     String message = expectedVsActual();
     Iterator<FileDocument> it = documentAcceptor.iterator();
-    for (MockReadonlyFile file : expectedFiles) {
+    for (MockReadonlyFile file : builder.getExpected()) {
       assertTrue(message, it.hasNext());
       assertEquals(message, file.getPath(), it.next().getDocumentId());
     }
@@ -148,7 +129,7 @@ public class FileListerTest extends TestCase {
     StringBuilder builder = new StringBuilder();
     builder.append("Test = ").append(getName());
     builder.append("\nExpect = [ ");
-    for (MockReadonlyFile file : expectedFiles) {
+    for (MockReadonlyFile file : this.builder.getExpected()) {
       builder.append(file.getPath()).append(",");
     }
     builder.setLength(builder.length() - 1);
@@ -163,146 +144,44 @@ public class FileListerTest extends TestCase {
     return builder.toString();
   }
 
-  /** Used to configure test ReadonlyFiles before they are traversed. */
-  private interface ConfigureFile {
-    /**
-     * Allows the supplied file to be configured as the test data is
-     * being built.
-     *
-     * @param file a MockReadonlyFile that may be configured via its setters.
-     * @return true if the file is expected in the traversal results; false
-     *     if the file is not expected to be included in the traversal results.
-     */
-    public boolean configure(MockReadonlyFile file) throws Exception;
-  }
-
-  /**
-   * Builds a small directory tree to traverse.
-   *
-   * @param configureFile used to configure dirs and files added to tree
-   * @param expected a List to which expected results are added
-   * @param parent the parent directory under which to add a subdir;
-   *        or null to create a root dir
-   * @param dirName the name of the directory to create
-   * @param fileNames names of regular files to add to the directory
-   * @return the directory
-   */
-  private MockReadonlyFile addDir(MockReadonlyFile parent, String dirName,
-      String... fileNames) throws Exception {
-    return addDir(CONFIGURE_FILE_ALL, parent, dirName, fileNames);
-  }
-
-  /**
-   * Builds a small directory tree to traverse.
-   *
-   * @param configureFile used to configure dirs and files added to tree
-   * @param expected a List to which expected results are added
-   * @param parent the parent directory under which to add a subdir;
-   *        or null to create a root dir
-   * @param dirName the name of the directory to create
-   * @param fileNames names of regular files to add to the directory
-   * @return the directory
-   */
-  private MockReadonlyFile addDir(ConfigureFile configureFile,
-      MockReadonlyFile parent, String dirName, String... fileNames)
-      throws Exception {
-    MockReadonlyFile dir;
-    if (parent == null) {
-      dir = MockReadonlyFile.createRoot(dirName);
-    } else {
-      dir = parent.addSubdir(dirName);
-    }
-    if (configureFile.configure(dir)) {
-      expectedFiles.add(dir);
-    }
-    for (String name : fileNames) {
-      MockReadonlyFile f = dir.addFile(name, name + "_data");
-      if (configureFile.configure(f)) {
-        expectedFiles.add(f);
-      }
-    }
-    return dir;
-  }
-
-  /**
-   * Asserts the expectedFiles set contains the specified files.
-   * This is intended to verify that configureFile and addDir
-   * test machinery are working correctly.
-   * This doesn't verify production code.
-   */
-  private void assertExpected(String... fileNames) {
-    for (String name : fileNames) {
-      boolean found = false;
-      for (MockReadonlyFile file : expectedFiles) {
-        if (file.getPath().equals(name)) {
-          found = true;
-          break;
-        }
-      }
-      assertTrue(name, found);
-    }
-  }
-
-  /**
-   * Asserts the expectedFiles set does not contain the specified files.
-   * This is intended to verify that configureFile and addDir
-   * test machinery are working correctly.
-   * This doesn't verify production code.
-   */
-  private void assertNotExpected(String... fileNames) {
-    for (String name : fileNames) {
-      for (MockReadonlyFile file : expectedFiles) {
-        assertFalse(name, file.getPath().equals(name));
-      }
-    }
-  }
-
   public void testEmptyRoot() throws Exception {
-    MockReadonlyFile root = addDir(CONFIGURE_FILE_NONE, null, "/foo/bar");
-    assertNotExpected("/foo/bar");
+    MockReadonlyFile root =
+        builder.addDir(builder.CONFIGURE_FILE_NONE, null, "/foo/bar");
     runLister(root);
   }
 
   public void testRootWith1File() throws Exception {
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1");
-    assertExpected("/foo/bar", "/foo/bar/f1");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
     runLister(root);
   }
 
   public void testRootWith2Files() throws Exception {
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1", "f2");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1", "f2");
     runLister(root);
   }
 
   public void testRootWith1FileAnd1EmptyDir() throws Exception {
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1");
-    addDir(CONFIGURE_FILE_NONE, root, "d1");
-    assertExpected("/foo/bar", "/foo/bar/f1");
-    assertNotExpected("/foo/bar/d1");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
+    builder.addDir(builder.CONFIGURE_FILE_NONE, root, "d1");
     runLister(root);
   }
 
   public void testRootWith1FileAnd2Dirs() throws Exception {
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1");
-    addDir(root, "d1", "d1f1");
-    MockReadonlyFile d2 = addDir(root, "d2", "d2f1");
-    addDir(CONFIGURE_FILE_NONE, d2, "d2d1");
-    addDir(CONFIGURE_FILE_NONE, d2, "d2d2");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/d1", "/foo/bar/d1/d1f1",
-                   "/foo/bar/d2", "/foo/bar/d2/d2f1");
-    assertNotExpected("/foo/bar/d2/d2d1", "/foo/bar/d2/d2d2");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
+    builder.addDir(root, "d1", "d1f1");
+    MockReadonlyFile d2 = builder.addDir(root, "d2", "d2f1");
+    builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d1");
+    builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d2");
     runLister(root);
   }
 
   public void testRootWithDirsAndFiles() throws Exception {
-    MockReadonlyFile root = addDir(null, "/foo/bar");
-    addDir(root, "d1", "d1f1");
-    MockReadonlyFile d2 = addDir(root, "d2", "d2f1", "d2a2");
-    addDir(CONFIGURE_FILE_NONE, d2, "d2d1");
-    addDir(CONFIGURE_FILE_NONE, d2, "d2d2");
-    addDir(d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
-    assertNotExpected("/foo/bar/d2/d2d1", "/foo/bar/d2/d2d2");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar");
+    builder.addDir(root, "d1", "d1f1");
+    MockReadonlyFile d2 = builder.addDir(root, "d2", "d2f1", "d2a2");
+    builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d1");
+    builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d2");
+    builder.addDir(d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
     runLister(root);
   }
 
@@ -313,17 +192,13 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar");
-    addDir(configureFile, root, "d1", "d1f1");
-    MockReadonlyFile d2 = addDir(configureFile, root, "d2", "d2f1", "d2a2");
-    addDir(configureFile, d2, "d2d1");
-    addDir(configureFile, d2, "d2d2");
-    addDir(configureFile, d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
-    assertExpected("/foo/bar/d1/d1f1", "/foo/bar/d2/d2f1", "/foo/bar/d2/d2a2",
-        "/foo/bar/d2/d2d3/d2d3f1", "/foo/bar/d2/d2d3/d2d3a2",
-        "/foo/bar/d2/d2d3/d2d3f3");
-    assertNotExpected("/foo/bar", "/foo/bar/d1", "/foo/bar/d2",
-        "/foo/bar/d2/d2d1", "/foo/bar/d2/d2d2", "/foo/bar/d2/d2d3");
+    MockReadonlyFile root = builder.addDir(configureFile, null, "/foo/bar");
+    builder.addDir(configureFile, root, "d1", "d1f1");
+    MockReadonlyFile d2 =
+        builder.addDir(configureFile, root, "d2", "d2f1", "d2a2");
+    builder.addDir(configureFile, d2, "d2d1");
+    builder.addDir(configureFile, d2, "d2d2");
+    builder.addDir(configureFile, d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
               TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, false);
   }
@@ -343,11 +218,9 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar",
+    MockReadonlyFile root = builder.addDir(configureFile, null, "/foo/bar",
                                    "f1", "Big", "TooBig");
-    addDir(configureFile, root, "d1", "d1Big", "d1TooBig");
-    assertExpected("/foo/bar/Big", "/foo/bar/d1/d1Big");
-    assertNotExpected("/foo/bar/TooBig", "/foo/bar/d1/d1TooBig");
+    builder.addDir(configureFile, root, "d1", "d1Big", "d1TooBig");
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
               new FakeTraversalContext(maxSizeData.length()));
   }
@@ -355,10 +228,8 @@ public class FileListerTest extends TestCase {
   public void testFilterExcludedDirectory() throws Exception {
     List<String> include = ImmutableList.of("/foo/bar");
     List<String> exclude = ImmutableList.of("/foo/bar/excluded");
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1");
-    addDir(CONFIGURE_FILE_NONE, root, "excluded", "excludedf1");
-    assertExpected("/foo/bar", "/foo/bar/f1");
-    assertNotExpected("/foo/bar/excluded", "/foo/bar/excludedf1");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
+    builder.addDir(builder.CONFIGURE_FILE_NONE, root, "excluded", "excludedf1");
     runLister(root, include, exclude, TRAVERSAL_CONTEXT);
   }
 
@@ -370,10 +241,9 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar", "f1.doc");
-    addDir(configureFile, root, "d1", "excluded.txt", "included.txt");
-    assertExpected("/foo/bar/d1/included.txt");
-    assertNotExpected("/foo/bar/d1/excluded.txt");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/bar", "f1.doc");
+    builder.addDir(configureFile, root, "d1", "excluded.txt", "included.txt");
     runLister(root, INCLUDE_ALL_PATTERNS, exclude, TRAVERSAL_CONTEXT);
   }
 
@@ -389,10 +259,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar",
-                                   "f1", "fail1", "f2");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
-    assertNotExpected("/foo/bar/fail1");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/bar", "f1", "fail1", "f2");
     runLister(root);
   }
 
@@ -407,10 +275,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar",
-                                   "f1", "fail1", "f2");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
-    assertNotExpected("/foo/bar/fail1");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/bar", "f1", "fail1", "f2");
     runLister(root);
   }
 
@@ -426,10 +292,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar",
-                                   "f1", "f2", "PRN:");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
-    assertNotExpected("/foo/bar/PRN:");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/bar", "f1", "f2", "PRN:");
     runLister(root);
   }
 
@@ -440,10 +304,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/bar",
-                                   "f1", "exclude.tar.gz");
-    assertExpected("/foo/bar", "/foo/bar/f1");
-    assertNotExpected("/foo/bar/exclude.tar.gz");
+    MockReadonlyFile root =
+      builder.addDir(configureFile, null, "/foo/bar", "f1", "exclude.tar.gz");
     runLister(root);
   }
 
@@ -457,8 +319,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/non-existent");
-    assertNotExpected("/foo/non-existent");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/non-existent");
     runLister(root);
   }
 
@@ -472,8 +334,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/foo/top-secret");
-    assertNotExpected("/foo/top-secret");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/top-secret");
     runLister(root);
   }
 
@@ -488,8 +350,7 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/server/down");
-    assertNotExpected("/server/down");
+    MockReadonlyFile root = builder.addDir(configureFile, null, "/server/down");
     runLister(root);
   }
 
@@ -518,8 +379,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(configureFile, null, "/bad/root", "f1", "f2");
-    assertNotExpected("/bad/root", "/bad/root/f1", "/bad/root/f2");
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/bad/root", "f1", "f2");
     runLister(root);
   }
 
@@ -545,11 +406,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1", "f2");
-    addDir(configureFile, root, "bad-dir", "bad-f1", "bad-f2");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
-    assertNotExpected("/foo/bar/bad-dir", "/foo/bar/bad-dir/bad-f1",
-                      "/foo/bar/bad-dir/bad-f2");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1", "f2");
+    builder.addDir(configureFile, root, "bad-dir", "bad-f1", "bad-f2");
     runLister(root);
   }
 
@@ -565,11 +423,8 @@ public class FileListerTest extends TestCase {
         }
       };
 
-    MockReadonlyFile root = addDir(null, "/foo/bar", "f1", "f2");
-    addDir(configureFile, root, "top-secret", "secret-f1", "secret-f2");
-    assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
-    assertNotExpected("/foo/bar/top-secret", "/foo/bar/top-secret/secret-f1",
-                      "/foo/bar/top-secret/secret-f2");
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1", "f2");
+    builder.addDir(configureFile, root, "top-secret", "secret-f1", "secret-f2");
     runLister(root);
   }
 
@@ -582,9 +437,10 @@ public class FileListerTest extends TestCase {
   }
 
   private void testNoTraversal(TraversalSchedule schedule) throws Exception {
-    MockReadonlyFile root =
-        addDir(CONFIGURE_FILE_NONE, null, "/foo/bar", "f1", "f2");
-    assertTrue(expectedFiles.isEmpty());
+    MockReadonlyFile root = builder.addDir(builder.CONFIGURE_FILE_NONE, null,
+                                           "/foo/bar", "f1", "f2");
+
+    assertTrue(builder.getExpected().isEmpty());
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
               TRAVERSAL_CONTEXT, schedule, PUSH_ACLS);
   }
@@ -609,14 +465,14 @@ public class FileListerTest extends TestCase {
   }
 
   private void testDocumentAcceptorException(Exception e) throws Exception {
-    MockReadonlyFile root =
-        addDir(CONFIGURE_FILE_NONE, null, "/throws/exception", "f1", "f2");
+    MockReadonlyFile root = builder.addDir(builder.CONFIGURE_FILE_NONE, null,
+                                           "/throws/exception", "f1", "f2");
     documentAcceptor = new ExceptionalDocumentAcceptor(e);
     runLister(root);
   }
 
   private static class RecordingDocumentAcceptor extends ArrayList<FileDocument>
-       implements DocumentAcceptor {
+      implements DocumentAcceptor {
     /* @Override */
     public void take(Document document)
         throws DocumentAcceptorException, RepositoryException {
