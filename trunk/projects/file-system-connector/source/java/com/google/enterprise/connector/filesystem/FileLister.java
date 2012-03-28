@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.logging.NDC;
 import com.google.enterprise.connector.spi.Document;
@@ -28,6 +29,8 @@ import com.google.enterprise.connector.spi.TraversalSchedule;
 import com.google.enterprise.connector.spi.TraversalScheduleAware;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.util.Clock;
+import com.google.enterprise.connector.util.SystemClock;
 import com.google.enterprise.connector.spi.Value;
 
 import java.io.IOException;
@@ -46,6 +49,20 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Implementation of {@link Lister} that feeds files from local
+ * and network filesystems.  This Lister traverses each directory
+ * tree rooted at a {@code startPath} in a separate thread.
+ *
+ * Initially, a full traversal is performed - all appropriate files
+ * and directories are fed to to {@link DocumentAcceptor}.  If this
+ * succeeds, subsequent travarsals of the same filesystem will be
+ * incremental - only files modified since the previous traversal
+ * will be fed. (If sending ACLs, directories will always be fed.)
+ * Periodically, a forced full traversal will be done to ensure
+ * that the GSA's view of the filesystem does not drift too far
+ * from reality.
+ */
 class FileLister implements Lister, TraversalContextAware,
                             TraversalScheduleAware {
   private static final Logger LOGGER =
@@ -59,6 +76,21 @@ class FileLister implements Lister, TraversalContextAware,
 
   private boolean isShutdown = false;
   private Thread listerThread;
+  private Clock clock = new SystemClock();
+
+  /**
+   * How often to force a full re-traversal.
+   * If less than 0, always try to perform incremental traversal.
+   * If equal to 0, always perform full traversals.
+   * If greater than 0, perform a full traversal if the
+   * fullTraversalInterval time milliseconds has passed
+   * since the last full traversal, otherwise perform
+   * incremental traversal.
+   */
+  private long fullTraversalInterval;
+
+  /** Cushion for inaccurate timestamps in ifModifiedSince calculations. */
+  private long ifModifiedSinceCushion;
 
   private DocumentAcceptor documentAcceptor;
   private TraversalSchedule schedule;
@@ -87,6 +119,9 @@ class FileLister implements Lister, TraversalContextAware,
     this.context = context;
     // TODO (bmj): Get number of threads from advanced config properties.
     this.traverserService = Executors.newFixedThreadPool(10);
+    // TODO (bmj): Get these from config properties.
+    fullTraversalInterval = /*DEBUGGING 24 * 60 * 60 * 1000L; */  15 * 60 * 1000L;
+    ifModifiedSinceCushion = 60 * 60 * 1000L;
   }
 
   private static Collection<String> normalizeStartPaths(
@@ -123,6 +158,27 @@ class FileLister implements Lister, TraversalContextAware,
     }
   }
 
+  /** Allows tests to set adjustable clock. */
+  @VisibleForTesting
+  synchronized void setClock(Clock clock) {
+    this.clock = clock;
+  }
+
+  @VisibleForTesting
+  synchronized void setFullTraversalInterval(long interval) {
+    this.fullTraversalInterval = interval;
+  }
+
+  @VisibleForTesting
+  synchronized void setIfModifiedSinceCushion(long cushion) {
+    this.ifModifiedSinceCushion = cushion;
+  }
+
+  @VisibleForTesting
+  Traverser newTraverser(String startPath) {
+    return new Traverser(startPath, documentAcceptor);
+  }
+
   /* @Override */
   public void start() throws RepositoryException {
     this.listerThread = Thread.currentThread();
@@ -130,7 +186,7 @@ class FileLister implements Lister, TraversalContextAware,
 
     Collection<Callable<Void>> traversers = Lists.newArrayList();
     for (String startPath : startPaths) {
-      traversers.add(new Traverser(startPath, documentAcceptor));
+      traversers.add(newTraverser(startPath));
     }
 
     try {
@@ -215,10 +271,13 @@ class FileLister implements Lister, TraversalContextAware,
     LOGGER.finest("Awake from sleep.");
   }
 
-  private class Traverser implements Callable<Void> {
+  @VisibleForTesting
+  class Traverser implements Callable<Void> {
     private final String startPath;
     private final DocumentAcceptor documentAcceptor;
     private final String ndc;
+    private long lastFullTraversal = 0L;
+    private long lastTraversal = 0L;
 
     public Traverser(String startPath, DocumentAcceptor documentAcceptor) {
       this.startPath = startPath;
@@ -247,6 +306,31 @@ class FileLister implements Lister, TraversalContextAware,
       return null;
     }
 
+    /**
+     * Calculate an appropriate ifModifiedSince value based on the
+     * start traversal time, and the time of the last full traversal.
+     */
+    @VisibleForTesting
+    synchronized long getIfModifiedSince(long startTime) {
+      if (fullTraversalInterval >= 0 &&
+          (startTime - lastFullTraversal) >= fullTraversalInterval) {
+        // Force a full traversal.
+        lastFullTraversal = 0L;
+        return 0L;
+      } else {
+        return Math.max(0L, lastTraversal - ifModifiedSinceCushion);
+      }
+    }
+
+    /** Record the time that the last successful traversal started. */
+    @VisibleForTesting
+    void finishedTraversal(long startTime) {
+      if (lastFullTraversal == 0L) {
+        lastFullTraversal = startTime;
+      }
+      lastTraversal = startTime;
+    }
+
     private void traverse() throws DocumentAcceptorException,
         RepositoryException {
       LOGGER.fine("Start traversal: " + startPath);
@@ -256,10 +340,11 @@ class FileLister implements Lister, TraversalContextAware,
         LOGGER.warning("Failed to open start path: " + startPath);
         return;
       }
+      long startTime = clock.getTimeMillis();
       try {
-        FileIterator iter =
-          new FileIterator(root, filePatternMatcher, context, traversalContext);
-        try {
+        FileIterator iter = new FileIterator(root, filePatternMatcher, context,
+            traversalContext, getIfModifiedSince(startTime));
+         try {
           Document rootShareAclDoc = createRootShareAcl(root);
           if(rootShareAclDoc != null)
             documentAcceptor.take(rootShareAclDoc);
@@ -277,7 +362,9 @@ class FileLister implements Lister, TraversalContextAware,
             LOGGER.log(Level.WARNING, "Failed to feed document " + path, rde);
           }
         }
-      } finally {
+        // If we succeeded, remember the last completed pass.
+        finishedTraversal(startTime);
+     } finally {
         LOGGER.fine("End traversal: " + startPath);
         documentAcceptor.flush();
       }
@@ -288,14 +375,14 @@ class FileLister implements Lister, TraversalContextAware,
      *
      * @throws IOException
      */
-    private Document createRootShareAcl(ReadonlyFile<?> root) 
+    private Document createRootShareAcl(ReadonlyFile<?> root)
         throws IOException {
       Acl shareAcl = root.getShareAcl();
       if (shareAcl != null) {
         Map<String, List<Value>> aclValues = new HashMap<String, List<Value>>();
-        aclValues.put(SpiConstants.PROPNAME_ACLUSERS, 
+        aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
             getStringValueList(shareAcl.getUsers()));
-        aclValues.put(SpiConstants.PROPNAME_ACLGROUPS, 
+        aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
             getStringValueList(shareAcl.getGroups()));
         aclValues.put(SpiConstants.PROPNAME_DOCID,
             Collections.singletonList(Value.getStringValue(

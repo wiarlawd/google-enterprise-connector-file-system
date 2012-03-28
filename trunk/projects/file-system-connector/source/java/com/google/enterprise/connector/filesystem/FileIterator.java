@@ -43,6 +43,7 @@ public class FileIterator {
   private final DocumentContext context;
   private final TraversalContext traversalContext;
   private final MimeTypeDetector mimeTypeDetector;
+  private final long ifModifiedSince;
   private final boolean returnDirectories;
 
   private boolean positioned;
@@ -58,10 +59,12 @@ public class FileIterator {
   public FileIterator(ReadonlyFile<?> root,
                       FilePatternMatcher filePatternMatcher,
                       DocumentContext context,
-                      TraversalContext traversalContext) {
+                      TraversalContext traversalContext,
+                      long ifModifiedSince) {
     this.filePatternMatcher = filePatternMatcher;
     this.context = context;
     this.traversalContext = traversalContext;
+    this.ifModifiedSince = ifModifiedSince;
     this.traversalStateStack = Lists.newArrayList();
     this.mimeTypeDetector = context.getMimeTypeDetector();
     this.returnDirectories =
@@ -119,6 +122,7 @@ public class FileIterator {
                 ArrayList<ReadonlyFile<?>> al = new ArrayList<ReadonlyFile<?>>();
                 // Add the proccessed dir to the top of the list for
                 // next method's immediate consumption.
+                // TODO: Handle ifModifiedSince for directories?
                 al.add(f);
                 al.addAll(files);
                 traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(al));
@@ -135,6 +139,7 @@ public class FileIterator {
         } else if (!isQualifyingFile(f)) {
           l.remove(0);
         } else {
+          positioned = true;
           return;
         }
       }
@@ -160,6 +165,18 @@ public class FileIterator {
         LOGGER.log(Level.FINEST, "Skipping file {0} - no read access.",
                    f.getPath());
         return false;
+      }
+
+      if (ifModifiedSince != 0L) {
+        try {
+          if (f.getLastModified() < ifModifiedSince) {
+            LOGGER.log(Level.FINEST, "Skipping file {0} - unmodified.",
+                       f.getPath());
+            return false;
+          }
+        } catch (IOException e) {
+          // Could not get lastModified time. That is OK for now.
+        }
       }
 
       if (traversalContext != null) {

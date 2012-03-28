@@ -84,19 +84,8 @@ public class FileListerTest extends TestCase {
       List<String> excludePatterns, TraversalContext traversalContext,
       TraversalSchedule traversalSchedule, boolean pushAcls)
       throws RepositoryException {
-    FileSystemTypeRegistry fileSystemTypeRegistry =
-        new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
-    PathParser pathParser = new PathParser(fileSystemTypeRegistry);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        pushAcls, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
-        MIME_TYPE_DETECTOR);
-    // TODO: handle multiple startpoints.
-    List<String> startPoints = Collections.singletonList(root.getPath());
-    final FileLister lister = new FileLister(pathParser, startPoints,
-        includePatterns, excludePatterns, context);
-    lister.setTraversalContext(traversalContext);
-    lister.setTraversalSchedule(traversalSchedule);
-    lister.setDocumentAcceptor(documentAcceptor);
+    final FileLister lister = newLister(root, includePatterns, excludePatterns,
+        traversalContext, traversalSchedule, pushAcls);
 
     // Let the Lister run for 1 second, then shut it down.
     Timer timer = new Timer("Shutdown Lister");
@@ -123,6 +112,27 @@ public class FileListerTest extends TestCase {
       assertEquals(message, file.getPath(), it.next().getDocumentId());
     }
     assertFalse(message, it.hasNext());
+  }
+
+  /** Make a new Lister for testing. */
+  private FileLister newLister(MockReadonlyFile root,
+      List<String> includePatterns, List<String> excludePatterns,
+      TraversalContext traversalContext, TraversalSchedule traversalSchedule,
+      boolean pushAcls) throws RepositoryException {
+    FileSystemTypeRegistry fileSystemTypeRegistry =
+        new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
+    PathParser pathParser = new PathParser(fileSystemTypeRegistry);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+        pushAcls, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
+        MIME_TYPE_DETECTOR);
+    // TODO: handle multiple startpoints.
+    List<String> startPoints = Collections.singletonList(root.getPath());
+    final FileLister lister = new FileLister(pathParser, startPoints,
+        includePatterns, excludePatterns, context);
+    lister.setTraversalContext(traversalContext);
+    lister.setTraversalSchedule(traversalSchedule);
+    lister.setDocumentAcceptor(documentAcceptor);
+    return lister;
   }
 
   private String expectedVsActual() {
@@ -469,6 +479,41 @@ public class FileListerTest extends TestCase {
                                            "/throws/exception", "f1", "f2");
     documentAcceptor = new ExceptionalDocumentAcceptor(e);
     runLister(root);
+  }
+
+  public void testIfModifiedSince() throws Exception {
+    FileLister lister = newLister(MockReadonlyFile.createRoot("/root"),
+        INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
+        TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, PUSH_ACLS);
+    long initialTime = 100000L;
+    long fullTraversalInterval = 20000L;
+    long ifModifiedSinceCushion = 1000L;
+    lister.setFullTraversalInterval(fullTraversalInterval);
+    lister.setIfModifiedSinceCushion(ifModifiedSinceCushion);
+
+    FileLister.Traverser traverser = lister.newTraverser("/root");
+
+    // With no traversals done, ifModifiedSince should be 0.
+    long startTime = initialTime;
+    assertEquals(0L, traverser.getIfModifiedSince(startTime));
+
+    // Having performed a full traversal ifModifiedSince
+    // should be the last traversal time less the cushion.
+    traverser.finishedTraversal(startTime);
+    assertEquals(startTime - ifModifiedSinceCushion,
+                 traverser.getIfModifiedSince(startTime));
+
+    // Not yet next full traversal time,
+    // should be the last traversal time less the cushion.
+    assertEquals(startTime - ifModifiedSinceCushion,
+        traverser.getIfModifiedSince(startTime + fullTraversalInterval / 2));
+
+    // After a full traversal time interval, ifModifiedSince
+    // should again be 0L.
+    assertEquals(0L, traverser.getIfModifiedSince(
+        startTime + fullTraversalInterval));
+    assertEquals(0L, traverser.getIfModifiedSince(
+        startTime + fullTraversalInterval + 1000));
   }
 
   private static class RecordingDocumentAcceptor extends ArrayList<FileDocument>
