@@ -14,58 +14,44 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
-import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
-
 import junit.framework.TestCase;
 
-import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
  */
 public class FilePatternMatcherTest extends TestCase {
-  Credentials credentials = new Credentials(null, "testUser", "foobar");
 
-  public void testBasics() throws RepositoryException {
+  public void testBasics() {
     List<String> include = Arrays.asList("smb://foo.com/", "/foo/bar/");
     List<String> exclude = Arrays.asList("smb://foo.com/secret/", "/foo/bar/hidden/");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
-    assertTrue(new SmbReadonlyFile("smb://foo.com/baz.txt", credentials, getFetcher())
-        .acceptedBy(matcher));
+
+    assertTrue(matcher.acceptName("smb://foo.com/baz.txt"));
+    assertTrue(matcher.acceptName("/foo/bar/baz.txt"));
+    assertFalse(matcher.acceptName("smb://notfoo/com/zippy"));
+    assertFalse(matcher.acceptName("smb://foo.com/secret/private_key"));
+    assertFalse(matcher.acceptName("/foo/bar/hidden/porn.png"));
+    assertFalse(matcher.acceptName("/bar/foo/public/knowledge"));
+  }
+
+  /* Limit this test to local file systems. Specifically, do not use
+   * SmbReadonlyFile for this, because it will try to verify the server.
+   * All the current ReadonlyFile implementations inherit the same
+   * acceptedBy() method from AbstractReadonlyFile anyway, so just one
+   * will do.
+   */
+  public void testReadonlyFileAcceptedBy() throws Exception {
+    List<String> include = Collections.singletonList("/foo/bar/");
+    List<String> exclude = Collections.singletonList("/foo/bar/hidden/");
+    FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
     assertTrue(new JavaReadonlyFile("/foo/bar/baz.txt")
         .acceptedBy(matcher));
-    assertFalse(new SmbReadonlyFile("smb://notfoo/com/zippy", credentials, getFetcher())
-        .acceptedBy(matcher));
-    assertFalse(new SmbReadonlyFile("smb://foo.com/secret/private_key",
-        credentials, getFetcher()).acceptedBy(matcher));
     assertFalse(new JavaReadonlyFile("/foo/bar/hidden/porn.png")
         .acceptedBy(matcher));
     assertFalse(new JavaReadonlyFile("/bar/foo/public/knowledge")
         .acceptedBy(matcher));
   }
-
-  private SmbFileProperties getFetcher() {
-    return new SmbFileProperties() {
-      public String getUserAclFormat() {
-        return AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
-      }
-
-      public String getGroupAclFormat() {
-        return AclFormat.DOMAIN_BACKSLASH_GROUP.getFormat();
-      }
-
-      public String getAceSecurityLevel() {
-        return AceSecurityLevel.FILEANDSHARE.name();
-      }
-
-      public boolean isLastAccessResetFlagForSmb() {
-        return false;
-      }
-    };
-  }
-
 }
