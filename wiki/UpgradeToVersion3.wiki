@@ -129,4 +129,4 @@ You may also wish to configure the forced *Full Traversal Interval* for the need
 
 This version of the connector actually pays attention to the *Connector Schedule*,  so you may wish to configure that as well.
 
-Finally save the configuration.
+Finally, save the connector configuration.
