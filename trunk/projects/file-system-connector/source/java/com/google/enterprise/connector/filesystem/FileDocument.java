@@ -129,13 +129,15 @@ public class FileDocument implements Document {
   }
 
   private void fetchMimeType(ReadonlyFile<?> file) throws RepositoryException {
-    try {
-      MimeTypeDetector mimeTypeDetector = context.getMimeTypeDetector();
-      addProperty(SpiConstants.PROPNAME_MIMETYPE,
-                  mimeTypeDetector.getMimeType(file.getPath(), file));
-    } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "Failed to determine MimeType for "
-                 + file.getPath(), e);
+    if (file.isRegularFile()) {
+      try {
+        MimeTypeDetector mimeTypeDetector = context.getMimeTypeDetector();
+        addProperty(SpiConstants.PROPNAME_MIMETYPE,
+                    mimeTypeDetector.getMimeType(file.getPath(), file));
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "Failed to determine MimeType for "
+                   + file.getPath(), e);
+      }
     }
   }
 
@@ -170,7 +172,7 @@ public class FileDocument implements Document {
    */
   public static String getRootShareAclId(ReadonlyFile<?> root) {
     String rootPath = root.getPath();
-    return rootPath.replace(SmbFileSystemType.SMB_PATH_PREFIX, 
+    return rootPath.replace(SmbFileSystemType.SMB_PATH_PREFIX,
         SHARE_ACL_PREFIX);
   }
 
@@ -209,7 +211,7 @@ public class FileDocument implements Document {
   private void checkAndAddRootAclProperties(ReadonlyFile<?> file, Acl acl)
       throws IOException, RepositoryException {
     if (!acl.isPublic() && isRoot) {
-      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
+      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM,
           getRootShareAclId(file));
       Acl inheritedAcl = file.getInheritedAcl();
       if (inheritedAcl.isDeterminate()) {
