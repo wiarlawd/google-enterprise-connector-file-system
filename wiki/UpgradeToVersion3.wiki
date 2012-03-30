@@ -22,7 +22,7 @@ Before applying an update you should have the following available to you:
 
 == Preparing the GSA for the Upgrade ==
 
-  # Disable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Click *Disable Traversal* and save the configuration.
+  # Disable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Check *Disable Traversal* and save the configuration.
   # Delete the feed for your connector.  On the GSA admin console, navigate to the *Crawl and Index > Feeds* page, then click on the *Delete* link for your connector's feed.
   # Enable crawling of Retriever URLs.  On the GSA admin console, navigate to the *Crawl and Index > Crawl URLs* page.  Add the following item to the *Follow and Crawl Only URLs with the Following Patterns* section:<br/>{{{/connector-manager/getDocumentContent}}}
 
@@ -69,3 +69,64 @@ attrib -r *.jar
 copy /y %RELEASE_DIR%\connector-filesystem.jar .
 copy /y %RELEASE_DIR%\Lib\*.jar .
 }}}
+  # Restart the Tomcat web application server, either via the Services control panel, by using the `Start_*_Connector_Console` command in the Connector installation directory, or by using Tomcat's `startup` command or `startService` command.
+{{{
+cd %CATALINA_HOME%\bin
+startService.bat
+}}}
+== Upgrading the File System Connector deployed on Unix or Linux ==
+
+*Note:* `${CATALINA_HOME}` refers to the Apache Tomcat deployment directory for your Connector installation.  If you installed the Connector using the Google Connector Installer (GCI), then `${CATALINA_HOME}` will be the 
+`Tomcat` directory inside the Connector Installation (for instance: `~/GoogleConnectors/myConnector/Tomcat`).
+
+*Note:* `${CONNECTOR_NAME}` refers to the name of your File System Connector instance as it appears in the GSA admin console's *Connector Administration > Connectors* page.
+
+*Note:* `${RELEASE_DIR}` refers to the directory containing the File System Connector version 3 binary distribution.
+
+The syntax used here is Bash shell syntax.  You may need to adjust the syntax appropriately if you are using a different command shell.
+
+  # Download the _Google File System Connector version 3 Binary Distribution_ from the [http://code.google.com/p/google-enterprise-connector-file-system/downloads/list Downloads page], and unzip it.  
+{{{
+cd ${RELEASE_DIR}
+wget http://google-enterprise-connector-file-system.googlecode.com/files/connector-filesystem-3.0.0.zip
+unzip connector-filesystem-3.0.0.zip
+}}}
+  # Shutdown the Tomcat web application server either by using the `Stop_*_Connector_Console` command in the Connector installation directory, or by using Tomcat's `shutdown` command.
+{{{
+cd ${CATALINA_HOME}/bin
+./shutdown.sh
+}}}
+  # If upgrading from File System Connector version 2.6.4 or earlier, you *must* delete the connector's Java bean configuration  file `connectorInstance.xml`.  If upgrading from File System Connector version 2.8, this file may remain, however any custom configurations of the `delayBetweenTwoScansInMillis`, `introduceDelayAfterEveryScan`, or `queueSize` advanced configuration properties will be ignored.
+{{{
+cd ${CATALINA_HOME}/webapps/connector-manager/WEB-INF/connectors/FileConnectorType/${CONNECTOR_NAME}
+rm connectorInstance.xml
+}}}
+  # *Optional:* Remove the connector's `queue` and `snapshots` directories.  These will no longer be used and the contents may be quite large. 
+{{{
+cd ${CATALINA_HOME}/webapps/connector-manager/WEB-INF/connectors/FileConnectorType/${CONNECTOR_NAME}
+rm -rf queue snapshots
+}}}
+  # Deploy the new connector JAR files over the old installation.  *WARNING:* Some versions of the Google Connector Installer mark the installed connector JAR files as Read-Only.  Write permission for these files must be restored before deploying the new version. 
+{{{
+cd ${CATALINA_HOME}/webapps/connector-manager/WEB-INF/lib
+chmod +w *.jar
+cp -p ${RELEASE_DIR}/connector-filesystem.jar .
+cp -p ${RELEASE_DIR}/Lib/*.jar .
+}}}
+  # Restart the Tomcat web application server, either by using the `Start_*_Connector_Console` command in the Connector installation directory, or by using Tomcat's `startup` command.
+{{{
+cd ${CATALINA_HOME}/bin
+./startup.sh 
+}}}
+
+== Re-enable File System Connector Traversals  ==
+
+Enable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Uncheck *Disable Traversal*.
+
+If you had a set the `delayBetweenTwoScansInMillis`  advanced configuration property in a previous version of the connector, you my wish to adjust the *Retry Delay* value accordingly.
+
+You may also wish to configure the forced *Full Traversal Interval* for the needs of your organization.
+
+Finally, this version of the connector actually pays attention to the *Connector Schedule*,  so you may wish to configure that as well.
+
+Finally save the configuration.
