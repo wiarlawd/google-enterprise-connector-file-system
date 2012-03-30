@@ -1,0 +1,71 @@
+#summary Instructions for manually upgrading to File System Connector version 3.
+
+== Introduction ==
+
+File System Connector version 3 is a significant re-engineering of the File System Connector implementation.  The most notable improvements are:
+
+  * The connector moves from a Diffing Connector model to a Lister/Retriever model.  This is a major architectural change for the connector.
+  * Vastly improved feed and indexing performance.
+  * Support for ACL inheritance and deny for SMB file systems.
+  * The connector pays attention to the Traversal Schedule.
+
+== Prerequisites  ==
+
+Before applying an update you should have the following available to you:
+  * Administrative access to the GSA that the Connector is feeding.
+  * Access to the computer running the Connector and its Tomcat application server.  You will need sufficient access rights to start and stop Tomcat and modify files in its deployment directory.
+  * A binary distribution of the Connector Manager version 3 release, available on the [http://code.google.com/p/google-enterprise-connector-manager/downloads/list Connector Manager Downloads] page.
+  * A binary distribution of the File System Connector version 3 release, available on the [http://code.google.com/p/google-enterprise-connector-file-system/downloads/list File System Connector Downloads] page.
+  * Familiarity with the command line environment of the deployment computer (cmd.exe on Windows or a shell environment on Unix/Linux).
+
+*Note:* These instructions use environment variable syntax as an allusion. These environment variables may not exist in your environment.  You may choose to define them appropriately, or you must substitute the actual paths when entering the commands.
+
+== Preparing the GSA for the Upgrade ==
+
+  # Disable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Click *Disable Traversal* and save the configuration.
+  # Delete the feed for your connector.  On the GSA admin console, navigate to the *Crawl and Index > Feeds* page, then click on the *Delete* link for your connector's feed.
+  # Enable crawling of Retriever URLs.  On the GSA admin console, navigate to the *Crawl and Index > Crawl URLs* page.  Add the following item to the *Follow and Crawl Only URLs with the Following Patterns* section:<br/>{{{/connector-manager/getDocumentContent}}}
+
+
+== Upgrade to Connector Manager version 3==
+
+File System Connector version 3 *requires* Connector Manager version 3 to operate.  Please follow [http://code.google.com/p/google-enterprise-connector-manager/wiki/UpgradeToVersion3 these instructions to upgrade to Connector Manager version 3], before upgrading to File System Connector version 3.
+
+== Upgrading the File System Connector deployed on Windows ==
+
+*Note:* `%CATALINA_HOME%` refers to the Apache Tomcat deployment directory for your Connector installation.  If you installed the Connector using the Google Connector Installer (GCI), then `%CATALINA_HOME%` will be the `Tomcat` directory inside the Connector Installation (for instance: `C:\GoogleConnectors\myConnector\Tomcat`).
+
+*Note:* `%CONNECTOR_NAME%` refers to the name of your File System Connector instance as it appears in the GSA admin console's *Connector Administration > Connectors* page.
+
+*Note:* `%RELEASE_DIR%` refers to the directory containing the File System Connector version 3 binary distribution.
+
+You will need to stop and restart the Tomcat web application server during the upgrade.  The instructions here assume that Tomcat is running as a *Windows Service*.  The instructions for doing so differ if Tomcat is running as a console application.  You would typically stop and start the service via the `Windows->Settings->Control Panel->Administrative Tools->Services` control panel.
+
+  # Download the _Google File System Connector version 3 Binary Distribution_ from the [http://code.google.com/p/google-enterprise-connector-file-system/downloads/list Downloads page], and unzip it.  
+{{{
+cd %RELEASE_DIR%
+unzip connector-filesystem-3.0.0.zip
+}}}
+  # Shutdown the Tomcat web application server, either via the Services control panel, by using the `Stop_*_Connector_Console` command in the Connector installation directory, or by using Tomcat's `shutdown` or  `stopService` command. 
+{{{
+cd %CATALINA_HOME%\bin
+stopService.bat
+}}}
+  # If upgrading from File System Connector version 2.6.4 or earlier, you *must* delete the connector's Java bean configuration  file `connectorInstance.xml`.  If upgrading from File System Connector version 2.8, this file may remain, however any custom configurations of the `delayBetweenTwoScansInMillis`, `introduceDelayAfterEveryScan`, or `queueSize` advanced configuration properties will be ignored.
+{{{
+cd %CATALINA_HOME%\webapps\connector-manager\WEB-INF\connectors\FileConnectorType\%CONNECTOR_NAME%
+del connectorInstance.xml
+}}}
+  # *Optional:* Remove the connector's `queue` and `snapshots` directories.  These will no longer be used and the contents may be quite large. 
+{{{
+cd %CATALINA_HOME%\webapps\connector-manager\WEB-INF\connectors\FileConnectorType\%CONNECTOR_NAME%
+rmdir /s /q queue
+rmdir /s /q snapshots
+}}}
+  # Deploy the new connector JAR files over the old installation.  *WARNING:* Some versions of the Google Connector Installer mark the installed connector JAR files as Read-Only.  Write permission for these files must be restored before deploying the new version. 
+{{{
+cd %CATALINA_HOME%\webapps\connector-manager\WEB-INF\lib
+attrib -r *.jar
+copy /y %RELEASE_DIR%\connector-filesystem.jar .
+copy /y %RELEASE_DIR%\Lib\*.jar .
+}}}
