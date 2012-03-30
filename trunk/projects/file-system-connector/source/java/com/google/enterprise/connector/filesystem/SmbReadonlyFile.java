@@ -23,7 +23,6 @@ import jcifs.smb.SmbFile;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.UnknownHostException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -183,11 +182,11 @@ public class SmbReadonlyFile
   public Acl getAcl() throws IOException, RepositoryException {
     SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
     try {
-      return builder.build();
+      return builder.getAcl();
     } catch (SmbException e) {
       detectServerDown(e);
       LOG.warning("Failed to get ACL: " + e.getMessage());
-      LOG.log(Level.FINEST, "Got smbException while getting ACLs", e);
+      LOG.log(Level.FINEST, "Got SmbException while getting ACLs", e);
       return Acl.USE_HEAD_REQUEST;
     }
     catch (IOException e) {
@@ -198,9 +197,37 @@ public class SmbReadonlyFile
   }
 
   @Override
-  public Acl getShareAcl() throws IOException {
+  public Acl getInheritedAcl() throws IOException, RepositoryException {
     SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
-    return builder.getShareAcl();
+    try {
+      return builder.getInheritedAcl();
+    } catch (SmbException e) {
+      detectServerDown(e);
+      LOG.warning("Failed to get inherited ACL: " + e.getMessage());
+      LOG.log(Level.FINEST, "Got SmbException while getting inherited ACLs", e);
+      return Acl.USE_HEAD_REQUEST;
+    } catch (IOException e) {
+      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
+          + "getting ACLs for " + this.getPath(), e);
+      throw e;
+    }
+  }
+
+  @Override
+  public Acl getShareAcl() throws IOException, RepositoryException {
+    try {
+      SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
+      return builder.getShareAcl();
+    } catch (SmbException e) {
+      detectServerDown(e);
+      LOG.warning("Failed to get share ACL: " + e.getMessage());
+      LOG.log(Level.FINEST, "Got SmbException while getting share ACLs", e);
+      return Acl.USE_HEAD_REQUEST;
+    } catch (IOException e) {
+      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
+          + "getting share ACLs for " + this.getPath(), e);
+      throw e;
+    }
   }
 
   @Override

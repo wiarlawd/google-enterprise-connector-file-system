@@ -342,29 +342,30 @@ class FileLister implements Lister, TraversalContextAware,
       }
       long startTime = clock.getTimeMillis();
       try {
-        FileIterator iter = new FileIterator(root, filePatternMatcher, context,
+        FileIterator iter = new FileIterator(root, filePatternMatcher, context, 
             traversalContext, getIfModifiedSince(startTime));
-         try {
-          Document rootShareAclDoc = createRootShareAcl(root);
-          if(rootShareAclDoc != null)
-            documentAcceptor.take(rootShareAclDoc);
-        } catch (IOException e) {
-          LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
-              + root.getPath(), e);
+
+        Document rootShareAclDoc = createRootShareAcl(root);
+        if (rootShareAclDoc != null) {
+          documentAcceptor.take(rootShareAclDoc);
         }
         while (notShutdown() && iter.hasNext()) {
           String path = "";
           try {
             ReadonlyFile<?> file = iter.next();
             path = file.getPath();
-            documentAcceptor.take(new FileDocument(file, context));
+            if (startPath.equals(path)) {
+              documentAcceptor.take(new FileDocument(file, context, true));
+            } else {
+              documentAcceptor.take(new FileDocument(file, context));
+            }
           } catch (RepositoryDocumentException rde) {
             LOGGER.log(Level.WARNING, "Failed to feed document " + path, rde);
           }
         }
         // If we succeeded, remember the last completed pass.
         finishedTraversal(startTime);
-     } finally {
+      } finally {
         LOGGER.fine("End traversal: " + startPath);
         documentAcceptor.flush();
       }
@@ -375,20 +376,33 @@ class FileLister implements Lister, TraversalContextAware,
      *
      * @throws IOException
      */
-    private Document createRootShareAcl(ReadonlyFile<?> root)
-        throws IOException {
-      Acl shareAcl = root.getShareAcl();
-      if (shareAcl != null) {
-        Map<String, List<Value>> aclValues = new HashMap<String, List<Value>>();
-        aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
-            getStringValueList(shareAcl.getUsers()));
-        aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
-            getStringValueList(shareAcl.getGroups()));
-        aclValues.put(SpiConstants.PROPNAME_DOCID,
-            Collections.singletonList(Value.getStringValue(
-                FileDocument.getRootShareAclId(root))));
-        return SecureDocument.createAcl(aclValues);
-      } else {
+    private Document createRootShareAcl(ReadonlyFile<?> root) {
+      try {
+        Acl shareAcl = root.getShareAcl();
+        if (shareAcl != null) {
+          Map<String, List<Value>> aclValues =
+              new HashMap<String, List<Value>>();
+          aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
+              getStringValueList(shareAcl.getUsers()));
+          aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
+              getStringValueList(shareAcl.getGroups()));
+          aclValues.put(SpiConstants.PROPNAME_ACLDENYUSERS,
+              getStringValueList(shareAcl.getDenyUsers()));
+          aclValues.put(SpiConstants.PROPNAME_ACLDENYGROUPS,
+              getStringValueList(shareAcl.getDenyGroups()));
+          aclValues.put(SpiConstants.PROPNAME_DOCID, Collections.singletonList(
+              Value.getStringValue(FileDocument.getRootShareAclId(root))));
+          return SecureDocument.createAcl(aclValues);
+        } else {
+          return null;
+        }
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
+            + root.getPath(), e);
+        return null;
+      } catch (RepositoryException e) {
+        LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
+            + root.getPath(), e);
         return null;
       }
     }

@@ -52,7 +52,7 @@ public class AclTest extends TestCase {
   }
 
   private void validateAcl(List<String> users, List<String> groups) throws JSONException{
-    Acl acl = Acl.newAcl(users, groups);
+    Acl acl = Acl.newAcl(users, groups, null, null);
     assertFalse(acl.isPublic());
     assertEquals(users, acl.getUsers());
     assertEquals(groups, acl.getGroups());
@@ -94,24 +94,24 @@ public class AclTest extends TestCase {
 
   public void testEquals() throws Exception {
     Acl acl = Acl.newAcl(Collections.singletonList("fred"),
-                         Collections.singletonList("barney"));
+        Collections.singletonList("barney"), null, null);
     assertTrue(acl.equals(acl));
     assertFalse(acl.equals(null));
     assertFalse(acl.equals(new Object()));
 
     assertTrue(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-                                     Collections.singletonList("barney"))));
+        Collections.singletonList("barney"), null, null)));
     assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-                                      Collections.singletonList("wilma"))));
+        Collections.singletonList("wilma"), null, null)));
     assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("barney"),
-                                      Collections.singletonList("fred"))));
+        Collections.singletonList("fred"), null, null)));
     assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("wilma"),
-                                      Collections.singletonList("betty"))));
+        Collections.singletonList("betty"), null, null)));
 
     Acl publicAcl = Acl.newPublicAcl();
     assertFalse(acl.equals(publicAcl));
     assertFalse(publicAcl.equals(acl));
-    assertFalse(publicAcl.equals(Acl.newAcl(Collections.singletonList("fred"),
-                                            null)));
+    assertFalse(publicAcl.equals(
+        Acl.newAcl(Collections.singletonList("fred"), null, null, null)));
   }
 }

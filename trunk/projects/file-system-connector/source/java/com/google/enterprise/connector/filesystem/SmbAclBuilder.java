@@ -136,11 +136,6 @@ class SmbAclBuilder {
   private final AclFormat groupAclFormat;
 
   /**
-   * Represents the security level for fetching ACL
-   */
-  private final AceSecurityLevel securityLevel;
-
-  /**
    * Creates an {@link SmbAclBuilder}.
    *
    * @param file the {@link SmbFile} whose {@link Acl} we build.
@@ -153,9 +148,6 @@ class SmbAclBuilder {
     if (securityLevel == null) {
       LOGGER.warning("Incorrect value specified for aceSecurityLevel parameter; "
           + "Setting default value " + AceSecurityLevel.FILEANDSHARE);
-      this.securityLevel = AceSecurityLevel.FILEANDSHARE;
-    } else {
-      this.securityLevel = securityLevel;    
     }
     AclFormat tempFormat = AclFormat.getAclFormat(
         propertyFetcher.getUserAclFormat());
@@ -238,40 +230,79 @@ class SmbAclBuilder {
    * So getting the access is most probable in this scenario.
    * The default security setting is the most restrictive i.e. 'FILEANDSHARE'
    */
-  Acl build() throws IOException {
-    List<ACE> finalAces = new ArrayList<ACE>();
+  public Acl getAcl() throws IOException {
+    ACE[] securityAces = file.getSecurity();
     List<ACE> fileAces = new ArrayList<ACE>();
-    List<ACE> shareAces = new ArrayList<ACE>();
-    if (securityLevel != AceSecurityLevel.SHARE && !checkAndAddAces(fileAces, false)) {
-      return Acl.USE_HEAD_REQUEST;
-    }
-    if (securityLevel != AceSecurityLevel.FILE && !checkAndAddAces(shareAces, true)) {
-      return Acl.USE_HEAD_REQUEST;
-    }
-    finalAces = getFinalAces(fileAces, shareAces);
-    Set<String> users = new TreeSet<String>();
-    Set<String> groups = new TreeSet<String>();
-    for (ACE finalAce : finalAces) {
-      addAceToSet(users, groups, finalAce);
-    }
-    return Acl.newAcl(new ArrayList<String>(users), 
-        new ArrayList<String>(groups));
+    List<ACE> fileDenyAces = new ArrayList<ACE>();
+    checkAndAddAces(securityAces, fileAces, fileDenyAces, true);
+    return getAclFromAceList(fileAces, fileDenyAces);
   }
 
+  /**
+   * Returns inherited ACL, doesn't contain file level ACLs.
+   */
+  public Acl getInheritedAcl() throws IOException {
+    ACE[] inheritedAces = file.getSecurity();
+    List<ACE> fileAllowAces = new ArrayList<ACE>();
+    List<ACE> fileDenyAces = new ArrayList<ACE>();
+    checkAndAddAces(inheritedAces, fileAllowAces, fileDenyAces, false);
+    return getInheritedAclFromAceList(fileAllowAces, fileDenyAces);
+  }
+
+  /**
+   * returns share ACL for the shared root.
+   */
   public Acl getShareAcl() throws IOException {
-    //getShareSecurity with true argument of SmbFile attempts to resolve 
-    //the SIDs within each ACE form
-    ACE[] shareAces = file.getShareSecurity(true);
-    //TODO: Extract a helper method to go from ACE[] to 
-    // Acl object here and in build().
+      // getShareSecurity with true argument of SmbFile attempts to resolve
+      // the SIDs within each ACE form
+      ACE[] shareAces = file.getShareSecurity(true);
+      List<ACE> fileAllowAces = new ArrayList<ACE>();
+      List<ACE> fileDenyAces = new ArrayList<ACE>();
+      checkAndAddAces(shareAces, fileAllowAces, fileDenyAces, true);
+      return getAclFromAceList(fileAllowAces, fileDenyAces);
+  }
+
+  /*
+   * Returns ACL from the list of ACEs
+   */
+  private Acl getAclFromAceList(List<ACE> allowAceList, List<ACE> denyAceList) {
     Set<String> users = new TreeSet<String>();
     Set<String> groups = new TreeSet<String>();
-    for (ACE finalAce : shareAces) {
-      addAceToSet(users, groups, finalAce);
+    Set<String> denyusers = new TreeSet<String>();
+    Set<String> denygroups = new TreeSet<String>();
+    for (ACE ace : allowAceList) {
+      addAceToSet(users, groups, ace);
     }
+    for (ACE ace : denyAceList) {
+      addAceToSet(denyusers, denygroups, ace);
+    }
+    return Acl.newAcl(new ArrayList<String>(users),
+        new ArrayList<String>(groups), new ArrayList<String>(denyusers),
+        new ArrayList<String>(denygroups));
+  }
 
-    return Acl.newAcl(new ArrayList<String>(users), 
-        new ArrayList<String>(groups));
+  /*
+   * returns inherited ACL from the list of ACEs
+   */
+  private Acl getInheritedAclFromAceList(
+      List<ACE> allowAceList, List<ACE> denyAceList) {
+    Set<String> users = new TreeSet<String>();
+    Set<String> groups = new TreeSet<String>();
+    Set<String> denyusers = new TreeSet<String>();
+    Set<String> denygroups = new TreeSet<String>();
+    for (ACE ace : allowAceList) {
+      if (isInheritOnlyAce(ace.getFlags())) {
+        addAceToSet(users, groups, ace);
+      }
+    }
+    for (ACE ace : denyAceList) {
+      if (isInheritOnlyAce(ace.getFlags())) {
+        addAceToSet(denyusers, denygroups, ace);
+      }
+    }
+    return Acl.newAcl(new ArrayList<String>(users),
+        new ArrayList<String>(groups), new ArrayList<String>(denyusers),
+        new ArrayList<String>(denygroups));
   }
 
   /**
@@ -307,152 +338,39 @@ class SmbAclBuilder {
   /**
    * Gets the ACEs at either File or Share level depending on the boolean
    * 'isShare' parameter and checks if there is a presence of a DENY ACE 
-   * If it gets all the READ ACEs successfully, then it returns true otherwise false.
+   * If it gets all the READ ACEs successfully, then it returns true otherwise 
+   * false.
+   * 
+   * @param securityAces
    * @param aceList List where the ACEs need to be added.
-   * @param isShare parameter that decides whether to get file or share level ACEs
-   * @return true if ACEs are fetched successfully. False otherwise.
-   * @throws IOException 
+   * @param aceDenyList List where the deny ACEs need to be added.
+   * @param skipInheritedAce if true skips adding inherited ACEs to the list
+   * @throws IOException
    */
-  private boolean checkAndAddAces(List<ACE> aceList, boolean isShare) throws IOException {
-    try {
-      ACE securityAces[];
-      String operation;
-      if (isShare) {
-        securityAces = file.getShareSecurity(true);
-        operation = "getShareSecurity()";
-      } else {
-        securityAces = file.getSecurity();
-        operation = "getSecurity()";
-      }
-      if (securityAces == null) {
-        LOGGER.warning("Cannot process ACL because "+ operation + " not allowed"
-            + "on " + file.getURL());
-        return false; 
-      }
-      for (ACE securityAce: securityAces) {
-        if (!checkAndLogDenyAce(securityAce)) {
-          checkAndAddAce(securityAce, aceList);
-        } else {
-          return false;
-        }
-      }
-    } catch (SmbException smbe) {
-      throwIfNotAuthorizationException(smbe);
-      LOGGER.log(Level.WARNING, "Cannot process ACL because of authorization"
-          + " failure on file " + file.getURL(), smbe);
-      // TODO: Add Acl.newInderminantAcl to Acl and call here.
-      return false;
-    }
-    return true;
-  }
-  
-  /**
-   * Gets the final list of ACEs based on the level of Access and 
-   * operation values.
-   * @param fileAces ACEs at individual file level.
-   * @param shareAces ACEs at share level.
-   * @return List of consolidated ACEs for the file
-   */
-  private List<ACE> getFinalAces(List<ACE> fileAces, List<ACE> shareAces) {
-    LOGGER.finest("FILE ACL: " + fileAces);
-    LOGGER.finest("SHARE ACL: " + shareAces);
-    List<ACE> finalAceList = new ArrayList<ACE>();
-    switch (this.securityLevel) {
-      case FILE : 
-        LOGGER.fine("Only FILE level ACL for: " + file.getURL());
-        finalAceList.addAll(fileAces);
-        break;
-      case SHARE :
-        LOGGER.fine("Only SHARE level ACL for: " + file.getURL());
-        finalAceList.addAll(shareAces);
-        break;
-      case FILEORSHARE :
-        LOGGER.fine("Performing UNION of ACL for: " + file.getURL());
-        finalAceList.addAll(fileAces);
-        finalAceList.addAll(shareAces);
-        break;
-      case FILEANDSHARE :
-        //FIXME: Currently this does not handle the case when a user is allowed
-        // access at FILE level and a group that this user is member of is 
-        // allowed access at SHARE level. This is because we cannot resolve
-        // groups to see if a user is part of the group. This might potentially
-        // deny a user access to a document.
-        getFinalAcesForIntersection(fileAces, shareAces, finalAceList);
-    }
-    LOGGER.finer("FINAL ACL for file: " + file.getURL() + " is: "
-        + finalAceList);
-    return finalAceList;
-  }
-
-  /**
-   * Gets the final list of ACEs for intersection scenario.
-   * @param fileAces List of ACEs at file level.
-   * @param shareAces List of ACEs at share level.
-   * @param finalAceList final list of ACEs
-   */
-  private void getFinalAcesForIntersection(
-      List<ACE> fileAces, List<ACE> shareAces, List<ACE> finalAceList) {
-    LOGGER.fine("Performing INTERSECTION of ACL for: " + file.getURL());
-    boolean accessToEveryoneAtShare = containsEveryone(shareAces);
-    boolean accessToEveryoneAtFile = containsEveryone(fileAces);
-    if (accessToEveryoneAtShare || accessToEveryoneAtFile) {
-      if (accessToEveryoneAtShare) {
-        finalAceList.addAll(fileAces);
-      }
-      if (accessToEveryoneAtFile) {
-        finalAceList.addAll(shareAces);
-      }
-    } else {
-      for (ACE fileAce : fileAces) {
-        for (ACE shareAce : shareAces) {
-          if (shareAce.getSID().equals(fileAce.getSID())) {
-            finalAceList.add(fileAce);
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Checks the presence ACE for Windows Group "Everyone" in given ACE list.
-   * @param aceList List of ACEs
-   * @return true / false depending on the presence of Everyone group
-   */
-  private boolean containsEveryone(List<ACE> aceList) {
-    for (ACE ace: aceList) {
-      if (ace.getSID().toString().equals(EVERYONE_SID)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Checks to see if the ACE is a DENY entry.
-   * @param ace ACE being checked for DENY entry.
-   * @return true/ false depending on whether ACE is ALLOW or DENY
-   */
-  private boolean checkAndLogDenyAce(ACE ace) {
-    // TODO: Add qualification that some read related ACE access bit
-    //     is set before returning an indeterminant response here.
-    if (!ace.isAllow()) {
-      LOGGER.warning("Cannot process ACL. DENY ACE found. No ACL information returned for: "
+  private void checkAndAddAces(ACE[] securityAces, List<ACE> aceList,
+      List<ACE> aceDenyList, boolean skipInheritedAce) throws IOException {
+    if (securityAces == null) {
+      LOGGER.warning("Cannot process ACL because of null ACL " + "on "
           + file.getURL());
-      return true;
-    } else {
-      return false;    
+      return;
+    }
+    for (ACE securityAce : securityAces) {
+      checkAndAddAce(securityAce, aceList, aceDenyList, skipInheritedAce);
     }
   }
-  
+
   /**
-   * Checks for various conditions on ACEs before adding them as valid READ 
-   * ACEs.
+   * Checks for various conditions on ACEs before adding them as valid READ ACEs.
+   *
    * @param ace ACE to be checked and added.
    * @param aceList List where the ACE needs to be added if it is a valid ACE
+   * @param aceDenyList List where the deny ACE needs to be added if it is a 
+   * valid ACE
+   * @param skipInheritedAce if true skips adding inherited ACEs to the list
    */
-  private void checkAndAddAce(ACE ace, List<ACE> aceList) {
-    if (isInheritOnlyAce(ace.getFlags())) {
+  private void checkAndAddAce(ACE ace, List<ACE> aceList, List<ACE> aceDenyList,
+      boolean skipInheritedAce) {
+    if (skipInheritedAce && isInheritOnlyAce(ace.getFlags())) {
       LOGGER.finest("Filtering inherit only ACE " + ace + " for file " 
           + file.getURL());
       return;
@@ -482,7 +400,7 @@ class SmbAclBuilder {
       return;
     }
     LOGGER.finest("Adding read ACE " + ace + " for file " + file.getURL());
-    aceList.add(ace);
+    (ace.isAllow() ? aceList : aceDenyList).add(ace);
   }
   /**
    * Returns if the passed in {@link SmbException} indicates an authorization

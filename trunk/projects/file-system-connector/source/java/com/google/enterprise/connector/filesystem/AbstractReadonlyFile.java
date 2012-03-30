@@ -170,8 +170,14 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     return Acl.newPublicAcl();
   }
 
+  @Override
+  public Acl getInheritedAcl() throws IOException, RepositoryException {
+    // TODO: figure out what the inherited ACLs really are.
+    return null;
+  }
+
   /* @Override */
-  public Acl getShareAcl() throws IOException {
+  public Acl getShareAcl() throws IOException, RepositoryException {
     // TODO: figure out what the share ACLs really are.
     return null;
   }

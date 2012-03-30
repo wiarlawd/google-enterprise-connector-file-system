@@ -58,7 +58,8 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.FILEANDSHARE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getAcl();
+    Acl shareAcl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
     assertEquals("user1", acl.getUsers().get(0));
@@ -88,12 +89,13 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.FILEORSHARE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getAcl();
+    Acl shareAcl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
     assertTrue((acl.getUsers()).contains("user1"));
-    assertTrue((acl.getUsers()).contains("user2"));
-    assertTrue(acl.getGroups().contains("group1"));
+    assertTrue((shareAcl.getUsers()).contains("user2"));
+    assertTrue(shareAcl.getGroups().contains("group1"));
     verify(smbFile);
     verify(fileAce);
     verify(shareAce);
@@ -113,7 +115,7 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.FILE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
     assertTrue((acl.getUsers()).contains("user1"));
@@ -135,7 +137,7 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.SHARE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
     assertTrue((acl.getUsers()).contains("user2"));
@@ -157,7 +159,7 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.SHARE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue((acl.getGroups()).contains("accountants"));
@@ -182,13 +184,14 @@ public class SmbAclBuilderTest extends TestCase {
         "Incorrect Rule",
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getAcl();
+    Acl shareAcl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
     //Idea is to check in case of incorrect value, whether the code defaults to
     // file_intersection_share
-    assertTrue(acl.getUsers().isEmpty());
-    assertTrue(acl.getGroups().isEmpty());
+    //assertTrue(acl.getUsers().isEmpty());  // not valid anymore
+    //assertTrue(acl.getGroups().isEmpty());  // not valid anymore
     verify(smbFile);
     verify(fileAce);
     verify(shareAce);
@@ -207,8 +210,8 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.FILE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
-    assertEquals(Acl.USE_HEAD_REQUEST, acl);
+    Acl acl = builder.getAcl();
+    //assertEquals(Acl.USE_HEAD_REQUEST, acl);  // not valid anymore
     verify(smbFile);
   }
 
@@ -222,8 +225,8 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.SHARE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
-    assertEquals(Acl.USE_HEAD_REQUEST, acl);
+    Acl acl = builder.getShareAcl();
+    //assertEquals(Acl.USE_HEAD_REQUEST, acl); // not valid anymore
     verify(smbFile);
   }
 
@@ -241,7 +244,7 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.SHARE.name(),
         AclFormat.USER.getFormat(),AclFormat.GROUP.getFormat());
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue((acl.getGroups()).contains("accountants"));
@@ -261,9 +264,9 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.SHARE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getShareAcl();
     //Once DENY ACE is found, code should return ACL with null user and group ACE list
-    assertEquals(Acl.USE_HEAD_REQUEST, acl);
+    //assertEquals(Acl.USE_HEAD_REQUEST, acl); // not valid anymore
     verify(smbFile);
   }
 
@@ -279,9 +282,9 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.FILE.name(),
         defaultAceFormat, defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getAcl();
     //Once DENY ACE is found, code should return ACL with null user and group ACE list
-    assertEquals(Acl.USE_HEAD_REQUEST, acl);
+    //assertEquals(Acl.USE_HEAD_REQUEST, acl); // not valid anymore
     verify(smbFile);
   }
   
@@ -296,7 +299,7 @@ public class SmbAclBuilderTest extends TestCase {
           AceSecurityLevel.FILE.name(),
           defaultAceFormat, defaultAceFormat);
       SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-      builder.build();
+      builder.getAcl();
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
       assertTrue(e.getMessage().contains("On purpose"));
@@ -318,7 +321,7 @@ public class SmbAclBuilderTest extends TestCase {
         samlAceFormat, samlAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
 
-    Acl acl = builder.build();
+    Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue((acl.getGroups()).contains("accountants@google"));
@@ -339,7 +342,7 @@ public class SmbAclBuilderTest extends TestCase {
         AceSecurityLevel.SHARE.name(),
         httpAceFormat, httpAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue((acl.getGroups()).contains("google\\accountants"));
@@ -366,11 +369,12 @@ public class SmbAclBuilderTest extends TestCase {
         AclFormat.GROUP_AT_DOMAIN.getFormat(),
         defaultAceFormat);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.build();
+    Acl acl = builder.getAcl();
+    Acl shareAcl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
     assertEquals("google\\superUser", acl.getUsers().get(0));
-    assertEquals("employees@google", acl.getGroups().get(0));
+    assertEquals("employees@google", shareAcl.getGroups().get(0));
     verify(smbFile);
     verify(fileAce);
     verify(fileAce1);
@@ -413,17 +417,18 @@ public class SmbAclBuilderTest extends TestCase {
     //as long as they return the given value; some of these calls are made in a 
     //loop so its good enough to say that they will be called at least once.
     expectLastCall().atLeastOnce();
-    if (isDeny) {
-      expect(ace.isAllow()).andReturn(false);
-      expectLastCall().atLeastOnce();
-    } else {
+//  not valid anymore, deny ACL is allowed    
+//    if (isDeny) {
+//      expect(ace.isAllow()).andReturn(false);
+//      expectLastCall().atLeastOnce();
+//    } else {
       expect(ace.isAllow()).andReturn(true);
       expectLastCall().atLeastOnce();
       expect(ace.getFlags()).andReturn(0);
       expectLastCall().atLeastOnce();
       expect(ace.getAccessMask()).andReturn(SmbAclBuilder.READ_ACCESS_MASK);
       expectLastCall().atLeastOnce();
-    }
+//    }
     replay(sid);
     replay(ace);
     return ace;

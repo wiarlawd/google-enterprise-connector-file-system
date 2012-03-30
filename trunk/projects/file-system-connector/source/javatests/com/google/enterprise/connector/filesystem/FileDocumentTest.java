@@ -96,7 +96,7 @@ public class FileDocumentTest extends TestCase {
     List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
     List<String> groups = Arrays.asList("domain1\\engineers",
                                         "domain1\\product managers");
-    Acl acl = Acl.newAcl(users, groups);
+    Acl acl = Acl.newAcl(users, groups, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(true, false));
     validateNotPublic(doc);
@@ -133,7 +133,7 @@ public class FileDocumentTest extends TestCase {
 
   public void testAddNotPublicFileWithIndeterminateAcl()
       throws RepositoryException {
-    Acl acl = Acl.newAcl(null, null);
+    Acl acl = Acl.newAcl(null, null, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(true, false));
     validateNotPublic(doc);
@@ -146,7 +146,7 @@ public class FileDocumentTest extends TestCase {
     List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
     List<String> groups = Arrays.asList("domain1\\engineers",
                                         "domain1\\product managers");
-    Acl acl = Acl.newAcl(users, groups);
+    Acl acl = Acl.newAcl(users, groups, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(false, false));
     validateNotPublic(doc);
@@ -159,7 +159,7 @@ public class FileDocumentTest extends TestCase {
     List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
     List<String> groups = Arrays.asList("domain1\\engineers",
                                         "domain1\\product managers");
-    Acl acl = Acl.newAcl(users, groups);
+    Acl acl = Acl.newAcl(users, groups, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(false, true));
     assertNotNull(doc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
@@ -187,7 +187,7 @@ public class FileDocumentTest extends TestCase {
     List<String> users = Arrays.asList("domain1\\James", "domain1\\Mike");
     List<String> groups = Arrays.asList("domain1\\engineers",
                                         "domain1\\managers");
-    Acl acl = Acl.newAcl(users, groups);
+    Acl acl = Acl.newAcl(users, groups, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(true, false));
     validateNotPublic(doc);

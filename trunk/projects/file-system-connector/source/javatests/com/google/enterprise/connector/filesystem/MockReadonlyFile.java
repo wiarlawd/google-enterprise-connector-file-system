@@ -40,6 +40,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private String name;
   private boolean readable = true;
   private Acl acl;
+  private Acl shareAcl;
+  private Acl inheritedAcl;
   private long lastModified;
   private String fileContents;
   private boolean exists = true;
@@ -233,6 +235,14 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.acl = acl;
   }
 
+  public void setShareAcl(Acl acl) {
+    this.shareAcl = acl;
+  }
+
+  public void setInheritedAcl(Acl acl) {
+    this.inheritedAcl = acl;
+  }
+
   public void setFileContents(String fileContents) {
     if (isDir) {
       throw new RuntimeException("cannot set file contents of a directory: "
@@ -387,6 +397,11 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   @Override
   public Acl getShareAcl() throws IOException {
+    return null;
+  }
+
+  @Override
+  public Acl getInheritedAcl() throws IOException {
     return null;
   }
 }

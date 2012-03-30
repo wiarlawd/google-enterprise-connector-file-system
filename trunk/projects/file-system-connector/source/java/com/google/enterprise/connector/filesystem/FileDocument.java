@@ -42,7 +42,7 @@ public class FileDocument implements Document {
   private static final Logger LOGGER =
       Logger.getLogger(FileDocument.class.getName());
 
-  public static final String SHARE_ACL_DOCID = "shareAcl";
+  public static final String SHARE_ACL_PREFIX = "ShareACL://";
   private final ReadonlyFile<?> file;
   private final DocumentContext context;
   private final Map<String, List<Value>> properties;
@@ -149,27 +149,12 @@ public class FileDocument implements Document {
         LOGGER.finest("pushAcls flag is true so adding ACL to the document");
         try {
           Acl acl = file.getAcl();
-          if (acl.isDeterminate()) {
-            if (acl.isPublic()) {
-              LOGGER.finest("ACL isPublic flag is true so setting "
-                            + "PROPNAME_ISPUBLIC to TRUE");
-              addProperty(SpiConstants.PROPNAME_ISPUBLIC,
-                          Boolean.TRUE.toString());
-            } else {
-              if (isRoot) {
-                addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
-                    getRootShareAclId(file));
-              } else {
-                addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
-                    file.getParent());
-              }
-              addProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
-              addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
-            }
-          }
+          checkAndAddPublicAclProperties(acl);
+          checkAndAddRootAclProperties(file, acl);
+          checkAndAddNonRootAclProperties(file, acl);
         } catch (IOException ioe) {
           throw new RepositoryDocumentException("Failed to read ACL for "
-               + file.getPath(), ioe);
+              + file.getPath(), ioe);
         }
       }
       if (!properties.containsKey(SpiConstants.PROPNAME_ISPUBLIC)) {
@@ -180,11 +165,73 @@ public class FileDocument implements Document {
     }
   }
 
+  /*
+   * Returns share ACL ID for the root.
+   */
   public static String getRootShareAclId(ReadonlyFile<?> root) {
     String rootPath = root.getPath();
-    //TODO: unique name for the share
-    String docId = rootPath + SHARE_ACL_DOCID;
-    return docId;
+    return rootPath.replace(SmbFileSystemType.SMB_PATH_PREFIX, 
+        SHARE_ACL_PREFIX);
+  }
+
+  /*
+   * Adds ACL properties to the property map.
+   */
+  private void addAclProperties(Acl acl) {
+    if (acl.getUsers() != null) {
+      addProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
+    }
+    if (acl.getGroups() != null) {
+      addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
+    }
+    if (acl.getDenyUsers() != null) {
+      addProperty(SpiConstants.PROPNAME_ACLDENYUSERS, acl.getDenyUsers());
+    }
+    if (acl.getDenyGroups() != null) {
+      addProperty(SpiConstants.PROPNAME_ACLDENYGROUPS, acl.getDenyGroups());
+    }
+  }
+
+  /*
+   * Adds public ACL property to the property map.
+   */
+  private void checkAndAddPublicAclProperties(Acl acl) {
+    if (acl.isDeterminate() && acl.isPublic()) {
+      LOGGER.finest("ACL isPublic flag is true so setting "
+          + "PROPNAME_ISPUBLIC to TRUE");
+      addProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.TRUE.toString());
+    }
+  }
+
+  /*
+   * Adds root ACL properties to the property map.
+   */
+  private void checkAndAddRootAclProperties(ReadonlyFile<?> file, Acl acl)
+      throws IOException, RepositoryException {
+    if (!acl.isPublic() && isRoot) {
+      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, 
+          getRootShareAclId(file));
+      Acl inheritedAcl = file.getInheritedAcl();
+      if (inheritedAcl.isDeterminate()) {
+        addAclProperties(inheritedAcl);
+      }
+      if (acl.isDeterminate()) {
+        addAclProperties(acl);
+      }
+    }
+  }
+
+  /*
+   * Adds non-root ACL properties to the property map.
+   */
+  private void checkAndAddNonRootAclProperties(ReadonlyFile<?> file, Acl acl)
+      throws IOException, RepositoryException {
+    if (!acl.isPublic() && !isRoot) {
+      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, file.getParent());
+      if (acl.isDeterminate()) {
+        addAclProperties(acl);
+      }
+    }
   }
 
   /**
@@ -227,8 +274,9 @@ public class FileDocument implements Document {
       LinkedList<Value> firstValues = new LinkedList<Value>();
       firstValues.add(value);
       properties.put(name, firstValues);
-    } else
+    } else {
       values.add(value);
+    }
   }
 
   @Override
