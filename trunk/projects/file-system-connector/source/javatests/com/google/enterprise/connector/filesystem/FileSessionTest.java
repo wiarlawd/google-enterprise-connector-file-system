@@ -18,6 +18,9 @@ import com.google.enterprise.connector.spi.ListerAware;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.RetrieverAware;
 import com.google.enterprise.connector.spi.Session;
+import com.google.enterprise.connector.spi.SimpleTraversalContext;
+import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import junit.framework.TestCase;
 
@@ -36,17 +39,23 @@ public class FileSessionTest extends TestCase {
   public void setUp() throws Exception {
     FileSystemTypeRegistry fileSystemTypeRegistry = new FileSystemTypeRegistry(
         Collections.singletonList(new JavaFileSystemType()));
-
+    TraversalContext traversalContext = new SimpleTraversalContext();
+    MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
+    mimeTypeDetector.setTraversalContext(traversalContext);
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
+    FileSystemPropertyManager propertyManager =
+        new TestFileSystemPropertyManager(false);
     DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        false, true, null, null, null, null);
+        null, null, null, mimeTypeDetector, propertyManager);
 
     authz = new FileAuthorizationManager(pathParser);
     List<String> empty = Collections.emptyList();
-    lister = new FileLister(pathParser, empty, empty, empty, context);
+    lister = new FileLister(pathParser, empty, empty, empty, context,
+                            propertyManager);
     retriever = new FileRetriever(pathParser, context);
 
-    FileConnector connector = new FileConnector(authz, lister, retriever, null);
+    FileConnector connector = new FileConnector(authz, lister, retriever,
+                                                propertyManager);
     session = connector.login();
     assertNotNull(session);
   }

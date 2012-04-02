@@ -99,12 +99,11 @@ public class FileIteratorTest extends TestCase {
     FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
-    TraversalContext traversalContext = new FakeTraversalContext(
-        FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE);
+    TraversalContext traversalContext = new FakeTraversalContext();
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
     mimeTypeDetector.setTraversalContext(traversalContext);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        true, false, null, mimeTypeDetector);
+    DocumentContext context = new DocumentContext(fileSystemTypeRegistry, null,
+        null, null, mimeTypeDetector, new TestFileSystemPropertyManager());
     FilePatternMatcher matcher = new FilePatternMatcher(
         Collections.singletonList("/"), (List<String>) Collections.EMPTY_LIST);
 

@@ -54,7 +54,8 @@ public class FileConnectorType implements ConnectorType {
   }
 
   private static final Logger LOG = Logger.getLogger(FileConnectorType.class.getName());
-  private static final Map<String, String> EMPTY_CONFIG = Collections.emptyMap();
+  private static final Map<String, String> EMPTY_CONFIG =
+      Collections.singletonMap("fulltraversal", "7");
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
      * Our field values come from HTML input boxes which get maped to
@@ -377,6 +378,7 @@ public class FileConnectorType implements ConnectorType {
   private static class FormManager {
     private final List<AbstractField> fields;
     private final SingleLineField domainField, userField, passwordField;
+    private final SingleLineField fullTraversalField;
     private final MultiLineField startField, includeField, excludeField;
     private final ResourceBundle bundle;
     private final Map<String, String> config;
@@ -391,6 +393,7 @@ public class FileConnectorType implements ConnectorType {
       tempFields.add(domainField = new SingleLineField("domain", false, false));
       tempFields.add(userField = new SingleLineField("user", false, false));
       tempFields.add(passwordField = new SingleLineField("password", false, true));
+      tempFields.add(fullTraversalField = new SingleLineField("fulltraversal", false, false));
       fields = Collections.unmodifiableList(tempFields);
 
       this.bundle = bundle;
@@ -443,6 +446,12 @@ public class FileConnectorType implements ConnectorType {
         return new ConfigureResponse(errorMessageHtml, getFormRows(errorKeys));
       }
 
+      errorMessageHtml = assureFullTraversalInteger();
+      if (errorMessageHtml != null) {
+        errorKeys = Collections.singletonList(fullTraversalField.getName());
+        return new ConfigureResponse(errorMessageHtml, getFormRows(errorKeys));
+      }
+
       // If we have been given a factory, try to instantiate a connector.
       try {
         if (factory != null) {
@@ -455,6 +464,18 @@ public class FileConnectorType implements ConnectorType {
         return new ConfigureResponse(bundle.getString(FileSystemConnectorErrorMessages.CONNECTOR_INSTANTIATION_FAILED
             .name()), getFormRows(null));
       }
+    }
+
+    /** Checks to see if the full traversal interval is an integer. */
+    private String assureFullTraversalInteger() {
+      if (fullTraversalField.hasValue() &&
+          fullTraversalField.getValue().matches("(-1)|(\\d+)")) {
+        return null;
+      }
+      LOG.info(FileSystemConnectorErrorMessages.INVALID_FULL_TRAVERSAL +
+          ": " + fullTraversalField.getValue());
+      return bundle.getString(
+          FileSystemConnectorErrorMessages.INVALID_FULL_TRAVERSAL.name());
     }
 
     /**

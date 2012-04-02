@@ -87,10 +87,10 @@ class FileLister implements Lister, TraversalContextAware,
    * since the last full traversal, otherwise perform
    * incremental traversal.
    */
-  private long fullTraversalInterval;
+  private long fullTraversalInterval = 24 * 60 * 60 * 1000L;
 
   /** Cushion for inaccurate timestamps in ifModifiedSince calculations. */
-  private long ifModifiedSinceCushion;
+  private long ifModifiedSinceCushion = 60 * 60 * 1000L;;
 
   private DocumentAcceptor documentAcceptor;
   private TraversalSchedule schedule;
@@ -111,17 +111,16 @@ class FileLister implements Lister, TraversalContextAware,
    */
   public FileLister(PathParser pathParser, List<String> userEnteredStartPaths,
       List<String> includePatterns, List<String> excludePatterns,
-      DocumentContext context) throws RepositoryException {
+      DocumentContext context, FileSystemPropertyManager propertyManager)
+      throws RepositoryException {
     this.pathParser = pathParser;
     this.startPaths = normalizeStartPaths(userEnteredStartPaths);
     this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
         includePatterns, excludePatterns);
     this.context = context;
-    // TODO (bmj): Get number of threads from advanced config properties.
-    this.traverserService = Executors.newFixedThreadPool(10);
-    // TODO (bmj): Get these from config properties.
-    fullTraversalInterval = /*DEBUGGING 24 * 60 * 60 * 1000L; */  15 * 60 * 1000L;
-    ifModifiedSinceCushion = 60 * 60 * 1000L;
+    this.traverserService =
+        Executors.newFixedThreadPool(propertyManager.getThreadPoolSize());
+    setIfModifiedSinceCushion(propertyManager.getIfModifiedSinceCushion());
   }
 
   private static Collection<String> normalizeStartPaths(
@@ -162,6 +161,12 @@ class FileLister implements Lister, TraversalContextAware,
   @VisibleForTesting
   synchronized void setClock(Clock clock) {
     this.clock = clock;
+  }
+
+  /** Settable via Spring. */
+  public void setFullTraversalIntervalDays(int days) {
+    setFullTraversalInterval(
+        (days > 0) ? days * 24 * 60 * 60 * 1000L : days);
   }
 
   @VisibleForTesting

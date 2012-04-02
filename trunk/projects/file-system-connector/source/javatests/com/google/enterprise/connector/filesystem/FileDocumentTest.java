@@ -169,16 +169,6 @@ public class FileDocumentTest extends TestCase {
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
   }
 
-  public void testPushAllAclsWithMarkAllDocumentsPublic() {
-    try {
-      makeContext(true, true);
-      fail();
-    } catch (IllegalArgumentException iae) {
-      assertTrue(iae.getMessage().contains(
-                 "pushAcls not supported with markAllDocumentsPublic"));
-    }
-  }
-
   public void testDirectoryWithAcl() throws RepositoryException {
     root = MockReadonlyFile.createRoot("/foo/bar");
     fileFactory = new MockFileSystemType(root);
@@ -220,12 +210,11 @@ public class FileDocumentTest extends TestCase {
       boolean markAllDocumentsPublic) {
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
     mimeTypeDetector.setTraversalContext(new FakeTraversalContext());
-    DocumentContext result =
-      new DocumentContext(
-          new FileSystemTypeRegistry(Arrays.asList(fileFactory)),
-          pushAcls, markAllDocumentsPublic,
-          FileConnectorType.newCredentials(null, null, null),
-          mimeTypeDetector);
+    DocumentContext result = new DocumentContext(
+        new FileSystemTypeRegistry(Arrays.asList(fileFactory)),
+        null, null, null, mimeTypeDetector,
+        new TestFileSystemPropertyManager(pushAcls, markAllDocumentsPublic));
+
     return result;
   }
 }

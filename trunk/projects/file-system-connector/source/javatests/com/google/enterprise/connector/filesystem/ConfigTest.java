@@ -32,9 +32,9 @@ import java.util.Properties;
  */
 public class ConfigTest extends TestCase {
   private static final String CONFIG_DIR = "config/";
-  private static final String DEFAULTS_CONFIG_FILE = CONFIG_DIR 
+  private static final String DEFAULTS_CONFIG_FILE = CONFIG_DIR
       + "connectorDefaults.xml";
-  private static final String INSTANCE_CONFIG_FILE = CONFIG_DIR 
+  private static final String INSTANCE_CONFIG_FILE = CONFIG_DIR
       + "connectorInstance.xml";
   private HashMap<String, String> goodConfig;
 
@@ -58,6 +58,7 @@ public class ConfigTest extends TestCase {
     goodConfig.put("domain", "domain1");
     goodConfig.put("user", "xyz");
     goodConfig.put("password", "test");
+    goodConfig.put("fulltraversal", "0");
   }
 
   public void testInstantiation() {
@@ -65,7 +66,7 @@ public class ConfigTest extends TestCase {
     props.putAll(goodConfig);
     DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
     XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
-    // Refer to InstanceInfo.makeConnectorWithSpring 
+    // Refer to InstanceInfo.makeConnectorWithSpring
     //(com.google.enterprise.connector.instantiator) for more info on how
     // these files are loaded to instantiate connector.
     reader.loadBeanDefinitions(new ClassPathResource(

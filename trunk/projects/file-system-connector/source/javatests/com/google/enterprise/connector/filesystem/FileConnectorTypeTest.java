@@ -103,6 +103,9 @@ public class FileConnectorTypeTest extends TestCase {
       config.put(field.getName(), field.getLabel(US_BUNDLE));
     }
 
+    // Full Traversal Interval needs to be an integer.
+    config.put("fulltraversal", "0");
+
     // Create some test directories to validate.
     for (int k = 0; k < 5; ++k) {
       File dir = testDirectoryManager.makeDirectory(String.format("start-path-%d", k));

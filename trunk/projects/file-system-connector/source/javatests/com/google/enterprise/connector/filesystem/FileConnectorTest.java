@@ -28,17 +28,20 @@ public class FileConnectorTest extends TestCase {
   public void testConstructor() throws Exception {
     FileSystemTypeRegistry fileSystemTypeRegistry = new FileSystemTypeRegistry(
         Collections.singletonList(new JavaFileSystemType()));
-
+    FileSystemPropertyManager propertyManager =
+        new TestFileSystemPropertyManager();
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        false, true, null, null, null, null);
+        null, null, null, null, propertyManager);
 
     FileAuthorizationManager authz = new FileAuthorizationManager(pathParser);
     List<String> empty = Collections.emptyList();
-    FileLister lister = new FileLister(pathParser, empty, empty, empty, context);
+    FileLister lister = new FileLister(pathParser, empty, empty, empty, context,
+                                       propertyManager);
     FileRetriever retriever = new FileRetriever(pathParser, context);
 
-    FileConnector connector = new FileConnector(authz, lister, retriever, null);
+    FileConnector connector =
+        new FileConnector(authz, lister, retriever, propertyManager);
     Session session = connector.login();
     assertNotNull(session);
   }

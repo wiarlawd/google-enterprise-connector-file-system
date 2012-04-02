@@ -76,6 +76,32 @@
     <property name="userAclFormat" value="user"/>
     -->
 
+    <!--
+    Cushion for inaccurate timestamps in if-modified-since comparisons,
+    usually due to unsynchronized clocks.
+
+    The cushion value is the number of minutes before the if-modified-since
+    check time in which a file may still be considered  modified.
+    For instance, if the cushion is 60 minutes, and we are looking for files
+    modified since time X, a file modified at X - 30 minutes whould still
+    qualify.
+
+    The default value is 60 minutes (1 hour).
+    -->
+    <!--
+    <property name="ifModifiedSinceCushionMinutes" value="60"/>
+    -->
+
+    <!--
+    Number of threads in the traversal thread pool. Each startpoint
+    is traversed in its own thread, so this value affects how many
+    startpoints may be traversed concurrently.
+    The default number of traversal threads is 10.
+    -->
+    <!--
+    <property name="threadPoolSize" value="10"/>
+    -->
+
   </bean>
 
 </beans>

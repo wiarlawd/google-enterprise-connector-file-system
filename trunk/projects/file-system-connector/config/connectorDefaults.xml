@@ -146,6 +146,8 @@
       </list>
     </constructor-arg>
     <constructor-arg ref="document-context"/>
+    <constructor-arg ref="filesystem-property-manager"/>
+    <property name="fullTraversalIntervalDays" value="${fulltraversal}"/>
   </bean>
 
   <bean id="file-retriever"
@@ -162,6 +164,8 @@
     <property name="pushAclFlag" value="true"/>
     <property name="groupAclFormat" value="group"/>
     <property name="userAclFormat" value="user"/>
+    <property name="ifModifiedSinceCushionMinutes" value="60"/>
+    <property name="threadPoolSize" value="10"/>
   </bean>
 
   <bean id="file-connector"
@@ -171,6 +175,16 @@
     <constructor-arg ref="file-retriever"/>
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
+
+  <bean id="propertyPlaceholderConfigurer"
+        class="com.google.enterprise.connector.instantiator.EncryptedPropertyPlaceholderConfigurer">
+    <property name="properties">
+      <props>
+        <prop key="fulltraversal">7</prop>
+      </props>
+    </property>
+  </bean>
+
 
   <!--
     Dummy beans to overcome backward compatibility of connectorInstance.xml

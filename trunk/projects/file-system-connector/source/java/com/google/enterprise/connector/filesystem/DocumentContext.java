@@ -24,33 +24,6 @@ public class DocumentContext {
   private final MimeTypeDetector mimeTypeDetector;
 
   /**
-   * This constructor is used only in test cases.
-   */
-  DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
-                  boolean pushAcls, boolean markAllDocumentsPublic,
-                  String domain, String userName, String password,
-                  MimeTypeDetector mimeTypeDetector) {
-
-    this(fileSystemTypeRegistry, pushAcls, markAllDocumentsPublic,
-         new Credentials(domain, userName, password),
-         mimeTypeDetector);
-  }
-
-  DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
-                  boolean pushAcls, boolean markAllDocumentsPublic,
-                  Credentials credentials, MimeTypeDetector mimeTypeDetector) {
-    if (pushAcls && markAllDocumentsPublic) {
-      throw new IllegalArgumentException(
-          "pushAcls not supported with markAllDocumentsPublic");
-    }
-    this.fileSystemTypeRegistry = fileSystemTypeRegistry;
-    this.pushAcls = pushAcls;
-    this.markAllDocumentsPublic = markAllDocumentsPublic;
-    this.credentials = credentials;
-    this.mimeTypeDetector = mimeTypeDetector;
-  }
-
-  /**
    * This constructor is used to instantiate the document context
    * using properties configured in Spring.
    */
@@ -58,10 +31,11 @@ public class DocumentContext {
                   String domain, String userName, String password,
                   MimeTypeDetector mimeTypeDetector,
                   DocumentSecurityProperties propertyFetcher) {
-    this(fileSystemTypeRegistry, propertyFetcher.isPushAclFlag(),
-         propertyFetcher.isMarkDocumentPublicFlag(),
-         new Credentials(domain, userName, password),
-         mimeTypeDetector);
+    this.pushAcls = propertyFetcher.isPushAclFlag();
+    this.markAllDocumentsPublic = propertyFetcher.isMarkDocumentPublicFlag();
+    this.fileSystemTypeRegistry = fileSystemTypeRegistry;
+    this.credentials = new Credentials(domain, userName, password);
+    this.mimeTypeDetector = mimeTypeDetector;
   }
 
   public FileSystemTypeRegistry getFileSystemTypeRegistry() {

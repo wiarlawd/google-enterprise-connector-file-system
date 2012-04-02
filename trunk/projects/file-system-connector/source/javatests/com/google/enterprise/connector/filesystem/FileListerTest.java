@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.ImmutableList;
@@ -42,14 +43,12 @@ public class FileListerTest extends TestCase {
   private static final List<String> INCLUDE_ALL_PATTERNS = ImmutableList.of("/");
   private static final List<String> EXCLUDE_NONE_PATTERNS = ImmutableList.of();
   private static final TraversalContext TRAVERSAL_CONTEXT =
-      new FakeTraversalContext(FakeTraversalContext.DEFAULT_MAXIMUM_DOCUMENT_SIZE);
+      new FakeTraversalContext();
   private static final TraversalSchedule TRAVERSAL_SCHEDULE =
       new MockTraversalSchedule();
   private static final MimeTypeDetector MIME_TYPE_DETECTOR =
       new MimeTypeDetector();
-  private static final Credentials CREDENTIALS = null;
   private static final boolean PUSH_ACLS = true;
-  private static final boolean MARK_ALL_DOCUMENTS_PUBLIC = false;
 
   static {
     MIME_TYPE_DETECTOR.setTraversalContext(TRAVERSAL_CONTEXT);
@@ -122,13 +121,14 @@ public class FileListerTest extends TestCase {
     FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
+    FileSystemPropertyManager propertyManager =
+        new TestFileSystemPropertyManager(pushAcls);
     DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        pushAcls, MARK_ALL_DOCUMENTS_PUBLIC, CREDENTIALS,
-        MIME_TYPE_DETECTOR);
+        null, null, null, MIME_TYPE_DETECTOR, propertyManager);
     // TODO: handle multiple startpoints.
     List<String> startPoints = Collections.singletonList(root.getPath());
     final FileLister lister = new FileLister(pathParser, startPoints,
-        includePatterns, excludePatterns, context);
+        includePatterns, excludePatterns, context, propertyManager);
     lister.setTraversalContext(traversalContext);
     lister.setTraversalSchedule(traversalSchedule);
     lister.setDocumentAcceptor(documentAcceptor);
