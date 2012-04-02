@@ -10,8 +10,47 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
+Release 2.8.6, March 30, 2012
+=============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality. Users of previous releases are encouraged to review
+the changes below to determine whether to upgrade.
+
+Issues fixed from last release:
+-------------------------------
+Issue 6109697: File system connector throws a NullPointerException and
+               halts traversal. The exception may be logged to stdout
+               or in catalina.out. This issue was introduced in
+               version 2.8.4 and can occur when the traversal user
+               does not have permission to read the files in a
+               directory.
+
+Known limitations:
+-----------------
+Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
+Issue 5111509: File system connector goes into infinite loop when connector is reset. This is reproducible only for
+               very small file shares.
+
+Advanced Configuration Properties
+---------------------------------
+For more details on the advanced properties, see 
+http://code.google.com/p/google-enterprise-connector-file-system/wiki/AdvancedConfiguration
+
+Version Compatibility
+---------------------
+Connector instances created using version 2.8.0 may be used with this
+version. Connector instances from earlier versions must be upgraded
+manually. See the section below about release 2.8.4 for more details.
+This version works with Connector Manager version 2.8.0 or later.
+Earlier versions of the Connector Manager will not work correctly with
+this version of the connector.
+
+
 Release 2.8.4, February 21, 2012
-===============================
+================================
 
 Introduction
 ------------
