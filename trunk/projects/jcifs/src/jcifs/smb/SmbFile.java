@@ -2583,9 +2583,12 @@ if (this instanceof SmbNamedPipe) {
 
         f = open0( O_RDONLY, FILE_WRITE_ATTRIBUTES,
                 dir, dir != 0 ? 0x0001 : 0x0040 );
-        send( new Trans2SetFileInformation( f, attrs | dir, ctime, mtime, latime ),
-                new Trans2SetFileInformationResponse() );
-        close( f, 0L );
+        try {
+            send( new Trans2SetFileInformation( f, attrs | dir, ctime, mtime, latime ),
+                  new Trans2SetFileInformationResponse() );
+        } finally {
+            close( f, 0L );
+        }
 
         attrExpiration = 0;
     }
