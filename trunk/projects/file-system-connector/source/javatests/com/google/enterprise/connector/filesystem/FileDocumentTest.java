@@ -106,7 +106,7 @@ public class FileDocumentTest extends TestCase {
     validateRepeatedProperty(groups, groupsProperty);
 
     Property aclInheritFrom = doc.findProperty(
-        SpiConstants.PROPNAME_ACLINHERITFROM);
+        SpiConstants.PROPNAME_ACLINHERITFROM_DOCID);
     assertNotNull(aclInheritFrom);
     assertEquals(foo.getParent(), aclInheritFrom.nextValue().toString());
   }
@@ -187,11 +187,11 @@ public class FileDocumentTest extends TestCase {
     validateRepeatedProperty(groups, groupsProperty);
 
     if (foo.isDirectory()) {
-      Property aclFeedProperty =
-          doc.findProperty(SpiConstants.PROPNAME_FEEDTYPE);
-      assertNotNull(aclFeedProperty);
-      assertEquals(SpiConstants.FeedType.ACL.toString(),
-          aclFeedProperty.nextValue().toString());
+      Property aclDocumentTypeProperty =
+          doc.findProperty(SpiConstants.PROPNAME_DOCUMENTTYPE);
+      assertNotNull(aclDocumentTypeProperty);
+      assertEquals(SpiConstants.DocumentType.ACL.toString(),
+          aclDocumentTypeProperty.nextValue().toString());
 
       Property aclInheritanceTypeProperty =
           doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE);
@@ -201,7 +201,7 @@ public class FileDocumentTest extends TestCase {
     }
 
     Property aclInheritFrom = doc.findProperty(
-        SpiConstants.PROPNAME_ACLINHERITFROM);
+        SpiConstants.PROPNAME_ACLINHERITFROM_DOCID);
     assertNotNull(aclInheritFrom);
     assertEquals(foo.getParent(), aclInheritFrom.nextValue().toString());
   }

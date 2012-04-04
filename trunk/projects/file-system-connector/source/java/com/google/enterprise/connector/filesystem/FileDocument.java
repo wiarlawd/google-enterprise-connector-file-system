@@ -92,14 +92,13 @@ public class FileDocument implements Document {
 
   private void fetchProperties() throws RepositoryException {
     if (file.isDirectory()) {
-      addProperty(SpiConstants.PROPNAME_FEEDTYPE,
-          SpiConstants.FeedType.ACL.toString());
+      addProperty(SpiConstants.PROPNAME_DOCUMENTTYPE,
+          SpiConstants.DocumentType.ACL.toString());
       addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
           SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString());
-    } else {
-      addProperty(SpiConstants.PROPNAME_FEEDTYPE,
-          SpiConstants.FeedType.CONTENTURL.toString());
     }
+    addProperty(SpiConstants.PROPNAME_FEEDTYPE,
+        SpiConstants.FeedType.CONTENTURL.toString());
     addProperty(SpiConstants.PROPNAME_DOCID, getDocumentId());
     addProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
     try {
@@ -211,7 +210,7 @@ public class FileDocument implements Document {
   private void checkAndAddRootAclProperties(ReadonlyFile<?> file, Acl acl)
       throws IOException, RepositoryException {
     if (!acl.isPublic() && isRoot) {
-      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM,
+      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID,
           getRootShareAclId(file));
       Acl inheritedAcl = file.getInheritedAcl();
       if (inheritedAcl.isDeterminate()) {
@@ -229,7 +228,8 @@ public class FileDocument implements Document {
   private void checkAndAddNonRootAclProperties(ReadonlyFile<?> file, Acl acl)
       throws IOException, RepositoryException {
     if (!acl.isPublic() && !isRoot) {
-      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM, file.getParent());
+      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID,
+          file.getParent());
       if (acl.isDeterminate()) {
         addAclProperties(acl);
       }

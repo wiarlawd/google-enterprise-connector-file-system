@@ -23,6 +23,7 @@ import com.google.enterprise.connector.spi.DocumentAcceptorException;
 import com.google.enterprise.connector.spi.Lister;
 import com.google.enterprise.connector.spi.SecureDocument;
 import com.google.enterprise.connector.spi.SpiConstants;
+import com.google.enterprise.connector.spi.SpiConstants.FeedType;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalContextAware;
 import com.google.enterprise.connector.spi.TraversalSchedule;
@@ -395,8 +396,10 @@ class FileLister implements Lister, TraversalContextAware,
               getStringValueList(shareAcl.getDenyUsers()));
           aclValues.put(SpiConstants.PROPNAME_ACLDENYGROUPS,
               getStringValueList(shareAcl.getDenyGroups()));
-          aclValues.put(SpiConstants.PROPNAME_DOCID, Collections.singletonList(
-              Value.getStringValue(FileDocument.getRootShareAclId(root))));
+          aclValues.put(SpiConstants.PROPNAME_DOCID,
+              getStringValueList(FileDocument.getRootShareAclId(root)));
+          aclValues.put(SpiConstants.PROPNAME_FEEDTYPE,
+              getStringValueList(FeedType.CONTENTURL.toString()));
           return SecureDocument.createAcl(aclValues);
         } else {
           return null;
@@ -412,15 +415,18 @@ class FileLister implements Lister, TraversalContextAware,
       }
     }
 
-    /*
-     * Creates a value list carrying a String values.
-     */
+    /** Creates a value list from a list of String values. */
     private List<Value> getStringValueList(List<String> strValues) {
-      List<Value> valueList = new ArrayList<Value>();
+      List<Value> valueList = new ArrayList<Value>(strValues.size());
       for (String str : strValues) {
         valueList.add(Value.getStringValue(str));
       }
       return valueList;
+    }
+
+    /** Creates a value list from single string. */
+    private List<Value> getStringValueList(String value) {
+      return Collections.singletonList(Value.getStringValue(value));
     }
   }
 }
