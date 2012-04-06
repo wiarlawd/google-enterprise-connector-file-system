@@ -70,7 +70,8 @@ class CopySmbToLocalDisk {
     String endPath = a[1];
     Credentials creds = new Credentials("", "admin", "test");
     SmbFileProperties smbProperties = new SmbProperties();
-    SmbReadonlyFile start = new SmbReadonlyFile(startPath, creds, smbProperties);
+    SmbFileSystemType type = new SmbFileSystemType(smbProperties);
+    SmbReadonlyFile start = new SmbReadonlyFile(type, startPath, creds, smbProperties);
     CopySmbToLocalDisk copier = new CopySmbToLocalDisk(start, new File(endPath));
     long startTimeMillis = System.currentTimeMillis();
     copier.copy();

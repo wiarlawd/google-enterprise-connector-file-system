@@ -22,18 +22,14 @@ public class NfsReadonlyFileTest extends JavaReadonlyFileTest {
 
   @Override
   protected void makeReadonlyFiles() {
-    readonlyRoot = new NfsReadonlyFile(root.getAbsolutePath());
-    readonlyFile1 = new NfsReadonlyFile(file1.getAbsolutePath());
-    readonlyOtherFile1 = new NfsReadonlyFile(file1.getAbsolutePath());
-    readonlyTest1 = new NfsReadonlyFile(test1.getAbsolutePath());
-    readonlyTest2 = new NfsReadonlyFile(test2.getAbsolutePath());
-    readonlyDirA = new NfsReadonlyFile(dirA.getAbsolutePath());
-    readonlyDirB = new NfsReadonlyFile(dirB.getAbsolutePath());
-  }
-
-  @Override
-  public void testFileSystemType() {
-    assertEquals("nfs", readonlyRoot.getFileSystemType());
+    type = new NfsFileSystemType();
+    readonlyRoot = new NfsReadonlyFile(type, root.getAbsolutePath());
+    readonlyFile1 = new NfsReadonlyFile(type, file1.getAbsolutePath());
+    readonlyOtherFile1 = new NfsReadonlyFile(type, file1.getAbsolutePath());
+    readonlyTest1 = new NfsReadonlyFile(type, test1.getAbsolutePath());
+    readonlyTest2 = new NfsReadonlyFile(type, test2.getAbsolutePath());
+    readonlyDirA = new NfsReadonlyFile(type, dirA.getAbsolutePath());
+    readonlyDirB = new NfsReadonlyFile(type, dirB.getAbsolutePath());
   }
 
   /** TODO: Why NFS getPath follows different rules wrt trailing slash? */

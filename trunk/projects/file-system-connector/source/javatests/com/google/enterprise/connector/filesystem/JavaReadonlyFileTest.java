@@ -36,6 +36,7 @@ public class JavaReadonlyFileTest extends TestCase {
 
   protected TestDirectoryManager testDirectoryManager;
   protected long fileOneLastModified;
+  protected FileSystemType type;
 
   protected ReadonlyFile<?> readonlyRoot;
   protected ReadonlyFile<?> readonlyFile1;
@@ -80,17 +81,18 @@ public class JavaReadonlyFileTest extends TestCase {
   }
 
   protected void makeReadonlyFiles() {
-    readonlyRoot = new JavaReadonlyFile(root.getAbsolutePath());
-    readonlyFile1 = new JavaReadonlyFile(file1.getAbsolutePath());
-    readonlyOtherFile1 = new JavaReadonlyFile(file1.getAbsolutePath());
-    readonlyTest1 = new JavaReadonlyFile(test1.getAbsolutePath());
-    readonlyTest2 = new JavaReadonlyFile(test2.getAbsolutePath());
-    readonlyDirA = new JavaReadonlyFile(dirA.getAbsolutePath());
-    readonlyDirB = new JavaReadonlyFile(dirB.getAbsolutePath());
+    type = new JavaFileSystemType();
+    readonlyRoot = new JavaReadonlyFile(type, root.getAbsolutePath());
+    readonlyFile1 = new JavaReadonlyFile(type, file1.getAbsolutePath());
+    readonlyOtherFile1 = new JavaReadonlyFile(type, file1.getAbsolutePath());
+    readonlyTest1 = new JavaReadonlyFile(type, test1.getAbsolutePath());
+    readonlyTest2 = new JavaReadonlyFile(type, test2.getAbsolutePath());
+    readonlyDirA = new JavaReadonlyFile(type, dirA.getAbsolutePath());
+    readonlyDirB = new JavaReadonlyFile(type, dirB.getAbsolutePath());
   }
 
   public void testFileSystemType() {
-    assertEquals("java", readonlyRoot.getFileSystemType());
+    assertEquals(type.getName(), readonlyRoot.getFileSystemType().getName());
   }
 
   public void testToString() {
@@ -219,10 +221,6 @@ public class JavaReadonlyFileTest extends TestCase {
 
   public void testGetAcl() throws Exception {
     assertTrue(readonlyRoot.getAcl().isPublic());
-  }
-
-  public void testSupportsAuthn() throws Exception {
-    assertFalse(readonlyRoot.supportsAuthn());
   }
 
   public void testLastModified() throws Exception {

@@ -47,11 +47,12 @@ public class FilePatternMatcherTest extends TestCase {
     List<String> include = Collections.singletonList("/foo/bar/");
     List<String> exclude = Collections.singletonList("/foo/bar/hidden/");
     FilePatternMatcher matcher = new FilePatternMatcher(include, exclude);
-    assertTrue(new JavaReadonlyFile("/foo/bar/baz.txt")
+    // We do not really need a FileSystemType for these, so null should be OK.
+    assertTrue(new JavaReadonlyFile(null, "/foo/bar/baz.txt")
         .acceptedBy(matcher));
-    assertFalse(new JavaReadonlyFile("/foo/bar/hidden/porn.png")
+    assertFalse(new JavaReadonlyFile(null, "/foo/bar/hidden/porn.png")
         .acceptedBy(matcher));
-    assertFalse(new JavaReadonlyFile("/bar/foo/public/knowledge")
+    assertFalse(new JavaReadonlyFile(null, "/bar/foo/public/knowledge")
         .acceptedBy(matcher));
   }
 }

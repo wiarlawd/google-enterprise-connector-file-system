@@ -35,31 +35,22 @@ public class WindowsReadonlyFile
   /** If true, preserve the last access time for the file. */
   private final boolean accessTimeResetFlag;
 
-  /**
-   * Constant for this file system type
-   */
-  public static final String FILE_SYSTEM_TYPE = "windows";
-
-  public WindowsReadonlyFile(String absolutePath, boolean accessTimeResetFlag) {
-    this(new WindowsFileDelegate(absolutePath), accessTimeResetFlag);
+  public WindowsReadonlyFile(FileSystemType type, String absolutePath,
+      boolean accessTimeResetFlag) {
+    this(type, new WindowsFileDelegate(absolutePath), accessTimeResetFlag);
   }
 
-  private WindowsReadonlyFile(WindowsFileDelegate delegate,
-                              boolean accessTimeResetFlag) {
-    super(delegate, accessTimeResetFlag);
+  private WindowsReadonlyFile(FileSystemType type,
+      WindowsFileDelegate delegate, boolean accessTimeResetFlag) {
+    super(type, delegate, accessTimeResetFlag);
     this.delegate = delegate;
     this.accessTimeResetFlag = accessTimeResetFlag;
   }
 
   @Override
   protected WindowsReadonlyFile newChild(String name) {
-    return new WindowsReadonlyFile(new WindowsFileDelegate(delegate, name),
-                                   accessTimeResetFlag);
-  }
-
-  /* @Override */
-  public String getFileSystemType() {
-    return FILE_SYSTEM_TYPE;
+    return new WindowsReadonlyFile(getFileSystemType(),
+        new WindowsFileDelegate(delegate, name), accessTimeResetFlag);
   }
 
   /* @Override */

@@ -18,11 +18,11 @@ package com.google.enterprise.connector.filesystem;
  */
 public class NfsFileSystemType extends AbstractFileSystemType<NfsReadonlyFile> {
 
-  static final String NFS_PATH_PREFIX = "nfs://";
+  private static final String NFS_PATH_PREFIX = "nfs://";
 
   @Override
   public NfsReadonlyFile getFile(String path, Credentials credentials) {
-    return new NfsReadonlyFile(path);
+    return new NfsReadonlyFile(this, path);
   }
 
   @Override
@@ -33,11 +33,17 @@ public class NfsFileSystemType extends AbstractFileSystemType<NfsReadonlyFile> {
 
   @Override
   public String getName() {
-    return NfsReadonlyFile.FILE_SYSTEM_TYPE;
+    return "nfs";
   }
 
   @Override
   public boolean isUserPasswordRequired() {
     return true;
+  }
+
+  @Override
+  public boolean supportsAuthz() {
+    // TODO: Is this correct?
+    return false;
   }
 }

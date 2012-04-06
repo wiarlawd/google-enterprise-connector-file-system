@@ -46,6 +46,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private String fileContents;
   private boolean exists = true;
   private boolean isRegularFile = true;
+  private FileSystemType fileSystemType = null;
 
   private Where where = Where.NONE; // Where to throw an Exception.
   private Exception exception;      // What exception to throw.
@@ -55,7 +56,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    */
   public static enum Where { NONE, ALL, IS_DIRECTORY, IS_REGULAR_FILE,
       GET_LAST_MODIFIED, GET_ACL, CAN_READ, LIST_FILES, GET_DISPLAY_URL,
-      LENGTH, EXISTS, SUPPORTS_AUTHN, GET_INPUT_STREAM }
+      LENGTH, EXISTS, GET_INPUT_STREAM }
 
   void setException(Where where, Exception exception) {
     this.where = where;
@@ -134,7 +135,9 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   public static MockReadonlyFile createRoot(String path,
       Clock clock) {
-    return new MockReadonlyFile(null, path, true, clock);
+    MockReadonlyFile root = new MockReadonlyFile(null, path, true, clock);
+    root.setFileSystemType(new MockFileSystemType(root));
+    return root;
   }
 
   /**
@@ -360,17 +363,13 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public boolean supportsAuthn() throws RepositoryException {
-    maybeThrowRepositoryException(Where.SUPPORTS_AUTHN);
-    return true;
+  public FileSystemType getFileSystemType() {
+    return (fileSystemType != null) ? fileSystemType
+                                    : parent.getFileSystemType();
   }
 
-  /**
-   * @return null; a mock file system doesn't have a kind.
-   */
-  /* @Override */
-  public String getFileSystemType() {
-    return "mock";
+  void setFileSystemType(FileSystemType type) {
+    fileSystemType = type;
   }
 
   public boolean acceptedBy(FilePatternMatcher matcher) {

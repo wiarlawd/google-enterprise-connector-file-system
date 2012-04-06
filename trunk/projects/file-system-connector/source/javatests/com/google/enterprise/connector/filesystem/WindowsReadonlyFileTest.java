@@ -22,18 +22,21 @@ public class WindowsReadonlyFileTest extends JavaReadonlyFileTest {
 
   @Override
   protected void makeReadonlyFiles() {
-    readonlyRoot = new WindowsReadonlyFile(root.getAbsolutePath(), false);
-    readonlyFile1 = new WindowsReadonlyFile(file1.getAbsolutePath(), false);
-    readonlyOtherFile1 = new WindowsReadonlyFile(file1.getAbsolutePath(), false);
-    readonlyTest1 = new WindowsReadonlyFile(test1.getAbsolutePath(), false);
-    readonlyTest2 = new WindowsReadonlyFile(test2.getAbsolutePath(), false);
-    readonlyDirA = new WindowsReadonlyFile(dirA.getAbsolutePath(), false);
-    readonlyDirB = new WindowsReadonlyFile(dirB.getAbsolutePath(), false);
-  }
-
-  @Override
-  public void testFileSystemType() {
-    assertEquals("windows", readonlyRoot.getFileSystemType());
+    type = new WindowsFileSystemType(false);
+    readonlyRoot =
+        new WindowsReadonlyFile(type, root.getAbsolutePath(), false);
+    readonlyFile1 =
+        new WindowsReadonlyFile(type, file1.getAbsolutePath(), false);
+    readonlyOtherFile1 =
+        new WindowsReadonlyFile(type, file1.getAbsolutePath(), false);
+    readonlyTest1 =
+        new WindowsReadonlyFile(type, test1.getAbsolutePath(), false);
+    readonlyTest2 =
+        new WindowsReadonlyFile(type, test2.getAbsolutePath(), false);
+    readonlyDirA =
+        new WindowsReadonlyFile(type, dirA.getAbsolutePath(), false);
+    readonlyDirB =
+        new WindowsReadonlyFile(type, dirB.getAbsolutePath(), false);
   }
 
   /**
@@ -41,7 +44,7 @@ public class WindowsReadonlyFileTest extends JavaReadonlyFileTest {
    */
   public void testGetSetAccessTime() throws Exception {
     WindowsReadonlyFile file =
-        new WindowsReadonlyFile(file1.getAbsolutePath(), false);
+        new WindowsReadonlyFile(type, file1.getAbsolutePath(), false);
     FileTime fileTime = file.getLastAccessTime();
 
     // A null FileTime probably means we are not running on Windows.

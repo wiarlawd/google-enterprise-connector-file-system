@@ -24,27 +24,21 @@ import java.io.File;
  */
 public class JavaReadonlyFile extends AbstractReadonlyFile<JavaReadonlyFile> {
 
-  public static final String FILE_SYSTEM_TYPE = "java";
-
   private final JavaFileDelegate delegate;
 
-  public JavaReadonlyFile(String absolutePath) {
-    this(new JavaFileDelegate(absolutePath));
+  public JavaReadonlyFile(FileSystemType type, String absolutePath) {
+    this(type, new JavaFileDelegate(absolutePath));
   }
 
-  private JavaReadonlyFile(JavaFileDelegate delegate) {
-    super(delegate);
+  private JavaReadonlyFile(FileSystemType type, JavaFileDelegate delegate) {
+    super(type, delegate);
     this.delegate = delegate;
   }
 
   @Override
   protected JavaReadonlyFile newChild(String name) {
-    return new JavaReadonlyFile(new JavaFileDelegate(delegate, name));
-  }
-
-  @Override
-  public String getFileSystemType() {
-    return FILE_SYSTEM_TYPE;
+    return new JavaReadonlyFile(getFileSystemType(),
+                                new JavaFileDelegate(delegate, name));
   }
 
   @Override

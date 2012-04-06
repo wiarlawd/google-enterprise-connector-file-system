@@ -35,7 +35,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   /**
    * @return the kind of file system this file belongs to. E.g., SMB, JAVA, etc.
    */
-  public String getFileSystemType();
+  public FileSystemType getFileSystemType();
 
   /**
    * <p>Lexicographic ordering of the paths within a directory tree must be
@@ -70,7 +70,6 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
    * @return parent directory path as String
    */
   public String getParent();
-
 
   /**
    * @return true if this is a directory.
@@ -155,12 +154,6 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
    * @throws IOException
    */
   public long length() throws IOException, RepositoryException;
-
-  /**
-   * Returns true if this {@Link ReadonlyFile} supports authn
-   * based on a specific associated {@link Credentials}.
-   */
-  public boolean supportsAuthn() throws RepositoryException;
 
   /**
    * Returns true if the file actually exists in the file system false otherwise

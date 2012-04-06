@@ -33,7 +33,8 @@ public class MockLastAccessReadonlyFile
 
   private MockLastAccessReadonlyFile(MockLastAccessFileDelegate delegate,
       boolean accessTimeResetFlag) {
-    super(delegate, accessTimeResetFlag);
+    // We do not really need a FileSystemType for these, so null should be OK.
+    super(null, delegate, accessTimeResetFlag);
     this.delegate = delegate;
     this.accessTimeResetFlag = accessTimeResetFlag;
   }
@@ -42,10 +43,5 @@ public class MockLastAccessReadonlyFile
   protected MockLastAccessReadonlyFile newChild(String name) {
     return new MockLastAccessReadonlyFile(
         new MockLastAccessFileDelegate(delegate, name), accessTimeResetFlag);
-  }
-
-  @Override
-  public String getFileSystemType() {
-    return "mock-last-access";
   }
 }

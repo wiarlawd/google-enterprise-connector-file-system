@@ -55,11 +55,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
     }
     try {
       ReadonlyFile<?> file = pathParser.getFile(docId, credentials);
-      if (file.supportsAuthn()) {
-        return file.canRead();
-      } else {
-        return false;
-      }
+      return file.getFileSystemType().supportsAuthz() && file.canRead();
     } catch (RepositoryException re) {
       LOG.log(Level.FINE,
           "Exception during authorization check for document id "

@@ -53,4 +53,14 @@ public abstract class AbstractFileSystemType<T extends ReadonlyFile<T>>
   public boolean isUserPasswordRequired() {
     return false;
   }
+
+  @Override
+  public boolean supportsAuthz() {
+    return isUserPasswordRequired();
+  }
+
+  @Override
+  public boolean supportsAcls() {
+    return false;
+  }
 }

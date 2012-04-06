@@ -43,12 +43,17 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   /** The delegate file implementation. */
   private final FileDelegate delegate;
 
+  /** The FileSystemType for this file. */
+  private final FileSystemType fileSystemType;
+
   /**
    * Create a ReadonlyFile that delegates to a {@link FileDelegate}.
    *
+   * @param type a FileSystemType instance
    * @param delegate a FileDelegate implementation
    */
-  public AbstractReadonlyFile(FileDelegate delegate) {
+  public AbstractReadonlyFile(FileSystemType type, FileDelegate delegate) {
+    this.fileSystemType = type;
     this.delegate = delegate;
   }
 
@@ -80,6 +85,11 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
    *          operation
    */
   protected void detectGeneralErrors(IOException e) throws RepositoryException {
+  }
+
+  @Override
+  public FileSystemType getFileSystemType() {
+    return fileSystemType;
   }
 
   /* @Override */
@@ -180,11 +190,6 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   public Acl getShareAcl() throws IOException, RepositoryException {
     // TODO: figure out what the share ACLs really are.
     return null;
-  }
-
-  /* @Override */
-  public boolean supportsAuthn() {
-    return false;
   }
 
   /* @Override */

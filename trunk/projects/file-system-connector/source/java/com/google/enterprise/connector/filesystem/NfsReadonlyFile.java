@@ -21,30 +21,24 @@ package com.google.enterprise.connector.filesystem;
 /* TODO: Implement detectServerDown() for NFS failures. */
 public class NfsReadonlyFile extends AbstractReadonlyFile<NfsReadonlyFile> {
 
-  public static final String FILE_SYSTEM_TYPE = "nfs";
-
   private final NfsFileDelegate delegate;
 
   /**
    * @param path see {@code com.sun.xfile.XFile} for path syntax.
    */
-  public NfsReadonlyFile(String path) {
-    this(new NfsFileDelegate(path));
+  public NfsReadonlyFile(FileSystemType type, String path) {
+    this(type, new NfsFileDelegate(path));
   }
 
-  private NfsReadonlyFile(NfsFileDelegate delegate) {
-    super(delegate);
+  private NfsReadonlyFile(FileSystemType type, NfsFileDelegate delegate) {
+    super(type, delegate);
     this.delegate = delegate;
   }
 
   @Override
   protected NfsReadonlyFile newChild(String name) {
-    return new NfsReadonlyFile(new NfsFileDelegate(delegate, name));
-  }
-
-  @Override
-  public String getFileSystemType() {
-    return FILE_SYSTEM_TYPE;
+    return new NfsReadonlyFile(getFileSystemType(),
+                               new NfsFileDelegate(delegate, name));
   }
 
   @Override

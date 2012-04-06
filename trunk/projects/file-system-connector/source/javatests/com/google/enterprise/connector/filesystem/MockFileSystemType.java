@@ -33,6 +33,7 @@ public class MockFileSystemType
                             AuthenticationIdentity identity) {
     this.root = root;
     this.identity = identity;
+    root.setFileSystemType(this);
   }
 
   @Override
@@ -71,6 +72,16 @@ public class MockFileSystemType
   @Override
   public boolean isUserPasswordRequired() {
     return identity != null;
+  }
+
+  @Override
+  public boolean supportsAuthz() {
+    return true;
+  }
+
+  @Override
+  public boolean supportsAcls() {
+    return true;
   }
 
   private void validateCredentials(Credentials credentials)

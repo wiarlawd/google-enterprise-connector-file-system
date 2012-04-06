@@ -85,7 +85,7 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
   @Override
   public SmbReadonlyFile getFile(String path, Credentials credentials)
       throws RepositoryException {
-    return new SmbReadonlyFile(path, credentials, propertyFetcher);
+    return new SmbReadonlyFile(this, path, credentials, propertyFetcher);
   }
 
   @Override
@@ -128,11 +128,16 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
 
   @Override
   public String getName() {
-    return SmbReadonlyFile.FILE_SYSTEM_TYPE;
+    return "smb";
   }
 
   @Override
   public boolean isUserPasswordRequired() {
+    return true;
+  }
+
+  @Override
+  public boolean supportsAcls() {
     return true;
   }
 

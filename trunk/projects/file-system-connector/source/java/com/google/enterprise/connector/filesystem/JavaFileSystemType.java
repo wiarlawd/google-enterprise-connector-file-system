@@ -20,11 +20,11 @@ public class JavaFileSystemType
 
   @Override
   public JavaReadonlyFile getFile(String path, Credentials credentials) {
-    return new JavaReadonlyFile(path);
+    return new JavaReadonlyFile(this, path);
   }
 
   @Override
   public String getName() {
-    return JavaReadonlyFile.FILE_SYSTEM_TYPE;
+    return "java";
   }
 }

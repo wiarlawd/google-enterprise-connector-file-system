@@ -41,8 +41,6 @@ import java.util.logging.Logger;
 public class SmbReadonlyFile
     extends AccessTimePreservingReadonlyFile<SmbReadonlyFile> {
 
-  public static final String FILE_SYSTEM_TYPE = "smb";
-
   private static final Logger LOG =
       Logger.getLogger(SmbReadonlyFile.class.getName());
 
@@ -59,29 +57,32 @@ public class SmbReadonlyFile
   private final SmbFileProperties smbPropertyFetcher;
 
   /**
+   * @param type a FileSystemType instance
    * @param path see {@code jcifs.org.SmbFile} for path syntax.
    * @param credentials
    * @param propertyFetcher Fetcher object that gives the required properties
    *        for SMB crawling.
    * @throws RepositoryDocumentException if the path is malformed
    */
-  public SmbReadonlyFile(String path, Credentials credentials,
-      SmbFileProperties propertyFetcher) throws RepositoryException {
-    this(newDelegate(path, credentials), credentials, propertyFetcher);
+  public SmbReadonlyFile(FileSystemType type, String path,
+      Credentials credentials, SmbFileProperties propertyFetcher)
+      throws RepositoryException {
+    this(type, newDelegate(path, credentials), credentials, propertyFetcher);
   }
 
   /**
    * Create a ReadonlyFile that delegates to {@code smbFile}.
    *
+   * @param type a FileSystemType instance
    * @param delegate a SmbFileDelegate instance
    * @param credentials
    * @param propertyFetcher Fetcher object that gives the required properties
    *        for SMB crawling.
    * @throws RepositoryDocumentException
    */
-  private SmbReadonlyFile(SmbFileDelegate delegate,
+  private SmbReadonlyFile(FileSystemType type, SmbFileDelegate delegate,
       Credentials credentials, SmbFileProperties propertyFetcher) {
-    super(delegate, propertyFetcher.isLastAccessResetFlagForSmb());
+    super(type, delegate, propertyFetcher.isLastAccessResetFlagForSmb());
     this.delegate = delegate;
     this.credentials = credentials;
     this.smbPropertyFetcher = propertyFetcher;
@@ -109,7 +110,8 @@ public class SmbReadonlyFile
   @Override
   protected SmbReadonlyFile newChild(String name) throws RepositoryException {
     String path = delegate.getPath() + name;
-    return new SmbReadonlyFile(path, credentials, smbPropertyFetcher);
+    return new SmbReadonlyFile(getFileSystemType(), path, credentials,
+                               smbPropertyFetcher);
   }
 
   /** If repository cannot be contacted throws RepositoryException. */
@@ -152,11 +154,6 @@ public class SmbReadonlyFile
       throw new NonExistentResourceException(
           "Path does not exist: " + getPath(), smbe);
     }
-  }
-
-  @Override
-  public String getFileSystemType() {
-    return FILE_SYSTEM_TYPE;
   }
 
   @Override
@@ -235,11 +232,6 @@ public class SmbReadonlyFile
     // There appears to be a bug in (at least) v1.2.13 that causes
     // non-existent paths to return true.
     return exists() ? super.isDirectory() : false;
-  }
-
-  @Override
-  public boolean supportsAuthn() {
-    return true;
   }
 
   boolean isTraversable() throws RepositoryDocumentException {

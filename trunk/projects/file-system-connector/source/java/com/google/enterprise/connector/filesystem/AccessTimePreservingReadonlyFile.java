@@ -54,9 +54,9 @@ public abstract class
   /** If true, preserve the last access time for the file. */
   private final boolean accessTimeResetFlag;
 
-  public AccessTimePreservingReadonlyFile(LastAccessFileDelegate delegate,
-                                          boolean accessTimeResetFlag) {
-    super(delegate);
+  public AccessTimePreservingReadonlyFile(FileSystemType type,
+      LastAccessFileDelegate delegate, boolean accessTimeResetFlag) {
+    super(type, delegate);
     this.delegate = delegate;
     this.accessTimeResetFlag = accessTimeResetFlag;
   }

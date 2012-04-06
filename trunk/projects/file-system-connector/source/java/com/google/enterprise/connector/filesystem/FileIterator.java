@@ -67,7 +67,7 @@ public class FileIterator {
     this.ifModifiedSince = ifModifiedSince;
     this.traversalStateStack = Lists.newArrayList();
     this.mimeTypeDetector = context.getMimeTypeDetector();
-    this.returnDirectories =
+    this.returnDirectories = root.getFileSystemType().supportsAcls() &&
         context.isPushAcls() && !context.isMarkAllDocumentsPublic();
 
     this.positioned = false;

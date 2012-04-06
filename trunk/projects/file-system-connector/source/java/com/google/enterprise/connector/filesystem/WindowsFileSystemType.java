@@ -48,12 +48,12 @@ public class WindowsFileSystemType
 
   @Override
   public WindowsReadonlyFile getFile(String path, Credentials credentials) {
-    return new WindowsReadonlyFile(path, accessTimeResetFlag);
+    return new WindowsReadonlyFile(this, path, accessTimeResetFlag);
   }
 
   @Override
   public String getName() {
-    return WindowsReadonlyFile.FILE_SYSTEM_TYPE;
+    return "windows";
   }
 
   /**

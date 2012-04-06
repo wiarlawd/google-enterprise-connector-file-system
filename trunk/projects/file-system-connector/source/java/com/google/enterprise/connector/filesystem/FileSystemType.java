@@ -88,4 +88,19 @@ public interface FileSystemType<T extends ReadonlyFile<T>> {
    * @return true / false depending on whether credentials are required or not.
    */
   public boolean isUserPasswordRequired();
+
+  /**
+   * Returns {@code true} if this {@Link FileSystemType} supports authorization
+   * based on a specific associated {@link Credentials}.
+   */
+  /* TODO: I suspect this is redundant and should be the same as
+   * isUserPasswordRequired().  But why are they different for NFS?
+   */
+  public boolean supportsAuthz();
+
+  /**
+   * Returns {@code true} if this {@Link FileSystemType} supports ACLs on
+   * documents.
+   */
+  public boolean supportsAcls();
 }
