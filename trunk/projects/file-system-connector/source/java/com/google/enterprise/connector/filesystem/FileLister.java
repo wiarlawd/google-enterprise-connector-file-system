@@ -348,12 +348,17 @@ class FileLister implements Lister, TraversalContextAware,
       }
       long startTime = clock.getTimeMillis();
       try {
-        FileIterator iter = new FileIterator(root, filePatternMatcher, context, 
+        FileIterator iter = new FileIterator(root, filePatternMatcher, context,
             traversalContext, getIfModifiedSince(startTime));
 
         Document rootShareAclDoc = createRootShareAcl(root);
         if (rootShareAclDoc != null) {
-          documentAcceptor.take(rootShareAclDoc);
+          try {
+            documentAcceptor.take(rootShareAclDoc);
+          } catch (RepositoryDocumentException rde) {
+            LOGGER.log(Level.WARNING, "Failed to feed root share ACL document "
+                       + path, rde);
+          }
         }
         while (notShutdown() && iter.hasNext()) {
           String path = "";
