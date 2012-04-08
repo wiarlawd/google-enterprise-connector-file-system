@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Lists;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.MimeTypeDetector;
@@ -67,9 +68,10 @@ public class FileIterator {
     this.ifModifiedSince = ifModifiedSince;
     this.traversalStateStack = Lists.newArrayList();
     this.mimeTypeDetector = context.getMimeTypeDetector();
-    this.returnDirectories = root.getFileSystemType().supportsAcls() &&
-        context.isPushAcls() && !context.isMarkAllDocumentsPublic();
-
+    AclProperties aclProps = context.getPropertyManager();
+    this.returnDirectories = root.getFileSystemType().supportsAcls()
+        && aclProps.isPushAcls() && !aclProps.isLegacyAcls()
+        && !aclProps.isMarkAllDocumentsPublic();
     this.positioned = false;
 
     // Prime the traversal with the root directory.

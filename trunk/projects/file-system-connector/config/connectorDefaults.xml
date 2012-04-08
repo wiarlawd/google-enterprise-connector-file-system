@@ -9,12 +9,12 @@
 
   <bean id="windows-file-system-type"
         class="com.google.enterprise.connector.filesystem.WindowsFileSystemType">
-    <constructor-arg ref="filesystem-property-manager" />
+    <constructor-arg ref="document-context" />
   </bean>
 
   <bean id="smb-file-system-type"
         class="com.google.enterprise.connector.filesystem.SmbFileSystemType">
-    <constructor-arg ref="filesystem-property-manager" />
+    <constructor-arg ref="document-context" />
   </bean>
 
   <bean id="nfs-file-system-type"
@@ -40,14 +40,20 @@
   <bean id="mime-type-finder"
         class="com.google.enterprise.connector.util.MimeTypeDetector"/>
 
+  <!-- The filesystem-property-manager bean is defined in connectorInstance.xml
+       as singleton="false", but it really needs to be a singleton per
+       connector instance.
+       For backward compatibility reasons, we can not fix it there;
+       so I will fix it here with only a single reference to that bean.
+  -->
   <bean id="document-context"
         class="com.google.enterprise.connector.filesystem.DocumentContext"
         singleton="true">
-    <constructor-arg ref="file-system-type-registry"/>
     <constructor-arg value="${domain}"/>
     <constructor-arg value="${user}"/>
     <constructor-arg value="${password}"/>
     <constructor-arg ref="mime-type-finder"/>
+    <!-- This must be the only reference to the filesystem-property-manager. -->
     <constructor-arg ref="filesystem-property-manager"/>
   </bean>
 
@@ -146,7 +152,6 @@
       </list>
     </constructor-arg>
     <constructor-arg ref="document-context"/>
-    <constructor-arg ref="filesystem-property-manager"/>
     <property name="fullTraversalIntervalDays" value="${fulltraversal}"/>
   </bean>
 
@@ -161,6 +166,7 @@
     <property name="markDocumentPublicFlag" value="false"/>
     <property name="lastAccessResetFlagForSmb" value="true"/>
     <property name="lastAccessResetFlagForLocalWindows" value="true"/>
+    <property name="legacyAclFlag" value="true"/>
     <property name="pushAclFlag" value="true"/>
     <property name="groupAclFormat" value="group"/>
     <property name="userAclFormat" value="user"/>
@@ -173,7 +179,6 @@
     <constructor-arg ref="authz"/>
     <constructor-arg ref="file-lister"/>
     <constructor-arg ref="file-retriever"/>
-    <constructor-arg ref="filesystem-property-manager"/>
   </bean>
 
   <bean id="propertyPlaceholderConfigurer"

@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.DocumentContext.DocumentSecurityProperties;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.filesystem.WindowsFileSystemType.WindowsFileProperties;
 
@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  * Individual components can fetch the required properties from this class.
  */
 public class FileSystemPropertyManager implements SmbFileProperties,
-    WindowsFileProperties, DocumentSecurityProperties {
+    WindowsFileProperties, AclProperties {
 
   private static final Logger LOGGER =
       Logger.getLogger(FileSystemPropertyManager.class.getName());
@@ -45,6 +45,12 @@ public class FileSystemPropertyManager implements SmbFileProperties,
    * Represents the flag to feed ACL with the document.
    */
   private boolean pushAclFlag;
+
+  /**
+   * Represents the flag to feed old style ACL with the document
+   * (no deny, no inheritance).
+   */
+  private boolean legacyAclFlag;
 
   /**
    * Represents the flag to reset last access time
@@ -123,7 +129,7 @@ public class FileSystemPropertyManager implements SmbFileProperties,
   /**
    * @return the markDocumentPublicFlag
    */
-  public boolean isMarkDocumentPublicFlag() {
+  public boolean isMarkAllDocumentsPublic() {
     return markDocumentPublicFlag;
   }
 
@@ -142,7 +148,7 @@ public class FileSystemPropertyManager implements SmbFileProperties,
   /**
    * @return the pushAclFlag
    */
-  public boolean isPushAclFlag() {
+  public boolean isPushAcls() {
     return pushAclFlag;
   }
 
@@ -156,6 +162,20 @@ public class FileSystemPropertyManager implements SmbFileProperties,
       pushAclFlag = false;
     }
     this.pushAclFlag = pushAclFlag;
+  }
+
+  /**
+   * @return the legacyAclFlag
+   */
+  public boolean isLegacyAcls() {
+    return legacyAclFlag;
+  }
+
+  /**
+   * @param pushAclFlag the pushAclFlag to set
+   */
+  public void setLegacyAclFlag(boolean legacyAclFlag) {
+    this.legacyAclFlag = legacyAclFlag;
   }
 
   /**

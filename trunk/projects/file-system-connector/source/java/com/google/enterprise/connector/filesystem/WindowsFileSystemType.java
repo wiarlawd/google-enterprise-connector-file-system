@@ -42,8 +42,8 @@ public class WindowsFileSystemType
     this.accessTimeResetFlag = accessTimeResetFlag;
   }
 
-  public WindowsFileSystemType(WindowsFileProperties propertyFetcher) {
-    this(propertyFetcher.isLastAccessResetFlagForLocalWindows());
+  public WindowsFileSystemType(DocumentContext context) {
+    this(context.getPropertyManager().isLastAccessResetFlagForLocalWindows());
   }
 
   @Override

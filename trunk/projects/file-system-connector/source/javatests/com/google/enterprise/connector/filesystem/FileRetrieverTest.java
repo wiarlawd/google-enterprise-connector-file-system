@@ -62,8 +62,8 @@ public class FileRetrieverTest extends TestCase {
     fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
     pathParser = new PathParser(fileSystemTypeRegistry);
-    context = new DocumentContext(fileSystemTypeRegistry, null, null, null,
-        MIME_TYPE_DETECTOR, new TestFileSystemPropertyManager(false));
+    context = new DocumentContext(null, null, null, MIME_TYPE_DETECTOR,
+        new TestFileSystemPropertyManager(false));
     retriever = new FileRetriever(pathParser, context);
     retriever.setTraversalContext(TRAVERSAL_CONTEXT);
   }

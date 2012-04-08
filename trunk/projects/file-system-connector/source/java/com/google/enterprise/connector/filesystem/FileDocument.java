@@ -14,7 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -45,6 +47,7 @@ public class FileDocument implements Document {
   public static final String SHARE_ACL_PREFIX = "ShareACL://";
   private final ReadonlyFile<?> file;
   private final DocumentContext context;
+  private final AclProperties aclProperties;
   private final Map<String, List<Value>> properties;
   private final boolean isRoot;
 
@@ -57,6 +60,7 @@ public class FileDocument implements Document {
       throws RepositoryException {
     this.file = file;
     this.context = context;
+    this.aclProperties = context.getPropertyManager();
     this.properties = Maps.newHashMap();
     this.isRoot = isRoot;
     fetchProperties();
@@ -92,6 +96,8 @@ public class FileDocument implements Document {
 
   private void fetchProperties() throws RepositoryException {
     if (file.isDirectory()) {
+      Preconditions.checkState(!aclProperties.isLegacyAcls(),
+          "Feeding directories is not supported with legacy ACLs.");
       addProperty(SpiConstants.PROPNAME_DOCUMENTTYPE,
           SpiConstants.DocumentType.ACL.toString());
       addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
@@ -141,18 +147,15 @@ public class FileDocument implements Document {
   }
 
   private void fetchAcl(ReadonlyFile<?> file) throws RepositoryException {
-    if (context.isMarkAllDocumentsPublic()) {
+    if (aclProperties.isMarkAllDocumentsPublic()) {
       LOGGER.finest("Public flag is true so setting PROPNAME_ISPUBLIC "
                     + "to TRUE");
       addProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.TRUE.toString());
     } else {
-      if (context.isPushAcls()) {
+      if (aclProperties.isPushAcls()) {
         LOGGER.finest("pushAcls flag is true so adding ACL to the document");
         try {
-          Acl acl = file.getAcl();
-          checkAndAddPublicAclProperties(acl);
-          checkAndAddRootAclProperties(file, acl);
-          checkAndAddNonRootAclProperties(file, acl);
+          addAclProperties(file, file.getAcl());
         } catch (IOException ioe) {
           throw new RepositoryDocumentException("Failed to read ACL for "
               + file.getPath(), ioe);
@@ -178,60 +181,48 @@ public class FileDocument implements Document {
   /*
    * Adds ACL properties to the property map.
    */
+  private void addAclProperties(ReadonlyFile<?> file, Acl acl)
+      throws IOException, RepositoryException {
+    if (acl.isPublic()) {
+      if (acl.isDeterminate()) {
+        LOGGER.finest("ACL isPublic flag is true so setting "
+                      + "PROPNAME_ISPUBLIC to TRUE");
+        addProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.TRUE.toString());
+      }
+    } else {
+      String inheritFrom;
+      if (isRoot) {
+        inheritFrom = getRootShareAclId(file);
+        addAclProperties(file.getInheritedAcl());
+      } else {
+        inheritFrom = file.getParent();
+      }
+      if (inheritFrom != null && !aclProperties.isLegacyAcls()) {
+        addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID, inheritFrom);
+      }
+      addAclProperties(acl);
+    }
+  }
+
+  /*
+   * Adds ACL properties to the property map.
+   */
   private void addAclProperties(Acl acl) {
+    if (!acl.isDeterminate()) {
+      return;
+    }
     if (acl.getUsers() != null) {
       addProperty(SpiConstants.PROPNAME_ACLUSERS, acl.getUsers());
     }
     if (acl.getGroups() != null) {
       addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
     }
-    if (acl.getDenyUsers() != null) {
-      addProperty(SpiConstants.PROPNAME_ACLDENYUSERS, acl.getDenyUsers());
-    }
-    if (acl.getDenyGroups() != null) {
-      addProperty(SpiConstants.PROPNAME_ACLDENYGROUPS, acl.getDenyGroups());
-    }
-  }
-
-  /*
-   * Adds public ACL property to the property map.
-   */
-  private void checkAndAddPublicAclProperties(Acl acl) {
-    if (acl.isDeterminate() && acl.isPublic()) {
-      LOGGER.finest("ACL isPublic flag is true so setting "
-          + "PROPNAME_ISPUBLIC to TRUE");
-      addProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.TRUE.toString());
-    }
-  }
-
-  /*
-   * Adds root ACL properties to the property map.
-   */
-  private void checkAndAddRootAclProperties(ReadonlyFile<?> file, Acl acl)
-      throws IOException, RepositoryException {
-    if (!acl.isPublic() && isRoot) {
-      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID,
-          getRootShareAclId(file));
-      Acl inheritedAcl = file.getInheritedAcl();
-      if (inheritedAcl.isDeterminate()) {
-        addAclProperties(inheritedAcl);
+    if (!aclProperties.isLegacyAcls()) {
+      if (acl.getDenyUsers() != null) {
+        addProperty(SpiConstants.PROPNAME_ACLDENYUSERS, acl.getDenyUsers());
       }
-      if (acl.isDeterminate()) {
-        addAclProperties(acl);
-      }
-    }
-  }
-
-  /*
-   * Adds non-root ACL properties to the property map.
-   */
-  private void checkAndAddNonRootAclProperties(ReadonlyFile<?> file, Acl acl)
-      throws IOException, RepositoryException {
-    if (!acl.isPublic() && !isRoot) {
-      addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID,
-          file.getParent());
-      if (acl.isDeterminate()) {
-        addAclProperties(acl);
+      if (acl.getDenyGroups() != null) {
+        addProperty(SpiConstants.PROPNAME_ACLDENYGROUPS, acl.getDenyGroups());
       }
     }
   }

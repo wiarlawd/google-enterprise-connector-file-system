@@ -31,17 +31,15 @@ public class FileConnectorTest extends TestCase {
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager();
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
-        null, null, null, null, propertyManager);
+    DocumentContext context =
+        new DocumentContext(null, null, null, null, propertyManager);
 
     FileAuthorizationManager authz = new FileAuthorizationManager(pathParser);
     List<String> empty = Collections.emptyList();
-    FileLister lister = new FileLister(pathParser, empty, empty, empty, context,
-                                       propertyManager);
+    FileLister lister = new FileLister(pathParser, empty, empty, empty, context);
     FileRetriever retriever = new FileRetriever(pathParser, context);
 
-    FileConnector connector =
-        new FileConnector(authz, lister, retriever, propertyManager);
+    FileConnector connector = new FileConnector(authz, lister, retriever);
     Session session = connector.login();
     assertNotNull(session);
   }

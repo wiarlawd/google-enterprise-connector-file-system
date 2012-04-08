@@ -22,10 +22,10 @@ import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.SimpleTraversalContext;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalSchedule;
 import com.google.enterprise.connector.util.MimeTypeDetector;
-import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 
 import junit.framework.TestCase;
 
@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -42,50 +43,46 @@ public class FileListerTest extends TestCase {
 
   private static final List<String> INCLUDE_ALL_PATTERNS = ImmutableList.of("/");
   private static final List<String> EXCLUDE_NONE_PATTERNS = ImmutableList.of();
-  private static final TraversalContext TRAVERSAL_CONTEXT =
-      new FakeTraversalContext();
   private static final TraversalSchedule TRAVERSAL_SCHEDULE =
       new MockTraversalSchedule();
   private static final MimeTypeDetector MIME_TYPE_DETECTOR =
       new MimeTypeDetector();
   private static final boolean PUSH_ACLS = true;
 
-  static {
-    MIME_TYPE_DETECTOR.setTraversalContext(TRAVERSAL_CONTEXT);
-  }
-
   /** Common objects used by most of the tests. */
   RecordingDocumentAcceptor documentAcceptor;
   MockDirectoryBuilder builder;
+  SimpleTraversalContext traversalContext;
 
   @Override
   public void setUp() throws Exception {
     documentAcceptor = new RecordingDocumentAcceptor();
     builder = new MockDirectoryBuilder();
+
+    traversalContext = new SimpleTraversalContext();
+    traversalContext.setSupportsAcls(true);
+    MIME_TYPE_DETECTOR.setTraversalContext(traversalContext);
   }
 
   /** Run the Lister and validate the results. */
   private void runLister(MockReadonlyFile root) throws RepositoryException {
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-              TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, PUSH_ACLS);
-  }
-
-  /** Run the Lister and validate the results. */
-  private void runLister(MockReadonlyFile root, List<String> includePatterns,
-      List<String> excludePatterns, TraversalContext traversalContext)
-      throws RepositoryException {
-    runLister(root, includePatterns, excludePatterns, traversalContext,
               TRAVERSAL_SCHEDULE, PUSH_ACLS);
   }
 
   /** Run the Lister and validate the results. */
   private void runLister(MockReadonlyFile root, List<String> includePatterns,
-      List<String> excludePatterns, TraversalContext traversalContext,
-      TraversalSchedule traversalSchedule, boolean pushAcls)
-      throws RepositoryException {
-    final FileLister lister = newLister(root, includePatterns, excludePatterns,
-        traversalContext, traversalSchedule, pushAcls);
+      List<String> excludePatterns) throws RepositoryException {
+    runLister(root, includePatterns, excludePatterns, TRAVERSAL_SCHEDULE,
+              PUSH_ACLS);
+  }
 
+  /** Run the Lister and validate the results. */
+  private void runLister(MockReadonlyFile root, List<String> includePatterns,
+      List<String> excludePatterns, TraversalSchedule traversalSchedule,
+      boolean pushAcls) throws RepositoryException {
+    final FileLister lister = newLister(root, includePatterns, excludePatterns,
+                                        traversalSchedule, pushAcls);
     // Let the Lister run for 1 second, then shut it down.
     Timer timer = new Timer("Shutdown Lister");
     TimerTask timerTask = new TimerTask() {
@@ -116,19 +113,19 @@ public class FileListerTest extends TestCase {
   /** Make a new Lister for testing. */
   private FileLister newLister(MockReadonlyFile root,
       List<String> includePatterns, List<String> excludePatterns,
-      TraversalContext traversalContext, TraversalSchedule traversalSchedule,
-      boolean pushAcls) throws RepositoryException {
+      TraversalSchedule traversalSchedule, boolean pushAcls)
+      throws RepositoryException {
     FileSystemTypeRegistry fileSystemTypeRegistry =
         new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager(pushAcls);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+    DocumentContext context = new DocumentContext(
         null, null, null, MIME_TYPE_DETECTOR, propertyManager);
     // TODO: handle multiple startpoints.
     List<String> startPoints = Collections.singletonList(root.getPath());
     final FileLister lister = new FileLister(pathParser, startPoints,
-        includePatterns, excludePatterns, context, propertyManager);
+        includePatterns, excludePatterns, context);
     lister.setTraversalContext(traversalContext);
     lister.setTraversalSchedule(traversalSchedule);
     lister.setDocumentAcceptor(documentAcceptor);
@@ -196,6 +193,15 @@ public class FileListerTest extends TestCase {
   }
 
   public void testFeedNoDirectoriesIfNoAcls() throws Exception {
+    testFeedNoDirectories(false);
+  }
+
+  public void testFeedNoDirectoriesIfLegacyAcls() throws Exception {
+    traversalContext.setSupportsAcls(false);
+    testFeedNoDirectories(true);
+  }
+
+  private void testFeedNoDirectories(boolean pushAcls) throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) throws Exception {
           return file.isRegularFile();
@@ -210,12 +216,14 @@ public class FileListerTest extends TestCase {
     builder.addDir(configureFile, d2, "d2d2");
     builder.addDir(configureFile, d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-              TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, false);
+              TRAVERSAL_SCHEDULE, pushAcls);
   }
 
   public void testFilterTooBig() throws Exception {
     final String maxSizeData = "not too big and not too small ends here<";
     final String tooBigData = maxSizeData + "x";
+    traversalContext.setMaxDocumentSize(maxSizeData.length());
+
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) {
           if (file.getName().contains("TooBig")) {
@@ -231,8 +239,7 @@ public class FileListerTest extends TestCase {
     MockReadonlyFile root = builder.addDir(configureFile, null, "/foo/bar",
                                    "f1", "Big", "TooBig");
     builder.addDir(configureFile, root, "d1", "d1Big", "d1TooBig");
-    runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-              new FakeTraversalContext(maxSizeData.length()));
+    runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS);
   }
 
   public void testFilterExcludedDirectory() throws Exception {
@@ -240,7 +247,7 @@ public class FileListerTest extends TestCase {
     List<String> exclude = ImmutableList.of("/foo/bar/excluded");
     MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
     builder.addDir(builder.CONFIGURE_FILE_NONE, root, "excluded", "excludedf1");
-    runLister(root, include, exclude, TRAVERSAL_CONTEXT);
+    runLister(root, include, exclude);
   }
 
   public void testFilterExcludedFile() throws Exception {
@@ -254,7 +261,7 @@ public class FileListerTest extends TestCase {
     MockReadonlyFile root =
         builder.addDir(configureFile, null, "/foo/bar", "f1.doc");
     builder.addDir(configureFile, root, "d1", "excluded.txt", "included.txt");
-    runLister(root, INCLUDE_ALL_PATTERNS, exclude, TRAVERSAL_CONTEXT);
+    runLister(root, INCLUDE_ALL_PATTERNS, exclude);
   }
 
   public void testFilterIOException() throws Exception {
@@ -308,14 +315,17 @@ public class FileListerTest extends TestCase {
   }
 
   public void testFilterMimeType() throws Exception {
+    Set<String> mimeTypes = Collections.singleton("text/plain");
+    traversalContext.setMimeTypeSet(mimeTypes);
+
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) {
-          return !file.getName().endsWith(".tar.gz");
+          return !file.getName().endsWith(".avi");
         }
       };
 
     MockReadonlyFile root =
-      builder.addDir(configureFile, null, "/foo/bar", "f1", "exclude.tar.gz");
+      builder.addDir(configureFile, null, "/foo/bar", "f1.txt", "exclude.avi");
     runLister(root);
   }
 
@@ -452,7 +462,7 @@ public class FileListerTest extends TestCase {
 
     assertTrue(builder.getExpected().isEmpty());
     runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-              TRAVERSAL_CONTEXT, schedule, PUSH_ACLS);
+              schedule, PUSH_ACLS);
   }
 
   public void testDocumentAcceptorException() throws Exception {
@@ -484,7 +494,7 @@ public class FileListerTest extends TestCase {
   public void testIfModifiedSince() throws Exception {
     FileLister lister = newLister(MockReadonlyFile.createRoot("/root"),
         INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS,
-        TRAVERSAL_CONTEXT, TRAVERSAL_SCHEDULE, PUSH_ACLS);
+        TRAVERSAL_SCHEDULE, PUSH_ACLS);
     long initialTime = 100000L;
     long fullTraversalInterval = 20000L;
     long ifModifiedSinceCushion = 1000L;

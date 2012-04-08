@@ -14,7 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.SmbAclProperties;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
@@ -78,8 +78,8 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
     }
   }
 
-  public SmbFileSystemType(SmbFileProperties propertyFetcher) {
-    this.propertyFetcher = propertyFetcher;
+  public SmbFileSystemType(DocumentContext context) {
+    this.propertyFetcher = context.getPropertyManager();
   }
 
   @Override
@@ -144,7 +144,7 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
   /**
    * Interface to retrieve the properties required for Smb crawling.
    */
-  public static interface SmbFileProperties extends SmbAclProperties {
+  public static interface SmbFileProperties extends AclProperties {
 
     /**
      * Gets the lastAccessTimeResetFlag

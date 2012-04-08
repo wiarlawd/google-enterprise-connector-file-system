@@ -85,9 +85,39 @@ public class FileIteratorTest extends TestCase {
     runIterator(NEWEST, configureFile);
   }
 
-  @SuppressWarnings("unchecked")
+  /** If not feeding ACLs, don't return directories. */
+  public void testNoDirectoriesIfNoAcls() throws Exception {
+    testNoDirectories(new TestFileSystemPropertyManager(false));
+  }
+
+  /** If feeding legacy ACLs, don't return directories. */
+  public void testNoDirectoriesIfLegacyAcls() throws Exception {
+    FileSystemPropertyManager propertyManager =
+        new TestFileSystemPropertyManager(true);
+    propertyManager.setLegacyAclFlag(true);
+    testNoDirectories(propertyManager);
+  }
+
+  private void testNoDirectories(FileSystemPropertyManager propertyManager)
+      throws Exception {
+    ConfigureFile configureFile = new ConfigureFile() {
+        public boolean configure(MockReadonlyFile file) throws Exception {
+          return !file.isDirectory();
+        }
+      };
+    runIterator(0L, configureFile, propertyManager);
+  }
+
   private void runIterator(long ifModifiedSince,
       ConfigureFile configureFile) throws Exception {
+    runIterator(ifModifiedSince, configureFile,
+                new TestFileSystemPropertyManager());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void runIterator(long ifModifiedSince,
+      ConfigureFile configureFile, FileSystemPropertyManager propertyManager)
+      throws Exception {
     MockDirectoryBuilder builder = new MockDirectoryBuilder();
 
     MockReadonlyFile root = builder.addDir(configureFile, null,
@@ -102,8 +132,8 @@ public class FileIteratorTest extends TestCase {
     TraversalContext traversalContext = new FakeTraversalContext();
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
     mimeTypeDetector.setTraversalContext(traversalContext);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry, null,
-        null, null, mimeTypeDetector, new TestFileSystemPropertyManager());
+    DocumentContext context = new DocumentContext(null, null, null,
+        mimeTypeDetector, propertyManager);
     FilePatternMatcher matcher = new FilePatternMatcher(
         Collections.singletonList("/"), (List<String>) Collections.EMPTY_LIST);
 

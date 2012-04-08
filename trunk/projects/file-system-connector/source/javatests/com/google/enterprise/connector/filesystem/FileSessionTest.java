@@ -45,17 +45,15 @@ public class FileSessionTest extends TestCase {
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager(false);
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+    DocumentContext context = new DocumentContext(
         null, null, null, mimeTypeDetector, propertyManager);
 
     authz = new FileAuthorizationManager(pathParser);
     List<String> empty = Collections.emptyList();
-    lister = new FileLister(pathParser, empty, empty, empty, context,
-                            propertyManager);
+    lister = new FileLister(pathParser, empty, empty, empty, context);
     retriever = new FileRetriever(pathParser, context);
 
-    FileConnector connector = new FileConnector(authz, lister, retriever,
-                                                propertyManager);
+    FileConnector connector = new FileConnector(authz, lister, retriever);
     session = connector.login();
     assertNotNull(session);
   }

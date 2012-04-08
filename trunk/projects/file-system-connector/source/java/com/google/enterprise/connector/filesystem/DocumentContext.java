@@ -17,37 +17,20 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
 public class DocumentContext {
-  private final FileSystemTypeRegistry fileSystemTypeRegistry;
-  private final boolean pushAcls;
-  private final boolean markAllDocumentsPublic;
   private final Credentials credentials;
   private final MimeTypeDetector mimeTypeDetector;
+  private final FileSystemPropertyManager propertyManager;
 
   /**
    * This constructor is used to instantiate the document context
    * using properties configured in Spring.
    */
-  DocumentContext(FileSystemTypeRegistry fileSystemTypeRegistry,
-                  String domain, String userName, String password,
+  DocumentContext(String domain, String userName, String password,
                   MimeTypeDetector mimeTypeDetector,
-                  DocumentSecurityProperties propertyFetcher) {
-    this.pushAcls = propertyFetcher.isPushAclFlag();
-    this.markAllDocumentsPublic = propertyFetcher.isMarkDocumentPublicFlag();
-    this.fileSystemTypeRegistry = fileSystemTypeRegistry;
+                  FileSystemPropertyManager propertyManager) {
     this.credentials = new Credentials(domain, userName, password);
     this.mimeTypeDetector = mimeTypeDetector;
-  }
-
-  public FileSystemTypeRegistry getFileSystemTypeRegistry() {
-    return fileSystemTypeRegistry;
-  }
-
-  public boolean isPushAcls() {
-    return pushAcls;
-  }
-
-  public boolean isMarkAllDocumentsPublic() {
-    return markAllDocumentsPublic;
+    this.propertyManager = propertyManager;
   }
 
   public Credentials getCredentials() {
@@ -58,21 +41,7 @@ public class DocumentContext {
     return mimeTypeDetector;
   }
 
-  /**
-   * Interface to retrieve the properties required by DocumentContext.
-   */
-  static interface DocumentSecurityProperties {
-
-    /**
-     * Returns the markAllDocumentsPublic.
-     * @return Flag to decide whether or not to mark all documents as public.
-     */
-    boolean isMarkDocumentPublicFlag();
-
-    /**
-     * Returns the pushAcls.
-     * @return Flag to decide whether or not to include ACL in the feed.
-     */
-    boolean isPushAclFlag();
+  public FileSystemPropertyManager getPropertyManager() {
+    return propertyManager;
   }
 }

@@ -57,6 +57,11 @@ public class SmbReadonlyFile
   private final SmbFileProperties smbPropertyFetcher;
 
   /**
+   * Cached AclBuilder for this file.
+   */
+  private AclBuilder aclBuilder;
+
+  /**
    * @param type a FileSystemType instance
    * @param path see {@code jcifs.org.SmbFile} for path syntax.
    * @param credentials
@@ -177,9 +182,8 @@ public class SmbReadonlyFile
 
   @Override
   public Acl getAcl() throws IOException, RepositoryException {
-    SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
     try {
-      return builder.getAcl();
+      return getAclBuilder().getAcl();
     } catch (SmbException e) {
       detectServerDown(e);
       LOG.warning("Failed to get ACL: " + e.getMessage());
@@ -195,9 +199,8 @@ public class SmbReadonlyFile
 
   @Override
   public Acl getInheritedAcl() throws IOException, RepositoryException {
-    SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
     try {
-      return builder.getInheritedAcl();
+      return getAclBuilder().getInheritedAcl();
     } catch (SmbException e) {
       detectServerDown(e);
       LOG.warning("Failed to get inherited ACL: " + e.getMessage());
@@ -213,8 +216,7 @@ public class SmbReadonlyFile
   @Override
   public Acl getShareAcl() throws IOException, RepositoryException {
     try {
-      SmbAclBuilder builder = new SmbAclBuilder(delegate, smbPropertyFetcher);
-      return builder.getShareAcl();
+      return getAclBuilder().getShareAcl();
     } catch (SmbException e) {
       detectServerDown(e);
       LOG.warning("Failed to get share ACL: " + e.getMessage());
@@ -232,6 +234,17 @@ public class SmbReadonlyFile
     // There appears to be a bug in (at least) v1.2.13 that causes
     // non-existent paths to return true.
     return exists() ? super.isDirectory() : false;
+  }
+
+  private synchronized AclBuilder getAclBuilder() {
+    if (aclBuilder == null) {
+      if (smbPropertyFetcher.isLegacyAcls()) {
+        aclBuilder = new LegacySmbAclBuilder(delegate, smbPropertyFetcher);
+      } else {
+        aclBuilder = new SmbAclBuilder(delegate, smbPropertyFetcher);
+      }
+    }
+    return aclBuilder;
   }
 
   boolean isTraversable() throws RepositoryDocumentException {

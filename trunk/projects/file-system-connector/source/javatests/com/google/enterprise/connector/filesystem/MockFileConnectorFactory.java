@@ -40,7 +40,7 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         Collections.singletonList(new JavaFileSystemType()));
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager();
-    DocumentContext context = new DocumentContext(fileSystemTypeRegistry,
+    DocumentContext context = new DocumentContext(
         null, null, null, null, propertyManager);
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     TraversalContext traversalContext = new FakeTraversalContext();
@@ -52,15 +52,14 @@ public class MockFileConnectorFactory implements ConnectorFactory {
     authorizationManager = new FileAuthorizationManager(pathParser);
 
     lister = new FileLister(pathParser, startPaths, includePatterns,
-                            excludePatterns, context, propertyManager);
+                            excludePatterns, context);
     lister.setTraversalContext(traversalContext);
     lister.setTraversalSchedule(new MockTraversalSchedule());
 
     retriever = new FileRetriever(pathParser, context);
     retriever.setTraversalContext(traversalContext);
 
-    return new FileConnector(authorizationManager, lister, retriever,
-                             propertyManager);
+    return new FileConnector(authorizationManager, lister, retriever);
   }
 
   private static List<String> readAllStartPaths(Map<String, String> config) {

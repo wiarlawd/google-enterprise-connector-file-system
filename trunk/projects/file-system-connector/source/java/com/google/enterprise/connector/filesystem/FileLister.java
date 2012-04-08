@@ -112,16 +112,16 @@ class FileLister implements Lister, TraversalContextAware,
    */
   public FileLister(PathParser pathParser, List<String> userEnteredStartPaths,
       List<String> includePatterns, List<String> excludePatterns,
-      DocumentContext context, FileSystemPropertyManager propertyManager)
-      throws RepositoryException {
+      DocumentContext context) throws RepositoryException {
     this.pathParser = pathParser;
     this.startPaths = normalizeStartPaths(userEnteredStartPaths);
     this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
         includePatterns, excludePatterns);
     this.context = context;
-    this.traverserService =
-        Executors.newFixedThreadPool(propertyManager.getThreadPoolSize());
-    setIfModifiedSinceCushion(propertyManager.getIfModifiedSinceCushion());
+    this.traverserService = Executors.newFixedThreadPool(
+        context.getPropertyManager().getThreadPoolSize());
+    setIfModifiedSinceCushion(
+        context.getPropertyManager().getIfModifiedSinceCushion());
   }
 
   private static Collection<String> normalizeStartPaths(
@@ -141,6 +141,8 @@ class FileLister implements Lister, TraversalContextAware,
   /* @Override */
   public void setTraversalContext(TraversalContext traversalContext) {
     this.traversalContext = traversalContext;
+    context.getPropertyManager().setLegacyAclFlag(
+         !traversalContext.supportsAcls());
   }
 
   /* @Override */
@@ -351,13 +353,16 @@ class FileLister implements Lister, TraversalContextAware,
         FileIterator iter = new FileIterator(root, filePatternMatcher, context,
             traversalContext, getIfModifiedSince(startTime));
 
-        Document rootShareAclDoc = createRootShareAcl(root);
-        if (rootShareAclDoc != null) {
-          try {
-            documentAcceptor.take(rootShareAclDoc);
-          } catch (RepositoryDocumentException rde) {
-            LOGGER.log(Level.WARNING, "Failed to feed root share ACL document "
-                       + path, rde);
+        if (traversalContext.supportsAcls()) {
+          Document rootShareAclDoc = createRootShareAcl(root);
+          if (rootShareAclDoc != null) {
+            try {
+              documentAcceptor.take(rootShareAclDoc);
+            } catch (RepositoryDocumentException rde) {
+              LOGGER.log(Level.WARNING,
+                  "Failed to feed root share ACL document " + root.getPath(),
+                  rde);
+            }
           }
         }
         while (notShutdown() && iter.hasNext()) {

@@ -36,15 +36,10 @@ public class FileConnector
   private final Retriever retriever;
 
   public FileConnector(AuthorizationManager authorizationManager,
-                       Lister lister, Retriever retriever,
-                       FileSystemPropertyManager propertyManager) {
-
+                       Lister lister, Retriever retriever) {
     this.authorizationManager = authorizationManager;
     this.lister = lister;
     this.retriever = retriever;
-
-    // TODO: If we add a property to PropertyManager, then this would be the
-    // place to validate the properties.
   }
 
   /* @Override */

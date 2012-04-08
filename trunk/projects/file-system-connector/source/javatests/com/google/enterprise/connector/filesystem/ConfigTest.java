@@ -41,11 +41,9 @@ public class ConfigTest extends TestCase {
   @Override
   public void setUp() throws Exception {
 
-    File workDir = new TestDirectoryManager(this).makeDirectory("workdir");
     File startDir = new TestDirectoryManager(this).makeDirectory("startdir");
 
     goodConfig = new HashMap<String, String>();
-    goodConfig.put("googleConnectorWorkDir", workDir.getAbsolutePath());
 
     int numInputs = FileConnectorType.getMaxInputsOfMultiLineFieldForTesting();
     for (int i = 0; i < numInputs; i++) {

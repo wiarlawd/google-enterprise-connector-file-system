@@ -89,14 +89,16 @@ public class FileDocumentTest extends TestCase {
         Value.getSingleValueString(doc, SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
-
   }
 
   public void testAddNotPublicFileWithAcl() throws RepositoryException {
     List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
     List<String> groups = Arrays.asList("domain1\\engineers",
                                         "domain1\\product managers");
-    Acl acl = Acl.newAcl(users, groups, null, null);
+    List<String> denyUsers = Arrays.asList("domain1\\beelzebob");
+    List<String> denyGroups = Arrays.asList("domain1\\sales", "domain1\\hr");
+
+    Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(true, false));
     validateNotPublic(doc);
@@ -104,11 +106,43 @@ public class FileDocumentTest extends TestCase {
     validateRepeatedProperty(users, usersProperty);
     Property groupsProperty = doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS);
     validateRepeatedProperty(groups, groupsProperty);
+    Property denyUsersProperty =
+        doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS);
+    validateRepeatedProperty(denyUsers, denyUsersProperty);
+    Property denyGroupsProperty =
+        doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS);
+    validateRepeatedProperty(denyGroups, denyGroupsProperty);
 
-    Property aclInheritFrom = doc.findProperty(
-        SpiConstants.PROPNAME_ACLINHERITFROM_DOCID);
+    Property aclInheritFrom =
+        doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID);
     assertNotNull(aclInheritFrom);
     assertEquals(foo.getParent(), aclInheritFrom.nextValue().toString());
+  }
+
+  public void testAddNotPublicFileWithLegacyAcl() throws RepositoryException {
+    List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
+    List<String> groups = Arrays.asList("domain1\\engineers",
+                                        "domain1\\product managers");
+    List<String> denyUsers = Arrays.asList("domain1\\beelzebob");
+    List<String> denyGroups = Arrays.asList("domain1\\sales", "domain1\\hr");
+
+    Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
+    foo.setAcl(acl);
+    DocumentContext context = makeContext(true, false);
+    context.getPropertyManager().setLegacyAclFlag(true);
+
+    Document doc = new FileDocument(foo, context);
+    validateNotPublic(doc);
+    Property usersProperty = doc.findProperty(SpiConstants.PROPNAME_ACLUSERS);
+    validateRepeatedProperty(users, usersProperty);
+    Property groupsProperty = doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS);
+    validateRepeatedProperty(groups, groupsProperty);
+
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID));
   }
 
   private void validateNotPublic(Document doc) throws RepositoryException {
@@ -211,7 +245,6 @@ public class FileDocumentTest extends TestCase {
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
     mimeTypeDetector.setTraversalContext(new FakeTraversalContext());
     DocumentContext result = new DocumentContext(
-        new FileSystemTypeRegistry(Arrays.asList(fileFactory)),
         null, null, null, mimeTypeDetector,
         new TestFileSystemPropertyManager(pushAcls, markAllDocumentsPublic));
 

@@ -13,9 +13,8 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.AceSecurityLevel;
-import com.google.enterprise.connector.filesystem.SmbAclBuilder.AclFormat;
-import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.File;
@@ -68,10 +67,13 @@ class CopySmbToLocalDisk {
       DirectoryListingException, InsufficientAccessException {
     String startPath = a[0];
     String endPath = a[1];
-    Credentials creds = new Credentials("", "admin", "test");
-    SmbFileProperties smbProperties = new SmbProperties();
-    SmbFileSystemType type = new SmbFileSystemType(smbProperties);
-    SmbReadonlyFile start = new SmbReadonlyFile(type, startPath, creds, smbProperties);
+    FileSystemPropertyManager smbProperties = new SmbProperties();
+    DocumentContext context =
+        new DocumentContext("", "admin", "test", null, smbProperties);
+    SmbFileSystemType type = new SmbFileSystemType(context);
+
+    SmbReadonlyFile start = new SmbReadonlyFile(type, startPath,
+        context.getCredentials(), smbProperties);
     CopySmbToLocalDisk copier = new CopySmbToLocalDisk(start, new File(endPath));
     long startTimeMillis = System.currentTimeMillis();
     copier.copy();
@@ -158,7 +160,7 @@ class CopySmbToLocalDisk {
     }
   }
 
-  private static class SmbProperties implements SmbFileProperties {
+  private static class SmbProperties extends FileSystemPropertyManager {
 
     public String getAceSecurityLevel() {
       return AceSecurityLevel.FILEANDSHARE.name();
@@ -173,6 +175,18 @@ class CopySmbToLocalDisk {
     }
 
     public boolean isLastAccessResetFlagForSmb() {
+      return false;
+    }
+
+    public boolean isMarkAllDocumentsPublic() {
+      return false;
+    }
+
+    public boolean isPushAcls() {
+      return false;
+    }
+
+    public boolean isLegacyAcls() {
       return false;
     }
   }
