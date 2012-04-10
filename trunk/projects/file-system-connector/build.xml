@@ -17,21 +17,11 @@
   <property name="build-prod-config.dir" value="${build-prod.dir}/config" />
   <property name="build-tests.dir" value="${build.dir}/tests" />
 
-  <property name="zip.dir" value  = "${build.dir}/file" />
-  <property name="config-zip.dir" value  = "${zip.dir}/Config" />
-  <property name="lib-zip.dir" value  = "${zip.dir}/Lib" />
-  <property name="license-zip.dir" value  = "${zip.dir}/License" />
-  <property name="file-connector-jar-zip.file"
-        value = "${zip.dir}/connector-filesystem.jar" />
-  <property name="file-connector-copying-zip.file" value="${zip.dir}/COPYING" />
-
   <property name="classes-prod.dir" value="${build-prod.dir}/classes" />
   <property name="classes-tests.dir" value="${build-tests.dir}/classes" />
 
   <property name="jar-prod.dir" value="${build-prod.dir}/jar" />
   <property name="jar-prod.file" value="${jar-prod.dir}/connector-filesystem.jar" />
-
-  <property name="downloads.dir" value="downloads" />
 
   <property name="javadoc.dir" value="javadoc" />
   <property name="javadoc-prod.dir" value="${javadoc.dir}/prod" />
@@ -50,10 +40,6 @@
   <property name="readme.file" value="README" />
   <property name="release-notes.file" value="RELEASE_NOTES" />
   <property name="downloads.dir" value="downloads" />
-
-  <property name="zip-src.dir" value="${build.dir}/file-src" />
-  <property name="release-notes-zip-src.file"
-        value="${zip-src.dir}/${release-notes.file}" />
 
   <property name="tests_out.dir" value="tests_outdir" />
   <property name="tests.logging.properties"
@@ -104,13 +90,6 @@
     <mkdir dir="${build-tests.dir}" />
     <mkdir dir="${build-prod.dir}" />
     <mkdir dir="${build-prod-config.dir}" />
-
-    <mkdir dir="${zip.dir}" />
-    <mkdir dir="${config-zip.dir}" />
-    <mkdir dir="${lib-zip.dir}" />
-    <mkdir dir="${license-zip.dir}" />
-
-    <mkdir dir="${zip-src.dir}" />
 
     <mkdir dir="${classes-prod.dir}" />
     <mkdir dir="${classes-tests.dir}" />
@@ -281,38 +260,28 @@
 
   <target name="download_filesystem_connector" depends="jar_prod"
           description="Build distribution zip files.">
-    <copy file="${release-notes.file}" tofile="${release-notes-zip-src.file}" >
-       <filterchain>
-         <replacestring from="__SVN_VERSION__" to="r${svn.branch.version} ${TODAY}"/>
-      </filterchain>
-    </copy>
     <zip destfile="${connector-filesystem-src.zip}" >
       <zipfileset dir="."
         prefix="connector-filesystem-${version}/projects/file-system-connector"
-        includes="${readme.file}, ${copying.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
-      <zipfileset dir="${zip-src.dir}" />
+        includes="${release-notes.file}, ${readme.file}, ${copying.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
     </zip>
-
-    <checksum file="${connector-filesystem-src.zip}" />
-
-    <copy file="${jar-prod.file}" tofile="${file-connector-jar-zip.file}"/>
-    <copy file="${copying.file}" tofile="${file-connector-copying-zip.file}"/>
-    <copy file="${logging-properties.file}" todir="${config-zip.dir}" />
-    <!-- Add connector instance xml files for manual upgrade process -->
-    <copy todir="${config-zip.dir}">
-      <fileset dir="./config" includes="connectorInstance.xml"></fileset>
-    </copy>
-    <copy todir="${lib-zip.dir}">
-      <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-    </copy>
-    <copy todir="${license-zip.dir}">
-      <fileset dir="${license-prod.dir}" />
-    </copy>
+    <checksum algorithm="SHA-1" file="${connector-filesystem-src.zip}" />
 
     <zip destfile="${downloads.dir}/connector-filesystem-${version}.zip">
-      <zipfileset dir="${zip.dir}" />
+      <zipfileset file="${jar-prod.file}" />
+      <zipfileset file="${release-notes.file}" />
+      <zipfileset file="${readme.file}" />
+      <zipfileset file="${copying.file}" />
+      <zipfileset file="${logging-properties.file}" prefix="Config" />
+      <!-- Add connector instance xml files for manual upgrade process -->
+      <zipfileset file="config/connectorInstance.xml" prefix="Config" />
+      <zipfileset dir="${thirdparty-prod-jar.dir}" prefix="Lib">
+        <include name="**/*.jar" />
+      </zipfileset>
+      <zipfileset dir="${license-prod.dir}" prefix="License" />
     </zip>
-
+    <checksum algorithm="SHA-1" 
+              file="${downloads.dir}/connector-filesystem-${version}.zip" />
   </target>
 
   <target name="clean" description="Deletes all build files.">
