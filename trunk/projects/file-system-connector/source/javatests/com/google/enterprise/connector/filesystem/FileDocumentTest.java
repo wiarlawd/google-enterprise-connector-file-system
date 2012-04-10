@@ -89,6 +89,8 @@ public class FileDocumentTest extends TestCase {
         Value.getSingleValueString(doc, SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS));
   }
 
   public void testAddNotPublicFileWithAcl() throws RepositoryException {
