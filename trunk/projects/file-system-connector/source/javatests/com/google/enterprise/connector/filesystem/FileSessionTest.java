@@ -26,7 +26,6 @@ import junit.framework.TestCase;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 
 /** Test Session aspect of FileConnector. */
 public class FileSessionTest extends TestCase {
@@ -45,12 +44,11 @@ public class FileSessionTest extends TestCase {
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager(false);
-    DocumentContext context = new DocumentContext(
-        null, null, null, mimeTypeDetector, propertyManager);
+    DocumentContext context = new DocumentContext(null, null, null,
+        mimeTypeDetector, propertyManager, null, null, null);
 
     authz = new FileAuthorizationManager(pathParser);
-    List<String> empty = Collections.emptyList();
-    lister = new FileLister(pathParser, empty, empty, empty, context);
+    lister = new FileLister(pathParser, context);
     retriever = new FileRetriever(pathParser, context);
 
     FileConnector connector = new FileConnector(authz, lister, retriever);

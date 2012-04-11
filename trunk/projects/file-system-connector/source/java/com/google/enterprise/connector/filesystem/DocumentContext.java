@@ -16,21 +16,32 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
 public class DocumentContext {
   private final Credentials credentials;
   private final MimeTypeDetector mimeTypeDetector;
   private final FileSystemPropertyManager propertyManager;
+  private final Collection<String> startPaths;
+  private final FilePatternMatcher filePatternMatcher;
 
   /**
    * This constructor is used to instantiate the document context
    * using properties configured in Spring.
    */
   DocumentContext(String domain, String userName, String password,
-                  MimeTypeDetector mimeTypeDetector,
-                  FileSystemPropertyManager propertyManager) {
+      MimeTypeDetector mimeTypeDetector,
+      FileSystemPropertyManager propertyManager,
+      List<String> userEnteredStartPaths,
+      List<String> includePatterns, List<String> excludePatterns) {
     this.credentials = new Credentials(domain, userName, password);
     this.mimeTypeDetector = mimeTypeDetector;
     this.propertyManager = propertyManager;
+    this.startPaths = normalizeStartPaths(userEnteredStartPaths);
+    this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
+        includePatterns, excludePatterns);
   }
 
   public Credentials getCredentials() {
@@ -43,5 +54,25 @@ public class DocumentContext {
 
   public FileSystemPropertyManager getPropertyManager() {
     return propertyManager;
+  }
+
+  public FilePatternMatcher getFilePatternMatcher() {
+    return filePatternMatcher;
+  }
+
+  public Collection<String> getStartPaths() {
+    return startPaths;
+  }
+
+  private static Collection<String> normalizeStartPaths(List<String> paths) {
+    List<String> result = FileConnectorType.filterUserEnteredList(paths);
+    for (int ix = 0; ix < result.size(); ix++) {
+      String path = result.get(ix);
+      if (!path.endsWith("/")) {
+        path += "/";
+        result.set(ix, path);
+      }
+    }
+    return Collections.unmodifiableCollection(result);
   }
 }

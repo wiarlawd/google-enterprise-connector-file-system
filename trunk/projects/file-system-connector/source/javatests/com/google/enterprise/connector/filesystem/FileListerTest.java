@@ -121,11 +121,11 @@ public class FileListerTest extends TestCase {
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager(pushAcls);
     DocumentContext context = new DocumentContext(
-        null, null, null, MIME_TYPE_DETECTOR, propertyManager);
-    // TODO: handle multiple startpoints.
-    List<String> startPoints = Collections.singletonList(root.getPath());
-    final FileLister lister = new FileLister(pathParser, startPoints,
-        includePatterns, excludePatterns, context);
+        null, null, null, MIME_TYPE_DETECTOR, propertyManager,
+        // TODO: handle multiple startpoints.
+        Collections.singletonList(root.getPath()),
+        includePatterns, excludePatterns);
+    final FileLister lister = new FileLister(pathParser, context);
     lister.setTraversalContext(traversalContext);
     lister.setTraversalSchedule(traversalSchedule);
     lister.setDocumentAcceptor(documentAcceptor);

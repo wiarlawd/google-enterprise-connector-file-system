@@ -40,19 +40,18 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         Collections.singletonList(new JavaFileSystemType()));
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager();
-    DocumentContext context = new DocumentContext(
-        null, null, null, null, propertyManager);
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     TraversalContext traversalContext = new FakeTraversalContext();
+    MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
+    mimeTypeDetector.setTraversalContext(traversalContext);
 
-    List<String> startPaths = readAllStartPaths(config);
-    List<String> includePatterns = new ArrayList<String>();
-    List<String> excludePatterns = new ArrayList<String>();
+    DocumentContext context = new DocumentContext(
+        null, null, null, mimeTypeDetector, propertyManager,
+        readAllStartPaths(config), null, null);
 
     authorizationManager = new FileAuthorizationManager(pathParser);
 
-    lister = new FileLister(pathParser, startPaths, includePatterns,
-                            excludePatterns, context);
+    lister = new FileLister(pathParser, context);
     lister.setTraversalContext(traversalContext);
     lister.setTraversalSchedule(new MockTraversalSchedule());
 

@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.enterprise.connector.logging.NDC;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
@@ -35,10 +36,8 @@ import com.google.enterprise.connector.util.SystemClock;
 import com.google.enterprise.connector.spi.Value;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +69,6 @@ class FileLister implements Lister, TraversalContextAware,
       Logger.getLogger(FileLister.class.getName());
 
   private final PathParser pathParser;
-  private final Collection<String> startPaths;
-  private final FilePatternMatcher filePatternMatcher;
   private final DocumentContext context;
   private final ExecutorService traverserService;
 
@@ -110,13 +107,9 @@ class FileLister implements Lister, TraversalContextAware,
    * @throws RepositoryDocumentException if this fails due to an environmental
    * issue or an invalid configuration.
    */
-  public FileLister(PathParser pathParser, List<String> userEnteredStartPaths,
-      List<String> includePatterns, List<String> excludePatterns,
-      DocumentContext context) throws RepositoryException {
+  public FileLister(PathParser pathParser, DocumentContext context)
+      throws RepositoryException {
     this.pathParser = pathParser;
-    this.startPaths = normalizeStartPaths(userEnteredStartPaths);
-    this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
-        includePatterns, excludePatterns);
     this.context = context;
     this.traverserService = Executors.newFixedThreadPool(
         context.getPropertyManager().getThreadPoolSize());
@@ -124,25 +117,12 @@ class FileLister implements Lister, TraversalContextAware,
         context.getPropertyManager().getIfModifiedSinceCushion());
   }
 
-  private static Collection<String> normalizeStartPaths(
-      List<String> userEnteredStartPaths) {
-    List<String> result =
-      FileConnectorType.filterUserEnteredList(userEnteredStartPaths);
-    for (int ix = 0; ix < result.size(); ix++) {
-      String path = result.get(ix);
-      if (!path.endsWith("/")) {
-        path += "/";
-        result.set(ix, path);
-      }
-    }
-    return Collections.unmodifiableCollection(result);
-  }
-
   /* @Override */
   public void setTraversalContext(TraversalContext traversalContext) {
     this.traversalContext = traversalContext;
     context.getPropertyManager().setLegacyAclFlag(
          !traversalContext.supportsAcls());
+    context.getMimeTypeDetector().setTraversalContext(traversalContext);
   }
 
   /* @Override */
@@ -193,7 +173,7 @@ class FileLister implements Lister, TraversalContextAware,
     LOGGER.fine("Starting File Lister");
 
     Collection<Callable<Void>> traversers = Lists.newArrayList();
-    for (String startPath : startPaths) {
+    for (String startPath : context.getStartPaths()) {
       traversers.add(newTraverser(startPath));
     }
 
@@ -350,7 +330,7 @@ class FileLister implements Lister, TraversalContextAware,
       }
       long startTime = clock.getTimeMillis();
       try {
-        FileIterator iter = new FileIterator(root, filePatternMatcher, context,
+        FileIterator iter = new FileIterator(root, context,
             traversalContext, getIfModifiedSince(startTime));
 
         if (traversalContext.supportsAcls()) {
@@ -396,8 +376,7 @@ class FileLister implements Lister, TraversalContextAware,
       try {
         Acl shareAcl = root.getShareAcl();
         if (shareAcl != null) {
-          Map<String, List<Value>> aclValues =
-              new HashMap<String, List<Value>>();
+          Map<String, List<Value>> aclValues = Maps.newHashMap();
           aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
               getStringValueList(shareAcl.getUsers()));
           aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
@@ -427,7 +406,7 @@ class FileLister implements Lister, TraversalContextAware,
 
     /** Creates a value list from a list of String values. */
     private List<Value> getStringValueList(List<String> strValues) {
-      List<Value> valueList = new ArrayList<Value>(strValues.size());
+      List<Value> valueList = Lists.newArrayListWithCapacity(strValues.size());
       for (String str : strValues) {
         valueList.add(Value.getStringValue(str));
       }

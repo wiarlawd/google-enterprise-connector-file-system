@@ -50,6 +50,9 @@
     <constructor-arg><null/></constructor-arg>
     <!-- This must be the only reference to the filesystem-property-manager. -->
     <constructor-arg ref="filesystem-property-manager"/>
+    <constructor-arg><null/></constructor-arg>
+    <constructor-arg><null/></constructor-arg>
+    <constructor-arg><null/></constructor-arg>
   </bean>
 
   <bean id="filesystem-property-manager"

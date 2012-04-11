@@ -68,8 +68,8 @@ class CopySmbToLocalDisk {
     String startPath = a[0];
     String endPath = a[1];
     FileSystemPropertyManager smbProperties = new SmbProperties();
-    DocumentContext context =
-        new DocumentContext("", "admin", "test", null, smbProperties);
+    DocumentContext context = new DocumentContext("", "admin", "test",
+        null, smbProperties, null, null, null);
     SmbFileSystemType type = new SmbFileSystemType(context);
 
     SmbReadonlyFile start = new SmbReadonlyFile(type, startPath,

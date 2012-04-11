@@ -21,7 +21,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
   @Override
   protected FileSystemType getFileSystemType() {
     return new SmbFileSystemType(new DocumentContext(null, null, null, null,
-        new TestFileSystemPropertyManager()));
+        new TestFileSystemPropertyManager(), null, null, null));
   }
 
   @Override

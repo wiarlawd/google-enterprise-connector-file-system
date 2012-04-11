@@ -55,18 +55,6 @@
     <constructor-arg ref="mime-type-finder"/>
     <!-- This must be the only reference to the filesystem-property-manager. -->
     <constructor-arg ref="filesystem-property-manager"/>
-  </bean>
-
-  <bean id="authz"
-        class="com.google.enterprise.connector.filesystem.FileAuthorizationManager"
-        singleton="false">
-    <constructor-arg ref="path-parser"/>
-  </bean>
-
-  <bean id="file-lister"
-       class="com.google.enterprise.connector.filesystem.FileLister"
-       singleton="true">
-    <constructor-arg ref="path-parser"/>
     <constructor-arg>
       <list>
         <value>${start_0}</value>
@@ -151,6 +139,18 @@
         <value>${exclude_23}</value>
       </list>
     </constructor-arg>
+  </bean>
+
+  <bean id="authz"
+        class="com.google.enterprise.connector.filesystem.FileAuthorizationManager"
+        singleton="false">
+    <constructor-arg ref="path-parser"/>
+  </bean>
+
+  <bean id="file-lister"
+       class="com.google.enterprise.connector.filesystem.FileLister"
+       singleton="true">
+    <constructor-arg ref="path-parser"/>
     <constructor-arg ref="document-context"/>
     <property name="fullTraversalIntervalDays" value="${fulltraversal}"/>
   </bean>

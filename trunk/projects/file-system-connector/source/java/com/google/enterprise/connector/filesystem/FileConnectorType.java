@@ -703,7 +703,8 @@ public class FileConnectorType implements ConnectorType {
    * entered {@link List} of values that represent <b>real</b> values rather
    * than
    * <OL>
-   * <LI> null
+   * <LI> null input list
+   * <LI> null values
    * <LI> Zero length values
    * <LI> All white space values
    * <LI> Comments beginning with #
@@ -711,12 +712,14 @@ public class FileConnectorType implements ConnectorType {
    */
   static final List<String> filterUserEnteredList(List<String> original) {
     List<String> result = new ArrayList<String>();
-    for (String v : original) {
-      v = (v == null) ? "" : v.trim();
-      if (v.length() == 0 || v.startsWith("#") || result.contains(v)) {
-        continue;
+    if (original != null) {
+      for (String v : original) {
+        v = (v == null) ? "" : v.trim();
+        if (v.length() == 0 || v.startsWith("#") || result.contains(v)) {
+          continue;
+        }
+        result.add(v);
       }
-      result.add(v);
     }
     return result;
   }

@@ -126,18 +126,14 @@ public class FileIteratorTest extends TestCase {
     builder.addDir(configureFile, root, "newerdir", "ndf1", "ndf2",
                    "newer.pdf");
 
-    FileSystemTypeRegistry fileSystemTypeRegistry =
-        new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
-    PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     TraversalContext traversalContext = new FakeTraversalContext();
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
     mimeTypeDetector.setTraversalContext(traversalContext);
     DocumentContext context = new DocumentContext(null, null, null,
-        mimeTypeDetector, propertyManager);
-    FilePatternMatcher matcher = new FilePatternMatcher(
+        mimeTypeDetector, propertyManager, null,
         Collections.singletonList("/"), (List<String>) Collections.EMPTY_LIST);
 
-    FileIterator it = new FileIterator(root, matcher, context,
+    FileIterator it = new FileIterator(root, context,
                                        traversalContext, ifModifiedSince);
     for (MockReadonlyFile file : builder.getExpected()) {
       assertTrue(it.hasNext());

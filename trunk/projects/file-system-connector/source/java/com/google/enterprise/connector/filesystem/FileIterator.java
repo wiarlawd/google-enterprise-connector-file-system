@@ -40,7 +40,6 @@ public class FileIterator {
   private static final Logger LOGGER =
       Logger.getLogger(FileIterator.class.getName());
 
-  private final FilePatternMatcher filePatternMatcher;
   private final DocumentContext context;
   private final TraversalContext traversalContext;
   private final MimeTypeDetector mimeTypeDetector;
@@ -58,11 +57,9 @@ public class FileIterator {
   private final List<List<ReadonlyFile<?>>> traversalStateStack;
 
   public FileIterator(ReadonlyFile<?> root,
-                      FilePatternMatcher filePatternMatcher,
                       DocumentContext context,
                       TraversalContext traversalContext,
                       long ifModifiedSince) {
-    this.filePatternMatcher = filePatternMatcher;
     this.context = context;
     this.traversalContext = traversalContext;
     this.ifModifiedSince = ifModifiedSince;
@@ -116,7 +113,7 @@ public class FileIterator {
         ReadonlyFile<?> f = l.get(0);
         if (f.isDirectory()) {
           l.remove(0);
-          if (f.acceptedBy(filePatternMatcher)) {
+          if (f.acceptedBy(context.getFilePatternMatcher())) {
             List<? extends ReadonlyFile<?>> files = listFiles(f);
             if (!files.isEmpty()) {
               if (returnDirectories) {
@@ -157,7 +154,7 @@ public class FileIterator {
         return false;
       }
 
-      if (!f.acceptedBy(filePatternMatcher)) {
+      if (!f.acceptedBy(context.getFilePatternMatcher())) {
         LOGGER.log(Level.FINEST, "Skipping file {0} - pattern mismatch.",
                    f.getPath());
         return false;
