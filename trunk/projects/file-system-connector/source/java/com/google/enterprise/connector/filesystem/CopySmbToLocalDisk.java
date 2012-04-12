@@ -186,7 +186,7 @@ class CopySmbToLocalDisk {
       return false;
     }
 
-    public boolean isLegacyAcls() {
+    public boolean supportsInheritedAcls() {
       return false;
     }
   }

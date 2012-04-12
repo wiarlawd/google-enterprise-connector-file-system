@@ -66,7 +66,7 @@ public class FileIterator {
     this.mimeTypeDetector = context.getMimeTypeDetector();
     AclProperties aclProps = context.getPropertyManager();
     this.returnDirectories = root.getFileSystemType().supportsAcls()
-        && aclProps.isPushAcls() && !aclProps.isLegacyAcls()
+        && aclProps.isPushAcls() && aclProps.supportsInheritedAcls()
         && !aclProps.isMarkAllDocumentsPublic();
     this.positioned = false;
 

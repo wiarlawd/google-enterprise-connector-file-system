@@ -331,7 +331,7 @@ class FileLister implements Lister, TraversalContextAware,
         FileIterator iter = new FileIterator(root, context,
             getIfModifiedSince(startTime));
 
-        if (traversalContext.supportsAcls()) {
+        if (traversalContext.supportsInheritedAcls()) {
           Document rootShareAclDoc = createRootShareAcl(root);
           if (rootShareAclDoc != null) {
             try {

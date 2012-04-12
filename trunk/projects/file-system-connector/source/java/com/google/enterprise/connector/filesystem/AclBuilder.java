@@ -205,8 +205,13 @@ interface AclBuilder {
     boolean isPushAcls();
 
     /**
-     * @return true if feeding legacy ACLs (no inheritance, no deny).
+     * Returns {@code true} if Documents may include full ACL support,
+     * specifically DENY users or groups, ACL inheritance, and ACL-only
+     * Documents.  Some earlier Search Appliance implementations do not
+     * support these features.
+     *
+     * @return {@code true} if Documents may include enhanced ACL support 
      */
-    boolean isLegacyAcls();
+    boolean supportsInheritedAcls();
   }
 }

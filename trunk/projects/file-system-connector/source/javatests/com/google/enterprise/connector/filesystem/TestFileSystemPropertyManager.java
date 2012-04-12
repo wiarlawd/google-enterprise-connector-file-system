@@ -35,5 +35,6 @@ public class TestFileSystemPropertyManager extends FileSystemPropertyManager {
     super.setUserAclFormat("user");
     super.setIfModifiedSinceCushionMinutes(60);
     super.setThreadPoolSize(10);
+    super.setSupportsInheritedAcls(true);
   }
 }

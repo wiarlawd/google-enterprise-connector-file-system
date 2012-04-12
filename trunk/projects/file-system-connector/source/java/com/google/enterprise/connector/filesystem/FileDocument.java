@@ -96,7 +96,7 @@ public class FileDocument implements Document {
 
   private void fetchProperties() throws RepositoryException {
     if (file.isDirectory()) {
-      Preconditions.checkState(!aclProperties.isLegacyAcls(),
+      Preconditions.checkState(aclProperties.supportsInheritedAcls(),
           "Feeding directories is not supported with legacy ACLs.");
       addProperty(SpiConstants.PROPNAME_DOCUMENTTYPE,
           SpiConstants.DocumentType.ACL.toString());
@@ -197,7 +197,7 @@ public class FileDocument implements Document {
       } else {
         inheritFrom = file.getParent();
       }
-      if (inheritFrom != null && !aclProperties.isLegacyAcls()) {
+      if (inheritFrom != null && aclProperties.supportsInheritedAcls()) {
         addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID, inheritFrom);
       }
       addAclProperties(acl);
@@ -217,7 +217,7 @@ public class FileDocument implements Document {
     if (acl.getGroups() != null) {
       addProperty(SpiConstants.PROPNAME_ACLGROUPS, acl.getGroups());
     }
-    if (!aclProperties.isLegacyAcls()) {
+    if (aclProperties.supportsInheritedAcls()) {
       if (acl.getDenyUsers() != null) {
         addProperty(SpiConstants.PROPNAME_ACLDENYUSERS, acl.getDenyUsers());
       }

@@ -238,10 +238,10 @@ public class SmbReadonlyFile
 
   private synchronized AclBuilder getAclBuilder() {
     if (aclBuilder == null) {
-      if (smbPropertyFetcher.isLegacyAcls()) {
-        aclBuilder = new LegacySmbAclBuilder(delegate, smbPropertyFetcher);
-      } else {
+      if (smbPropertyFetcher.supportsInheritedAcls()) {
         aclBuilder = new SmbAclBuilder(delegate, smbPropertyFetcher);
+      } else {
+        aclBuilder = new LegacySmbAclBuilder(delegate, smbPropertyFetcher);
       }
     }
     return aclBuilder;

@@ -47,10 +47,10 @@ public class FileSystemPropertyManager implements SmbFileProperties,
   private boolean pushAclFlag;
 
   /**
-   * Represents the flag to feed old style ACL with the document
-   * (no deny, no inheritance).
+   * Represents the flag to feed new style ACLs, including inheritance 
+   * and deny, with the document.
    */
-  private boolean legacyAclFlag;
+  private boolean supportsInheritedAcls;
 
   /**
    * Represents the flag to reset last access time
@@ -165,17 +165,22 @@ public class FileSystemPropertyManager implements SmbFileProperties,
   }
 
   /**
-   * @return the legacyAclFlag
+   * Returns {@code true} if Documents may include full ACL support,
+   * specifically DENY users or groups, ACL inheritance, and ACL-only
+   * Documents.  Some earlier Search Appliance implementations do not
+   * support these features.
+   *
+   * @return {@code true} if Documents may include enhanced ACL support
    */
-  public boolean isLegacyAcls() {
-    return legacyAclFlag;
+  public boolean supportsInheritedAcls() {
+    return supportsInheritedAcls;
   }
 
   /**
-   * @param pushAclFlag the pushAclFlag to set
+   * @param supportsInheritedAcls the supportsInheritedAcls flag to set
    */
-  public void setLegacyAclFlag(boolean legacyAclFlag) {
-    this.legacyAclFlag = legacyAclFlag;
+  public void setSupportsInheritedAcls(boolean supportsInheritedAcls) {
+    this.supportsInheritedAcls = supportsInheritedAcls;
   }
 
   /**

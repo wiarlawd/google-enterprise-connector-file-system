@@ -131,7 +131,7 @@ public class FileDocumentTest extends TestCase {
     Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
     foo.setAcl(acl);
     DocumentContext context = makeContext(true, false);
-    context.getPropertyManager().setLegacyAclFlag(true);
+    context.getPropertyManager().setSupportsInheritedAcls(false);
 
     Document doc = new FileDocument(foo, context);
     validateNotPublic(doc);

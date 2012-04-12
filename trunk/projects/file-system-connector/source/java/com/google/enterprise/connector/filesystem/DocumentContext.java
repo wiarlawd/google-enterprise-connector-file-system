@@ -82,7 +82,7 @@ public class DocumentContext {
   public synchronized void setTraversalContext(TraversalContext context) {
     if (this.traversalContext == null) {
       traversalContext = context;
-      propertyManager.setLegacyAclFlag(!context.supportsAcls());
+      propertyManager.setSupportsInheritedAcls(context.supportsInheritedAcls());
       if (mimeTypeDetector != null) {
         mimeTypeDetector.setTraversalContext(context);
       }

@@ -39,7 +39,7 @@ public class FileIteratorTest extends TestCase {
   @Override
   public void setUp() throws Exception {
     traversalContext = new SimpleTraversalContext();
-    traversalContext.setSupportsAcls(true);
+    traversalContext.setSupportsInheritedAcls(true);
 
     mimeTypeDetector = new MimeTypeDetector();
     mimeTypeDetector.setTraversalContext(traversalContext);
@@ -108,8 +108,8 @@ public class FileIteratorTest extends TestCase {
 
   /** If feeding legacy ACLs, don't return directories. */
   public void testNoDirectoriesIfLegacyAcls() throws Exception {
-    propertyManager.setLegacyAclFlag(true);
-    traversalContext.setSupportsAcls(false);
+    propertyManager.setSupportsInheritedAcls(false);
+    traversalContext.setSupportsInheritedAcls(false);
     noDirectoriesTest();
   }
 

@@ -60,7 +60,7 @@ public class FileListerTest extends TestCase {
     builder = new MockDirectoryBuilder();
 
     traversalContext = new SimpleTraversalContext();
-    traversalContext.setSupportsAcls(true);
+    traversalContext.setSupportsInheritedAcls(true);
     MIME_TYPE_DETECTOR.setTraversalContext(traversalContext);
   }
 
@@ -197,7 +197,7 @@ public class FileListerTest extends TestCase {
   }
 
   public void testFeedNoDirectoriesIfLegacyAcls() throws Exception {
-    traversalContext.setSupportsAcls(false);
+    traversalContext.setSupportsInheritedAcls(false);
     testFeedNoDirectories(true);
   }
 

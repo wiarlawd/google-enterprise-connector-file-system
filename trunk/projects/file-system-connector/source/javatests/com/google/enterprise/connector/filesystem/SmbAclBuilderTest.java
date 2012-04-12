@@ -564,8 +564,8 @@ public class SmbAclBuilderTest extends TestCase {
       return true;
     }
 
-    public boolean isLegacyAcls() {
-      return false;
+    public boolean supportsInheritedAcls() {
+      return true;
     }
   }
 }

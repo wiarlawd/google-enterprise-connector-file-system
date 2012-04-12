@@ -166,7 +166,7 @@
     <property name="markDocumentPublicFlag" value="false"/>
     <property name="lastAccessResetFlagForSmb" value="true"/>
     <property name="lastAccessResetFlagForLocalWindows" value="true"/>
-    <property name="legacyAclFlag" value="true"/>
+    <property name="supportsInheritedAcls" value="false"/>
     <property name="pushAclFlag" value="true"/>
     <property name="groupAclFormat" value="group"/>
     <property name="userAclFormat" value="user"/>
