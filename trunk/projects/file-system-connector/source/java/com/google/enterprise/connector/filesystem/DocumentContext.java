@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.util.Collection;
@@ -26,6 +27,7 @@ public class DocumentContext {
   private final FileSystemPropertyManager propertyManager;
   private final Collection<String> startPaths;
   private final FilePatternMatcher filePatternMatcher;
+  private TraversalContext traversalContext;
 
   /**
    * This constructor is used to instantiate the document context
@@ -42,6 +44,7 @@ public class DocumentContext {
     this.startPaths = normalizeStartPaths(userEnteredStartPaths);
     this.filePatternMatcher = FileConnectorType.newFilePatternMatcher(
         includePatterns, excludePatterns);
+    this.traversalContext = null;
   }
 
   public Credentials getCredentials() {
@@ -74,5 +77,19 @@ public class DocumentContext {
       }
     }
     return Collections.unmodifiableCollection(result);
+  }
+
+  public synchronized void setTraversalContext(TraversalContext context) {
+    if (this.traversalContext == null) {
+      traversalContext = context;
+      propertyManager.setLegacyAclFlag(!context.supportsAcls());
+      if (mimeTypeDetector != null) {
+        mimeTypeDetector.setTraversalContext(context);
+      }
+    }
+  }
+
+  public synchronized TraversalContext getTraversalContext() {
+    return traversalContext;
   }
 }

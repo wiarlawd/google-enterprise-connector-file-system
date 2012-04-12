@@ -120,9 +120,7 @@ class FileLister implements Lister, TraversalContextAware,
   /* @Override */
   public void setTraversalContext(TraversalContext traversalContext) {
     this.traversalContext = traversalContext;
-    context.getPropertyManager().setLegacyAclFlag(
-         !traversalContext.supportsAcls());
-    context.getMimeTypeDetector().setTraversalContext(traversalContext);
+    context.setTraversalContext(traversalContext);
   }
 
   /* @Override */
@@ -331,7 +329,7 @@ class FileLister implements Lister, TraversalContextAware,
       long startTime = clock.getTimeMillis();
       try {
         FileIterator iter = new FileIterator(root, context,
-            traversalContext, getIfModifiedSince(startTime));
+            getIfModifiedSince(startTime));
 
         if (traversalContext.supportsAcls()) {
           Document rootShareAclDoc = createRootShareAcl(root);

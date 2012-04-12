@@ -58,10 +58,9 @@ public class FileIterator {
 
   public FileIterator(ReadonlyFile<?> root,
                       DocumentContext context,
-                      TraversalContext traversalContext,
                       long ifModifiedSince) {
     this.context = context;
-    this.traversalContext = traversalContext;
+    this.traversalContext = context.getTraversalContext();
     this.ifModifiedSince = ifModifiedSince;
     this.traversalStateStack = Lists.newArrayList();
     this.mimeTypeDetector = context.getMimeTypeDetector();

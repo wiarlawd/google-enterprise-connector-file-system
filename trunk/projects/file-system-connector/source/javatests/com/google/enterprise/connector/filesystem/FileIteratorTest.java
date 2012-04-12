@@ -15,9 +15,9 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.filesystem.MockDirectoryBuilder.ConfigureFile;
+import com.google.enterprise.connector.spi.SimpleTraversalContext;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.MimeTypeDetector;
-import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 
 import junit.framework.TestCase;
 
@@ -31,6 +31,21 @@ public class FileIteratorTest extends TestCase {
   private final long OLDER = 1000L;
   private final long NEWER = 3000L;
   private final long NEWEST = 4000L;
+
+  private SimpleTraversalContext traversalContext;
+  private MimeTypeDetector mimeTypeDetector;
+  private FileSystemPropertyManager propertyManager;
+
+  @Override
+  public void setUp() throws Exception {
+    traversalContext = new SimpleTraversalContext();
+    traversalContext.setSupportsAcls(true);
+
+    mimeTypeDetector = new MimeTypeDetector();
+    mimeTypeDetector.setTraversalContext(traversalContext);
+
+    propertyManager = new TestFileSystemPropertyManager();
+  }
 
   public void testFullTraversal() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
@@ -87,54 +102,42 @@ public class FileIteratorTest extends TestCase {
 
   /** If not feeding ACLs, don't return directories. */
   public void testNoDirectoriesIfNoAcls() throws Exception {
-    testNoDirectories(new TestFileSystemPropertyManager(false));
+    propertyManager.setPushAclFlag(false);
+    noDirectoriesTest();
   }
 
   /** If feeding legacy ACLs, don't return directories. */
   public void testNoDirectoriesIfLegacyAcls() throws Exception {
-    FileSystemPropertyManager propertyManager =
-        new TestFileSystemPropertyManager(true);
     propertyManager.setLegacyAclFlag(true);
-    testNoDirectories(propertyManager);
+    traversalContext.setSupportsAcls(false);
+    noDirectoriesTest();
   }
 
-  private void testNoDirectories(FileSystemPropertyManager propertyManager)
-      throws Exception {
+  private void noDirectoriesTest() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) throws Exception {
           return !file.isDirectory();
         }
       };
-    runIterator(0L, configureFile, propertyManager);
-  }
-
-  private void runIterator(long ifModifiedSince,
-      ConfigureFile configureFile) throws Exception {
-    runIterator(ifModifiedSince, configureFile,
-                new TestFileSystemPropertyManager());
+    runIterator(0L, configureFile);
   }
 
   @SuppressWarnings("unchecked")
   private void runIterator(long ifModifiedSince,
-      ConfigureFile configureFile, FileSystemPropertyManager propertyManager)
-      throws Exception {
+      ConfigureFile configureFile) throws Exception {
     MockDirectoryBuilder builder = new MockDirectoryBuilder();
-
     MockReadonlyFile root = builder.addDir(configureFile, null,
         "/foo/bar", "f1", "newer.txt", "f2");
     builder.addDir(configureFile, root, "d1", "d1f1", "d1f2");
     builder.addDir(configureFile, root, "newerdir", "ndf1", "ndf2",
                    "newer.pdf");
 
-    TraversalContext traversalContext = new FakeTraversalContext();
-    MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
-    mimeTypeDetector.setTraversalContext(traversalContext);
     DocumentContext context = new DocumentContext(null, null, null,
         mimeTypeDetector, propertyManager, null,
         Collections.singletonList("/"), (List<String>) Collections.EMPTY_LIST);
+    context.setTraversalContext(traversalContext);
 
-    FileIterator it = new FileIterator(root, context,
-                                       traversalContext, ifModifiedSince);
+    FileIterator it = new FileIterator(root, context, ifModifiedSince);
     for (MockReadonlyFile file : builder.getExpected()) {
       assertTrue(it.hasNext());
       assertEquals(file.getPath(), it.next().getPath());

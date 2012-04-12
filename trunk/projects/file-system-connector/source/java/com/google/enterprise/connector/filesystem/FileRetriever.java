@@ -42,6 +42,7 @@ class FileRetriever implements Retriever, TraversalContextAware {
   /* @Override */
   public void setTraversalContext(TraversalContext traversalContext) {
     this.traversalContext = traversalContext;
+    context.setTraversalContext(traversalContext);
   }
 
   /* @Override */
