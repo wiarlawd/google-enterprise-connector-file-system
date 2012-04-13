@@ -14,9 +14,11 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import jcifs.smb.ACE;
+import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SID;
-import jcifs.smb.SmbAuthException;
 import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
 
@@ -91,6 +93,25 @@ class SmbAclBuilder implements AclBuilder {
     List<ACE> fileAces = new ArrayList<ACE>();
     List<ACE> fileDenyAces = new ArrayList<ACE>();
     checkAndAddAces(securityAces, fileAces, fileDenyAces, true);
+
+    try {
+      String parent = file.getParent();
+      if (parent != null) {
+        NtlmPasswordAuthentication auth = 
+            (NtlmPasswordAuthentication) file.getPrincipal();
+        SmbFile parentFile = new SmbFile(parent, auth);
+        ACE[] parentsecurityAces = parentFile.getSecurity();
+        checkAndAddParentInheritOnlyAces(parentsecurityAces, fileAces, 
+            fileDenyAces);
+      }
+    } catch (ClassCastException e) {
+      LOGGER.log(Level.FINEST,"ClassCastException while getting parent ACLs: " 
+          + e.getMessage());
+    } catch (SmbException e) {
+      LOGGER.warning("Failed to get parent ACL: " + e.getMessage());
+      LOGGER.log(Level.FINEST, "Got SmbException while getting parent ACLs", e);
+    }
+
     return getAclFromAceList(fileAces, fileDenyAces);
   }
 
@@ -117,7 +138,8 @@ class SmbAclBuilder implements AclBuilder {
   /*
    * Returns ACL from the list of ACEs
    */
-  private Acl getAclFromAceList(List<ACE> allowAceList, List<ACE> denyAceList) {
+  @VisibleForTesting
+  Acl getAclFromAceList(List<ACE> allowAceList, List<ACE> denyAceList) {
     Set<String> users = new TreeSet<String>();
     Set<String> groups = new TreeSet<String>();
     Set<String> denyusers = new TreeSet<String>();
@@ -143,12 +165,12 @@ class SmbAclBuilder implements AclBuilder {
     Set<String> denyusers = new TreeSet<String>();
     Set<String> denygroups = new TreeSet<String>();
     for (ACE ace : allowAceList) {
-      if (isInheritOnlyAce(ace.getFlags())) {
+      if (isInheritedAce(ace.getFlags())) {
         addAceToSet(users, groups, ace);
       }
     }
     for (ACE ace : denyAceList) {
-      if (isInheritOnlyAce(ace.getFlags())) {
+      if (isInheritedAce(ace.getFlags())) {
         addAceToSet(denyusers, denygroups, ace);
       }
     }
@@ -199,15 +221,48 @@ class SmbAclBuilder implements AclBuilder {
    * @param skipInheritedAce if true skips adding inherited ACEs to the list
    * @throws IOException
    */
-  private void checkAndAddAces(ACE[] securityAces, List<ACE> aceList,
+  @VisibleForTesting
+  void checkAndAddAces(ACE[] securityAces, List<ACE> aceList,
       List<ACE> aceDenyList, boolean skipInheritedAce) throws IOException {
     if (securityAces == null) {
-      LOGGER.warning("Cannot process ACL because of null ACL " + "on "
+      LOGGER.warning("Cannot process ACL because of null ACL on "
           + file.getURL());
       return;
     }
-    for (ACE securityAce : securityAces) {
-      checkAndAddAce(securityAce, aceList, aceDenyList, skipInheritedAce);
+    for (ACE ace : securityAces) {
+      if (skipInheritedAce && isInheritedAce(ace.getFlags())) {
+        LOGGER.finest("Filtering inherit only ACE " + ace + " for file " 
+            + file.getURL());
+        return;
+      }
+      checkAndAddAce(ace, aceList, aceDenyList);
+    }
+  }
+
+  /**
+   * Adds parent inherit only aces, checks for various conditions on ACEs before
+   * adding them as valid READ ACEs.
+   *
+   * @param ace ACE to be checked and added.
+   * @param aceList List where the ACE needs to be added if it is a valid ACE
+   * @param aceDenyList List where the deny ACE needs to be added if it is a
+   * valid ACE
+   */
+  @VisibleForTesting
+  void checkAndAddParentInheritOnlyAces(ACE[] securityAces,
+      List<ACE> aceList, List<ACE> aceDenyList) {
+    if (securityAces == null) {
+      LOGGER.warning("Cannot process ACL because of null ACL on "
+          + file.getURL());
+      return;
+    }
+    for (ACE ace : securityAces) {
+      if (!isInheritOnlyAce(ace.getFlags())) {
+        LOGGER.finest("Filtering inherit only ACE " + ace + " for file "
+            + file.getURL());
+        continue;
+      }
+      checkAndAddAce(ace, aceList, aceDenyList);
     }
   }
 
@@ -218,15 +273,9 @@ class SmbAclBuilder implements AclBuilder {
    * @param aceList List where the ACE needs to be added if it is a valid ACE
    * @param aceDenyList List where the deny ACE needs to be added if it is a
    * valid ACE
-   * @param skipInheritedAce if true skips adding inherited ACEs to the list
    */
-  private void checkAndAddAce(ACE ace, List<ACE> aceList, List<ACE> aceDenyList,
-      boolean skipInheritedAce) {
-    if (skipInheritedAce && isInheritOnlyAce(ace.getFlags())) {
-      LOGGER.finest("Filtering inherit only ACE " + ace + " for file "
-          + file.getURL());
-      return;
-    }
+  private void checkAndAddAce(ACE ace, List<ACE> aceList,
+      List<ACE> aceDenyList) {
     SID sid = ace.getSID();
     if (!isSupportedWindowsSid(sid)) {
       if (!isSupportedSidType(sid.getType())) {
@@ -254,30 +303,29 @@ class SmbAclBuilder implements AclBuilder {
     LOGGER.finest("Adding read ACE " + ace + " for file " + file.getURL());
     (ace.isAllow() ? aceList : aceDenyList).add(ace);
   }
+
   /**
-   * Returns if the passed in {@link SmbException} indicates an authorization
-   * failure and throws the {@link SmbException} otherwise.
-   *
-   * @throws SmbException
+   * Returns true if the passed in flags indicate the associated {@link ACE}
+   * is INHERIT_ONLY.
    */
-  private void throwIfNotAuthorizationException(SmbException e)
-      throws SmbException {
-    if (e instanceof SmbAuthException) {
-      return;
-    }
-    String m = e.getMessage();
-    if (m != null && m.contains("Access is denied")) {
-      return;
-    }
-    throw e;
+  private boolean isInheritOnlyAce(int aceFlags) {
+    return ((aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY);
   }
 
   /**
    * Returns true if the passed in flags indicate the associated {@link ACE}
-   * applies to contained objects but not this one.
+   * is INHERITED.
    */
-  private boolean isInheritOnlyAce(int aceFlags) {
-    return (((aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY)
+  private boolean isInheritedOnlyAce(int aceFlags) {
+    return (((aceFlags & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED));
+  }
+
+  /**
+   * Returns true if the passed in flags indicate the associated {@link ACE}
+   * is either INHERIT_ONLY or INHERITED.
+   */
+  private boolean isInheritedAce(int aceFlags) {
+    return (((aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY) 
         || ((aceFlags & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED));
   }
 

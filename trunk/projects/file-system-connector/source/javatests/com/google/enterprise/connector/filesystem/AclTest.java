@@ -114,26 +114,48 @@ public class AclTest extends TestCase {
 
   public void testEquals() throws Exception {
     Acl acl = Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("barney"), Collections.singletonList("ron"), 
-        Collections.singletonList("sales"));
+        Collections.singletonList("barney"), Collections.singletonList("pebbles"), 
+        Collections.singletonList("bamm"));
     assertTrue(acl.equals(acl));
     assertFalse(acl.equals(null));
     assertFalse(acl.equals(new Object()));
 
     assertTrue(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("barney"), Collections.singletonList("ron"), 
-        Collections.singletonList("sales"))));
+        Collections.singletonList("barney"), Collections.singletonList("pebbles"),
+        Collections.singletonList("bamm"))));
+    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("pebbles"),
+        Collections.singletonList("barney"), Collections.singletonList("pebbles"),
+        Collections.singletonList("bamm"))));
     assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("wilma"), null, null)));
-    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("barney"),
-        Collections.singletonList("fred"), null, null)));
+        Collections.singletonList("barney"), null, null)));
     assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("wilma"),
-        Collections.singletonList("betty"), null, null)));
+        Collections.singletonList("barney"), null, null)));
+    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("barney"),
+        Collections.singletonList("fred"), Collections.singletonList("pebbles"),
+        null)));
+    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
+        Collections.singletonList("barney"), Collections.singletonList("pebbles"),
+        Collections.singletonList("wilma"))));
 
     Acl publicAcl = Acl.newPublicAcl();
     assertFalse(acl.equals(publicAcl));
     assertFalse(publicAcl.equals(acl));
     assertFalse(publicAcl.equals(
         Acl.newAcl(Collections.singletonList("fred"), null, null, null)));
+
+    // test with null acl
+    Acl nullacl = Acl.newAcl(null, null, null, null);
+    assertTrue(nullacl.equals(nullacl));
+    assertFalse(nullacl.equals(null));
+    assertFalse(nullacl.equals(new Object()));
+    assertTrue(nullacl.equals(Acl.newAcl(null, null, null, null)));
+    assertFalse(nullacl.equals(Acl.newAcl(Collections.singletonList("barney"), 
+        null, null, null)));
+    assertFalse(nullacl.equals(Acl.newAcl(null, 
+        Collections.singletonList("barney"), null, null)));
+    assertFalse(nullacl.equals(Acl.newAcl(null, 
+        null, Collections.singletonList("barney"), null)));
+    assertFalse(nullacl.equals(Acl.newAcl(null, 
+        null, null, Collections.singletonList("barney"))));
   }
 }

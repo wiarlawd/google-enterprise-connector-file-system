@@ -17,6 +17,8 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
+import com.google.enterprise.connector.spi.SpiConstants.AclAccess;
+import com.google.enterprise.connector.spi.SpiConstants.AclScope;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
@@ -26,6 +28,8 @@ import static org.easymock.EasyMock.verify;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import jcifs.smb.ACE;
 import jcifs.smb.SID;
@@ -40,72 +44,12 @@ public class SmbAclBuilderTest extends TestCase {
   private final String defaultAceFormat =
       AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
 
-  public void testACLForFileAndShareAndIntersection () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("user1", true);
-    ACE fileAce1 = createACE("user2", true);
-    ACE [] fileAces = {fileAce, fileAce1};
-    expect(smbFile.getSecurity()).andReturn(fileAces);
-    //To ensure that we get same SID for checking equality
-    ACE shareAce = fileAce;
-    ACE shareAce1 = createACE("group1", false);
-    ACE [] shareAces = {shareAce, shareAce1};
-    expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
-    expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
-    expectLastCall().anyTimes();
-    replay(smbFile);
-    TestAclProperties fetcher = new TestAclProperties(
-        AceSecurityLevel.FILEANDSHARE.name(),
-        defaultAceFormat, defaultAceFormat);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.getAcl();
-    Acl shareAcl = builder.getShareAcl();
-    assertNotNull(acl);
-    assertNotNull(acl.getUsers());
-    assertEquals("user1", acl.getUsers().get(0));
-    assertFalse(acl.getUsers().get(0).contains("user2"));
-    assertTrue(acl.getGroups().isEmpty());
-    verify(smbFile);
-    verify(fileAce);
-    verify(fileAce1);
-    verify(shareAce);
-    verify(shareAce1);
-  }
-
-  public void testACLForFileAndShareAndUnion () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("user1", true);
-    ACE [] fileAces = {fileAce};
-    expect(smbFile.getSecurity()).andReturn(fileAces);
-
-    ACE shareAce = createACE("user2", true);
-    ACE shareAce1 = createACE("group1", false);
-    ACE [] shareAces = {shareAce, shareAce1};
-    expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
-    expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
-    expectLastCall().anyTimes();
-    replay(smbFile);
-    TestAclProperties fetcher = new TestAclProperties(
-        AceSecurityLevel.FILEORSHARE.name(),
-        defaultAceFormat, defaultAceFormat);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.getAcl();
-    Acl shareAcl = builder.getShareAcl();
-    assertNotNull(acl);
-    assertNotNull(acl.getUsers());
-    assertTrue((acl.getUsers()).contains("user1"));
-    assertTrue((shareAcl.getUsers()).contains("user2"));
-    assertTrue(shareAcl.getGroups().contains("group1"));
-    verify(smbFile);
-    verify(fileAce);
-    verify(shareAce);
-    verify(shareAce1);
-  }
-
   public void testACLForFileLevelAClOnly() throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("user1", true);
+    ACE fileAce = createACE("user1", AclScope.USER);
     ACE [] fileAces = {fileAce};
+    expect(smbFile.getParent()).andReturn("smb://root");
+    expect(smbFile.getPrincipal()).andReturn(null);
     expect(smbFile.getSecurity()).andReturn(fileAces);
 
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
@@ -129,7 +73,7 @@ public class SmbAclBuilderTest extends TestCase {
   public void testACLForShareLevelAclOnly () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
 
-    ACE shareAce = createACE("user2", true);
+    ACE shareAce = createACE("user2", AclScope.USER);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
@@ -153,7 +97,7 @@ public class SmbAclBuilderTest extends TestCase {
   public void testACLForShareLevelGroupAclOnly () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
 
-    ACE shareAce = createACE("accountants", false /* this will create a group ACE*/);
+    ACE shareAce = createACE("accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
@@ -173,39 +117,9 @@ public class SmbAclBuilderTest extends TestCase {
     verify(smbFile);
   }
 
-  public void testACLForIncorrectSecurityLevel () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("user1", true);
-    ACE [] fileAces = {fileAce};
-    expect(smbFile.getSecurity()).andReturn(fileAces);
-
-    ACE shareAce = createACE("user2", true);
-    ACE shareAce1 = createACE("group1", false);
-    ACE [] shareAces = {shareAce, shareAce1};
-    expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
-    expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
-    expectLastCall().anyTimes();
-    replay(smbFile);
-    TestAclProperties fetcher = new TestAclProperties(
-        "Incorrect Rule",
-        defaultAceFormat, defaultAceFormat);
-    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
-    Acl acl = builder.getAcl();
-    Acl shareAcl = builder.getShareAcl();
-    assertNotNull(acl);
-    assertNotNull(acl.getUsers());
-    //Idea is to check in case of incorrect value, whether the code defaults to
-    // file_intersection_share
-    //assertTrue(acl.getUsers().isEmpty());  // not valid anymore
-    //assertTrue(acl.getGroups().isEmpty());  // not valid anymore
-    verify(smbFile);
-    verify(fileAce);
-    verify(shareAce);
-    verify(shareAce1);
-  }
-
   public void testACLForGetSecurityNotAllowedOnFile () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
+    expect(smbFile.getParent()).andReturn(null);
     //file.getSecurity will return null so ACL with null user and group ACL
     //will be returned
     expect(smbFile.getSecurity()).andReturn(null);
@@ -245,8 +159,7 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForDomainNameStrippedOff () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-
-    ACE shareAce = createACE("domain\\accountants", false /* this will create a group ACE*/);
+    ACE shareAce = createACE("domain\\accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
@@ -266,7 +179,7 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForPresenceOfDenyShareLevelACE () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    ACE shareAce = createACE("John Doe", true /*group ACE*/, true /*Deny ACE*/);
+    ACE shareAce = createACE("John Doe", AclScope.USER, AclAccess.DENY);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
@@ -289,8 +202,9 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForPresenceOfDenyFileLevelACE () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("accountants", false /*group ACE*/, true /*Deny ACE*/);
+    ACE fileAce = createACE("accountants", AclScope.GROUP, AclAccess.DENY);
     ACE [] fileAces = {fileAce};
+    expect(smbFile.getParent()).andReturn(null);
     expect(smbFile.getSecurity()).andReturn(fileAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
@@ -332,7 +246,7 @@ public class SmbAclBuilderTest extends TestCase {
   public void testACLForSAMLTypeACL () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
     String samlAceFormat = AclFormat.USER_AT_DOMAIN.getFormat();
-    ACE shareAce = createACE("google\\accountants", false /* this will create a group ACE*/);
+    ACE shareAce = createACE("google\\accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
@@ -356,7 +270,7 @@ public class SmbAclBuilderTest extends TestCase {
   public void testACLForHTTPBasicTypeACL () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
     String httpAceFormat = AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
-    ACE shareAce = createACE("google\\accountants", false /* this will create a group ACE*/);
+    ACE shareAce = createACE("google\\accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
@@ -378,14 +292,15 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForHTTPBasicUserAceAndSAMLGroupAce () throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("google\\superUser", true);
-    ACE fileAce1 = createACE("user2", true);
+    ACE fileAce = createACE("google\\superUser", AclScope.USER);
+    ACE fileAce1 = createACE("user2", AclScope.USER);
     ACE [] fileAces = {fileAce, fileAce1};
     expect(smbFile.getSecurity()).andReturn(fileAces);
     //To ensure that we get same SID for checking equality
     ACE shareAce = fileAce;
-    ACE shareAce1 = createACE("google\\employees", false);
+    ACE shareAce1 = createACE("google\\employees", AclScope.GROUP);
     ACE [] shareAces = {shareAce, shareAce1};
+    expect(smbFile.getParent()).andReturn(null);
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
@@ -410,8 +325,8 @@ public class SmbAclBuilderTest extends TestCase {
 
   public void testACLForPresenceOfInheritedFileLevelACE() throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("accountants", false /* group ACE */,
-        false /* allow ACE */, true);
+    ACE fileAce = createACE("accountants", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.INHERITED);
     ACE[] fileAces = {fileAce};
     expect(smbFile.getSecurity()).andReturn(fileAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
@@ -434,10 +349,10 @@ public class SmbAclBuilderTest extends TestCase {
   public void testACLForPresenceOfInheritedFileLevelDenyACE()
       throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
-    ACE fileAce = createACE("Sales Engineers", true /* user ACE */,
-        true /* deny ACE */, true /* inherited ACE */);
-    ACE fileAce2 = createACE("Sales Managers", false /* group ACE */,
-        true /* deny ACE */, true /* inherited ACE */);
+    ACE fileAce = createACE("Sales Engineers", AclScope.USER,
+        AclAccess.DENY, AceType.INHERITED);
+    ACE fileAce2 = createACE("Sales Managers", AclScope.GROUP,
+        AclAccess.DENY, AceType.INHERITED);
     ACE[] fileAces = {fileAce, fileAce2};
     expect(smbFile.getSecurity()).andReturn(fileAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
@@ -458,14 +373,87 @@ public class SmbAclBuilderTest extends TestCase {
     verify(smbFile);
   }
 
+  public void testACEForcheckAndAddAces() throws IOException {
+    SmbFile smbFile = createMock(SmbFile.class);
+    ACE fileAce1 = createACE("test2", AclScope.USER,
+        AclAccess.PERMIT, AceType.DIRECT);
+    ACE fileAce2 = createACE("test3", AclScope.USER,
+        AclAccess.DENY, AceType.DIRECT);
+    ACE fileAce3 = createACE("tester", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.DIRECT);
+    ACE fileAce4 = createACE("testing", AclScope.GROUP,
+        AclAccess.DENY, AceType.DIRECT);
+    ACE fileAce5 = createACE("testing2", AclScope.GROUP,
+        AclAccess.DENY, AceType.INHERITED);
+
+    ACE[] fileAces = {fileAce1, fileAce2, fileAce3, fileAce4, fileAce5};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+    TestAclProperties fetcher = new TestAclProperties(
+        AceSecurityLevel.FILE.name(), defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    List<ACE> fileAllowAces = new ArrayList<ACE>();
+    List<ACE> fileDenyAces = new ArrayList<ACE>();
+    // test aces with values and skip inherited
+    builder.checkAndAddAces(fileAces, fileAllowAces, fileDenyAces, true);
+    Acl acl = builder.getAclFromAceList(fileAllowAces, fileDenyAces);
+    boolean b = fileAce1.toString().contains("test2");
+    assertTrue(acl.getUsers().contains("test2"));
+    assertTrue(acl.getGroups().contains("tester"));
+    assertTrue(acl.getDenyUsers().contains("test3"));
+    assertTrue(acl.getDenyGroups().contains("testing"));
+  }
+
+  public void testACEForcheckAndAddParentInheritOnlyAces() throws IOException {
+    SmbFile smbFile = createMock(SmbFile.class);
+    ACE fileAce1 = createACE("testuser1", AclScope.USER,
+        AclAccess.PERMIT, AceType.INHERIT_ONLY);
+    ACE fileAce2 = createACE("tester3", AclScope.USER,
+        AclAccess.DENY, AceType.INHERIT_ONLY);
+    ACE fileAce3 = createACE("testergroup", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.INHERIT_ONLY);
+    ACE fileAce4 = createACE("testing", AclScope.GROUP,
+        AclAccess.DENY, AceType.INHERIT_ONLY);
+    ACE fileAce5 = createACE("testing2", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.DIRECT);
+    ACE fileAce6 = createACE("testing3", AclScope.GROUP,
+        AclAccess.DENY, AceType.DIRECT);
+
+    ACE[] fileAces = {fileAce1, fileAce2, fileAce3, fileAce4,
+        fileAce5, fileAce6};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+    TestAclProperties fetcher = new TestAclProperties(
+        AceSecurityLevel.FILE.name(), defaultAceFormat, defaultAceFormat);
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    List<ACE> fileAllowAces = new ArrayList<ACE>();
+    List<ACE> fileDenyAces = new ArrayList<ACE>();
+    // test with null aces
+    builder.checkAndAddParentInheritOnlyAces(null, fileAllowAces, fileDenyAces);
+    assertTrue(fileAllowAces.isEmpty());
+    assertTrue(fileDenyAces.isEmpty());
+    // test aces with values
+    builder.checkAndAddParentInheritOnlyAces(fileAces, fileAllowAces,
+        fileDenyAces);
+    Acl acl = builder.getAclFromAceList(fileAllowAces, fileDenyAces);
+    assertTrue(acl.getUsers().contains("testuser1"));
+    assertTrue(acl.getGroups().contains("testergroup"));
+    assertTrue(acl.getDenyUsers().contains("tester3"));
+    assertTrue(acl.getDenyGroups().contains("testing"));
+  }
+
   /**
    * Returns a mock ACE object with the specified name
    * @return ACE
    * @param userOrGroupName Name of the user ACE
    * @param isUser if true then user ACE will be created otherwise Group ACE
    */
-  private ACE createACE(String userOrGroupName, boolean isUser) {
-    return createACE(userOrGroupName, isUser, false);
+  private ACE createACE(String userOrGroupName, AclScope aceUserType) {
+    return createACE(userOrGroupName, aceUserType, AclAccess.PERMIT);
   }
 
   /**
@@ -474,26 +462,34 @@ public class SmbAclBuilderTest extends TestCase {
    * @param userOrGroupName Name of the user ACE
    * @param isUser if true then user ACE will be created otherwise Group ACE
    */
-  private ACE createACE(String userOrGroupName, boolean isUser,
-      boolean isDeny) {
-    return createACE(userOrGroupName, isUser, isDeny, false);
+  private ACE createACE(String userOrGroupName, AclScope aceUserType,
+      AclAccess aceType) {
+    return createACE(userOrGroupName, aceUserType, aceType,
+        AceType.DIRECT);
+  }
+
+  public enum AceType {
+    DIRECT, INHERIT_ONLY, INHERITED;
   }
 
   /**
    * Returns a mock ACE object with the specified name 
-   * @return ACE
-   * @param userOrGroupName Name of the user ACE
-   * @param isUser if true then user ACE will be created otherwise Group ACE
-   * @param isInherited if true then gets inherited ACEs
+   * @return ACE.
+   * @param userOrGroupName Name of the user ACE.
+   * @param aclScope if USER then user ACE will be created, 
+   *        if GROUP Group ACE will be created.
+   * @param aclaAccess if ALLOW aloow ACE will be created, if DENY deny ACE
+   *        will be created.
+   * @param aceInheritType if DIRECT then direct ACE, if INHERITED then 
+   *        inherited ACE and if INHERIT_ONLY inherit_only ACE will be created.
    */
-  private ACE createACE(String userOrGroupName, boolean isUser,
-      boolean isDeny, boolean isInherited) {
-    //TODO : Add enums instead of booleans to avoid comments in the calls.
+  private ACE createACE(String userOrGroupName, AclScope aclScope,
+      AclAccess aclaAccess, AceType aceInheritType) {
     ACE ace = createMock(ACE.class);
     SID sid = createMock(SID.class);
     expect(sid.toDisplayString()).andReturn(userOrGroupName);
     expectLastCall().anyTimes();
-    if (isUser) {
+    if (aclScope == AclScope.USER) {
       expect(sid.getType()).andReturn(SID.SID_TYPE_USER);
     } else {
         expect(sid.getType()).andReturn(SID.SID_TYPE_DOM_GRP);
@@ -505,11 +501,13 @@ public class SmbAclBuilderTest extends TestCase {
     //loop so its good enough to say that they will be called at least once.
     expectLastCall().atLeastOnce();
     // deny ACL is allowed
-    if (isDeny) {
+    if (aclaAccess == AclAccess.DENY) {
       expect(ace.isAllow()).andReturn(false);
       expectLastCall().anyTimes();
-      if (isInherited) {
+      if (aceInheritType == AceType.INHERITED) {
         expect(ace.getFlags()).andReturn(ACE.FLAGS_INHERITED);
+      } else if (aceInheritType == AceType.INHERIT_ONLY) {
+        expect(ace.getFlags()).andReturn(ACE.FLAGS_INHERIT_ONLY);
       } else {
         expect(ace.getFlags()).andReturn(0);
       }
@@ -519,8 +517,10 @@ public class SmbAclBuilderTest extends TestCase {
     } else {
       expect(ace.isAllow()).andReturn(true);
       expectLastCall().anyTimes();
-      if (isInherited) {
+      if (aceInheritType == AceType.INHERITED) {
         expect(ace.getFlags()).andReturn(ACE.FLAGS_INHERITED);
+      } else if (aceInheritType == AceType.INHERIT_ONLY) {
+        expect(ace.getFlags()).andReturn(ACE.FLAGS_INHERIT_ONLY);
       } else {
         expect(ace.getFlags()).andReturn(0);
       }
