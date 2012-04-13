@@ -229,7 +229,7 @@
       <manifest>
         <attribute name="Implementation-Title" value="File System Connector"/>
         <attribute name="Implementation-Version"
-                   value="${version} (${svn.version}  ${TODAY})"/>
+                   value="${version} (build ${svn.version}  ${TODAY})"/>
         <attribute name="Implementation-Vendor" value="Google Inc."/>
         <attribute name="Specification-Title" value="Connector Manager SPI"/>
         <attribute name="Specification-Version" value="${version.spi}"/>
