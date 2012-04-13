@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -26,6 +27,7 @@ import junit.framework.TestCase;
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class FileRetrieverTest extends TestCase {
 
@@ -47,6 +49,12 @@ public class FileRetrieverTest extends TestCase {
   private MockReadonlyFile root;
   private MockReadonlyFile testFile;
   private String testFileName;
+  private MockReadonlyFile testDir;
+  private MockReadonlyFile testFile2;
+  private MockReadonlyFile badFile1;
+  private MockReadonlyFile badFile2;
+  private MockReadonlyFile rootie;
+  private MockReadonlyFile badFile3;
 
   private FileSystemTypeRegistry fileSystemTypeRegistry;
   private PathParser pathParser;
@@ -58,12 +66,22 @@ public class FileRetrieverTest extends TestCase {
     root = MockReadonlyFile.createRoot("/root");
     testFile = root.addFile("test.txt", TEST_DATA);
     testFileName = testFile.getPath();
+    testDir = root.addSubdir("dir");
+    testFile2 = testDir.addFile("test.txt", TEST_DATA);
+    badFile1 = root.addFile("test.exe", TEST_DATA);
+    badFile2 = root.addSubdir(".Trash").addFile("test.txt", TEST_DATA);
+    rootie = MockReadonlyFile.createRoot("/rootie");
+    badFile3 = rootie.addFile("tootie.txt", TEST_DATA);
 
-    fileSystemTypeRegistry =
-        new FileSystemTypeRegistry(Arrays.asList(new MockFileSystemType(root)));
+    fileSystemTypeRegistry = new FileSystemTypeRegistry(Arrays.asList(
+        new MockFileSystemType(root), new MockFileSystemType(rootie)));
     pathParser = new PathParser(fileSystemTypeRegistry);
+
     context = new DocumentContext(null, null, null, MIME_TYPE_DETECTOR,
-        new TestFileSystemPropertyManager(false), null, null, null);
+        new TestFileSystemPropertyManager(false),
+        Collections.singletonList(root.getPath()),
+        ImmutableList.of("/"), ImmutableList.of("/.Trash$", ".exe$"));
+
     retriever = new FileRetriever(pathParser, context);
     retriever.setTraversalContext(TRAVERSAL_CONTEXT);
   }
@@ -151,7 +169,46 @@ public class FileRetrieverTest extends TestCase {
 
   public void testGetContentDirectory() throws Exception {
     // Directories have no content.
-    assertNull(retriever.getContent(root.getPath()));
+    assertNull(retriever.getContent(testDir.getPath()));
+  }
+
+  public void testGetContentFileInSubdirectory() throws Exception {
+    InputStream is = retriever.getContent(testFile2.getPath());
+    assertNotNull(is);
+    assertEquals(TEST_DATA, streamToString(is));
+  }
+
+  /** Test a the file matches excluded pattern. */
+  public void testGetContentExcludedPattern1() throws Exception {
+    try {
+      InputStream is = retriever.getContent(badFile1.getPath());
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      assertTrue(expected.getMessage(),
+                 expected.getMessage().contains("Access denied"));
+    }
+  }
+
+  /** Test a the file's ancester matches an excluded pattern. */
+  public void testGetContentExcludedPattern2() throws Exception {
+    try {
+      InputStream is = retriever.getContent(badFile2.getPath());
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      assertTrue(expected.getMessage(),
+                 expected.getMessage().contains("Access denied"));
+    }
+  }
+
+  /** Test the file is not on a start path. */
+  public void testGetContentNotInStartPath() throws Exception {
+    try {
+      InputStream is = retriever.getContent(badFile3.getPath());
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      assertTrue(expected.getMessage(),
+                 expected.getMessage().contains("Access denied"));
+    }
   }
 
   public void testGetContentUnreadableFile() throws Exception {

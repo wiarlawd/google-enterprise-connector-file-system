@@ -19,6 +19,7 @@ import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class DocumentContext {
@@ -76,6 +77,13 @@ public class DocumentContext {
         result.set(ix, path);
       }
     }
+    // Sort the list by decreasing length of pathname for the benefit of
+    // the Retrievers.
+    Collections.sort(result, new Comparator<String>() {
+        public int compare(String s1, String s2) {
+          return s2.length() - s1.length();
+        }
+      });
     return Collections.unmodifiableCollection(result);
   }
 
