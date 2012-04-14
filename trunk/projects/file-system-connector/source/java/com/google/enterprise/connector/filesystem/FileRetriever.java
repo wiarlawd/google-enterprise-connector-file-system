@@ -123,14 +123,20 @@ class FileRetriever implements Retriever, TraversalContextAware {
     
     // Next, does it (and all its ancesters), pass the PatternMatcher?
     FilePatternMatcher matcher = context.getFilePatternMatcher();
-    while (pathName.length() > startPath.length()) {
+    Credentials credentials = context.getCredentials();
+    FileSystemType fileSystemType = file.getFileSystemType();
+    while (pathName.length() >= startPath.length()) {
       if (!matcher.acceptName(pathName)) {
         return false;
       }
-      file = file.getFileSystemType()
-          .getFile(file.getParent(), context.getCredentials());
-      // If we fall off the root without failing, consider it a pass.
-      pathName = (file == null) ? "" : file.getPath();
+      String parentPath = file.getParent();
+      if (parentPath == null || pathName.equals(parentPath)) {
+        // We tried to walk past the root of the filesystem.
+        // That means the startPoint was the root and we are done.
+        break;
+      }
+      file = fileSystemType.getFile(parentPath, credentials);
+      pathName = file.getPath();
     }
     return true;
   }
