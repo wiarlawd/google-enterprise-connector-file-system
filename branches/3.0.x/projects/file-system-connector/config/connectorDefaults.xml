@@ -46,6 +46,7 @@
        For backward compatibility reasons, we can not fix it there;
        so I will fix it here with only a single reference to that bean.
   -->
+  <!-- WARNING: If you change anything here, also change connectorType.xml -->
   <bean id="document-context"
         class="com.google.enterprise.connector.filesystem.DocumentContext"
         singleton="true">
@@ -161,6 +162,7 @@
     <constructor-arg ref="document-context"/>
   </bean>
 
+  <!-- WARNING: If you change anything here, also change connectorType.xml -->
   <bean id="filesystem-property-manager-defaults">
     <property name="aceSecurityLevel" value="FILEANDSHARE"/>
     <property name="markDocumentPublicFlag" value="false"/>

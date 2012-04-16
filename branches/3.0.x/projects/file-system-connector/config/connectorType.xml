@@ -63,9 +63,13 @@
     <property name="lastAccessResetFlagForSmb" value="false"/>
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
     <property name="pushAclFlag" value="true"/>
-    <property name="legacyAclFlag" value="false"/>
     <property name="groupAclFormat" value="userOrGroup"/>
     <property name="userAclFormat" value="userOrGroup"/>
+    <property name="supportsInheritedAcls" value="false"/>
+    <property name="globalNamespace" value=""/>
+    <property name="localNamespace" value=""/>
+    <property name="ifModifiedSinceCushionMinutes" value="60"/>
+    <property name="threadPoolSize" value="10"/>
   </bean>
 
 </beans>
