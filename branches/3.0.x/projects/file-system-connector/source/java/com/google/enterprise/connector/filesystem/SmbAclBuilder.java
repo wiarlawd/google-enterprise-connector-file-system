@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.Principal;
 import com.google.common.annotations.VisibleForTesting;
 
 import jcifs.smb.ACE;
@@ -48,6 +49,16 @@ class SmbAclBuilder implements AclBuilder {
   private final AclFormat groupAclFormat;
 
   /**
+   * The global namespace for users and groups.
+   */
+  private final String globalNamespace;
+
+  /**
+   * The local namespace for users and groups.
+   */
+  private final String localNamespace;
+
+  /**
    * Creates an {@link SmbAclBuilder}.
    *
    * @param file the {@link SmbFile} whose {@link Acl} we build.
@@ -55,6 +66,8 @@ class SmbAclBuilder implements AclBuilder {
    */
   SmbAclBuilder(SmbFile file, AclProperties propertyFetcher) {
     this.file = file;
+    this.globalNamespace = propertyFetcher.getGlobalNamespace();
+    this.localNamespace = propertyFetcher.getLocalNamespace();
     AceSecurityLevel securityLevel = getSecurityLevel(
         propertyFetcher.getAceSecurityLevel());
     if (securityLevel == null) {
@@ -140,19 +153,17 @@ class SmbAclBuilder implements AclBuilder {
    */
   @VisibleForTesting
   Acl getAclFromAceList(List<ACE> allowAceList, List<ACE> denyAceList) {
-    Set<String> users = new TreeSet<String>();
-    Set<String> groups = new TreeSet<String>();
-    Set<String> denyusers = new TreeSet<String>();
-    Set<String> denygroups = new TreeSet<String>();
+    Set<Principal> users = new TreeSet<Principal>();
+    Set<Principal> groups = new TreeSet<Principal>();
+    Set<Principal> denyusers = new TreeSet<Principal>();
+    Set<Principal> denygroups = new TreeSet<Principal>();
     for (ACE ace : allowAceList) {
       addAceToSet(users, groups, ace);
     }
     for (ACE ace : denyAceList) {
       addAceToSet(denyusers, denygroups, ace);
     }
-    return Acl.newAcl(new ArrayList<String>(users),
-        new ArrayList<String>(groups), new ArrayList<String>(denyusers),
-        new ArrayList<String>(denygroups));
+    return Acl.newAcl(users, groups, denyusers, denygroups);
   }
 
   /*
@@ -160,10 +171,10 @@ class SmbAclBuilder implements AclBuilder {
    */
   private Acl getInheritedAclFromAceList(
       List<ACE> allowAceList, List<ACE> denyAceList) {
-    Set<String> users = new TreeSet<String>();
-    Set<String> groups = new TreeSet<String>();
-    Set<String> denyusers = new TreeSet<String>();
-    Set<String> denygroups = new TreeSet<String>();
+    Set<Principal> users = new TreeSet<Principal>();
+    Set<Principal> groups = new TreeSet<Principal>();
+    Set<Principal> denyusers = new TreeSet<Principal>();
+    Set<Principal> denygroups = new TreeSet<Principal>();
     for (ACE ace : allowAceList) {
       if (isInheritedAce(ace.getFlags())) {
         addAceToSet(users, groups, ace);
@@ -174,9 +185,7 @@ class SmbAclBuilder implements AclBuilder {
         addAceToSet(denyusers, denygroups, ace);
       }
     }
-    return Acl.newAcl(new ArrayList<String>(users),
-        new ArrayList<String>(groups), new ArrayList<String>(denyusers),
-        new ArrayList<String>(denygroups));
+    return Acl.newAcl(users, groups, denyusers, denygroups);
   }
 
   /**
@@ -186,7 +195,7 @@ class SmbAclBuilder implements AclBuilder {
    * @param groups Container for Group ACEs
    * @param finalAce ACE that needs to be added to the ACL
    */
-  private void addAceToSet(Set<String> users, Set<String> groups,
+  private void addAceToSet(Set<Principal> users, Set<Principal> groups,
       ACE finalAce) {
     SID sid = finalAce.getSID();
     String aclEntry = sid.toDisplayString();
@@ -202,10 +211,22 @@ class SmbAclBuilder implements AclBuilder {
         aclEntry = AclFormat.formatString(groupAclFormat, userOrGroup, domain);
       }
     }
-    if (sidType == SID.SID_TYPE_USER) {
-      users.add(aclEntry);
-    } else {
-      groups.add(aclEntry);
+    switch (sidType) {
+      case SID.SID_TYPE_USER:
+        // TODO: I don't think SID supports local users, so assume global.
+        users.add(new Principal(userAclFormat.getPrincipalType(),
+                                globalNamespace, aclEntry));
+        break;
+      case SID.SID_TYPE_DOM_GRP:
+      case SID.SID_TYPE_DOMAIN:
+        groups.add(new Principal(groupAclFormat.getPrincipalType(),
+                                 globalNamespace, aclEntry));
+        break;
+      case SID.SID_TYPE_ALIAS:
+      case SID.SID_TYPE_WKN_GRP:
+        groups.add(new Principal(groupAclFormat.getPrincipalType(),
+                                 localNamespace, aclEntry));
+        break;
     }
   }
 

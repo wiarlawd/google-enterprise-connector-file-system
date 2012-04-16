@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.Principal;
+import com.google.enterprise.connector.spi.SpiConstants.PrincipalType;
+
 import java.io.IOException;
 
 interface AclBuilder {
@@ -43,17 +46,22 @@ interface AclBuilder {
    * Represents the ACL format.
    */
   public static enum AclFormat {
-    USER_AT_DOMAIN("user@domain"),
-    DOMAIN_BACKSLASH_USER("domain\\user"),
-    USER("user"),
-    GROUP_AT_DOMAIN("group@domain"),
-    DOMAIN_BACKSLASH_GROUP("domain\\group"),
-    GROUP("group");
+    USER_AT_DOMAIN("user@domain", PrincipalType.DN),
+    DOMAIN_BACKSLASH_USER("domain\\user", PrincipalType.NETBIOS),
+    USER("user", PrincipalType.UNQUALIFIED),
+    GROUP_AT_DOMAIN("group@domain", PrincipalType.DN),
+    DOMAIN_BACKSLASH_GROUP("domain\\group", PrincipalType.NETBIOS),
+    GROUP("group", PrincipalType.UNQUALIFIED);
 
     /**
      * Stores the format.
      */
     private final String format;
+
+    /**
+     * Stores the principal type.
+     */
+    private final PrincipalType principalType;
 
     /**
      * Returns the AclFormat enum based on the format string
@@ -76,10 +84,18 @@ interface AclBuilder {
     }
 
     /**
+     * Returns the principal type.
+     */
+    PrincipalType getPrincipalType() {
+      return this.principalType;
+    }
+
+    /**
      * Constructs the enum with the format.
      */
-    private AclFormat(String format) {
+    private AclFormat(String format, PrincipalType principalType) {
       this.format = format;
+      this.principalType = principalType;
     }
 
     /**
@@ -213,5 +229,15 @@ interface AclBuilder {
      * @return {@code true} if Documents may include enhanced ACL support 
      */
     boolean supportsInheritedAcls();
+
+    /**
+     * @return the global namespace
+     */
+    String getGlobalNamespace();
+
+    /**
+     * @return the local namespace
+     */
+    String getLocalNamespace();
   }
 }

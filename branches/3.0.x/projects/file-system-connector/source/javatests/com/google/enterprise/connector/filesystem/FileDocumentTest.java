@@ -16,11 +16,13 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.Property;
+import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.Value;
 import com.google.enterprise.connector.spiimpl.BinaryValue;
+import com.google.enterprise.connector.spiimpl.PrincipalValue;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext;
 
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -162,14 +165,17 @@ public class FileDocumentTest extends TestCase {
         break;
       }
       size++;
-      assertTrue(expect.contains(v.toString()));
+      String name = (v instanceof PrincipalValue) ?
+        ((PrincipalValue) v).getPrincipal().getName() : v.toString();
+      assertTrue(expect.contains(name));
     }
     assertEquals(expect.size(), size);
   }
 
   public void testAddNotPublicFileWithIndeterminateAcl()
       throws RepositoryException {
-    Acl acl = Acl.newAcl(null, null, null, null);
+    Collection<Principal> nothing = null;
+    Acl acl = Acl.newAcl(nothing, nothing, nothing, nothing);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(true, false));
     validateNotPublic(doc);

@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
+import com.google.enterprise.connector.spi.Principal;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
@@ -26,6 +27,9 @@ import static org.easymock.EasyMock.verify;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import jcifs.smb.ACE;
 import jcifs.smb.SID;
@@ -62,8 +66,10 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertEquals("user1", acl.getUsers().get(0));
-    assertFalse(acl.getUsers().get(0).contains("user2"));
+    assertFalse(acl.getUsers().isEmpty());
+    List<String> users = toStringList(acl.getUsers());
+    assertEquals("user1", users.get(0));
+    assertFalse(users.contains("user2"));
     assertTrue(acl.getGroups().isEmpty());
     verify(smbFile);
     verify(fileAce);
@@ -92,9 +98,9 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue((acl.getUsers()).contains("user1"));
-    assertTrue((acl.getUsers()).contains("user2"));
-    assertTrue(acl.getGroups().contains("group1"));
+    assertTrue(toStringList(acl.getUsers()).contains("user1"));
+    assertTrue(toStringList(acl.getUsers()).contains("user2"));
+    assertTrue(toStringList(acl.getGroups()).contains("group1"));
     verify(smbFile);
     verify(fileAce);
     verify(shareAce);
@@ -117,7 +123,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue((acl.getUsers()).contains("user1"));
+    assertTrue(toStringList(acl.getUsers()).contains("user1"));
     assertTrue(acl.getGroups().isEmpty());
     verify(smbFile);
     verify(fileAce);
@@ -139,7 +145,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue((acl.getUsers()).contains("user2"));
+    assertTrue(toStringList(acl.getUsers()).contains("user2"));
     assertTrue(acl.getGroups().isEmpty());
     verify(smbFile);
     verify(shareAce);
@@ -161,7 +167,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("accountants"));
+    assertTrue(toStringList(acl.getGroups()).contains("accountants"));
     assertTrue(acl.getUsers().isEmpty());
     verify(smbFile);
   }
@@ -245,7 +251,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("accountants"));
+    assertTrue(toStringList(acl.getGroups()).contains("accountants"));
     assertTrue(acl.getUsers().isEmpty());
     verify(smbFile);
   }
@@ -322,7 +328,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("accountants@google"));
+    assertTrue(toStringList(acl.getGroups()).contains("accountants@google"));
     assertTrue(acl.getUsers().isEmpty());
     verify(smbFile);
   }
@@ -343,7 +349,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("google\\accountants"));
+    assertTrue(toStringList(acl.getGroups()).contains("google\\accountants"));
     assertTrue(acl.getUsers().isEmpty());
     verify(smbFile);
   }
@@ -370,8 +376,11 @@ public class LegacySmbAclBuilderTest extends TestCase {
     Acl acl = builder.build();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertEquals("google\\superUser", acl.getUsers().get(0));
-    assertEquals("employees@google", acl.getGroups().get(0));
+    List<String> users = toStringList(acl.getUsers());
+    assertEquals("google\\superUser", users.get(0));
+    assertFalse(acl.getGroups().isEmpty());
+    List<String> groups = toStringList(acl.getGroups());
+    assertEquals("employees@google", groups.get(0));
     verify(smbFile);
     verify(fileAce);
     verify(fileAce1);
@@ -430,6 +439,15 @@ public class LegacySmbAclBuilderTest extends TestCase {
     return ace;
   }
 
+  /** Returns a List of the principals' names. */
+  private List<String> toStringList(Collection<Principal> principals) {
+    List<String> names = new ArrayList<String>(principals.size());
+    for (Principal principal : principals) {
+      names.add(principal.getName());
+    }
+    return names;
+  }
+
   private static class TestAclProperties implements AclProperties {
 
     private final String aceLevel, groupAclFormat, userAclFormat;
@@ -462,6 +480,14 @@ public class LegacySmbAclBuilderTest extends TestCase {
 
     public boolean supportsInheritedAcls() {
       return false;
+    }
+
+    public String getGlobalNamespace() {
+      return null;
+    }
+
+    public String getLocalNamespace() {
+      return null;
     }
   }
 }

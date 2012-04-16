@@ -57,6 +57,8 @@ public class ConfigTest extends TestCase {
     goodConfig.put("user", "xyz");
     goodConfig.put("password", "test");
     goodConfig.put("fulltraversal", "0");
+    goodConfig.put("googleGlobalNamespace", "GlobalNS");
+    goodConfig.put("googleLocalNamespace", "LocalNS");
   }
 
   public void testInstantiation() {

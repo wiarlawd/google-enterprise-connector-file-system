@@ -14,12 +14,13 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.Principal;
+
 import junit.framework.TestCase;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,7 +29,7 @@ import java.util.List;
  *
  */
 public class AclTest extends TestCase {
-  public void testPublic() throws JSONException {
+  public void testPublic() throws Exception {
     Acl acl = Acl.newPublicAcl();
     assertTrue(acl.isPublic());
     assertNull(acl.getGroups());
@@ -37,74 +38,57 @@ public class AclTest extends TestCase {
     assertNull(acl.getDenyUsers());
     assertEquals(acl, acl);
     assertTrue(acl.isDeterminate());
-    JSONObject jsonAcl = acl.getJson();
-    jsonAcl = new JSONObject(jsonAcl.toString());
-    Acl acl2 = Acl.fromJson(jsonAcl);
-    assertTrue(acl2.isPublic());
-    assertNull(acl2.getGroups());
-    assertNull(acl2.getUsers());
-    assertEquals(acl, acl2);
-    assertEquals(acl.hashCode(), acl2.hashCode());
   }
 
-  public void testUsersAndGroupsAcl() throws JSONException {
+  public void testUsersAndGroupsAcl() throws Exception {
     List<String> users = Arrays.asList("u'\"1");
     List<String> groups = Arrays.asList("g1", "g2");
     validateAcl(users, groups, null, null);
   }
 
   private void validateAcl(List<String> users, List<String> groups, 
-      List<String> denyusers, List<String> denygroups) throws JSONException{
+      List<String> denyusers, List<String> denygroups) throws Exception{
     Acl acl = Acl.newAcl(users, groups, denyusers, denygroups);
     assertFalse(acl.isPublic());
-    assertEquals(users, acl.getUsers());
-    assertEquals(groups, acl.getGroups());
-    assertEquals(denyusers, acl.getDenyUsers());
-    assertEquals(denygroups, acl.getDenyGroups());
+    assertEquals(users, toStringList(acl.getUsers()));
+    assertEquals(groups, toStringList(acl.getGroups()));
+    assertEquals(denyusers, toStringList(acl.getDenyUsers()));
+    assertEquals(denygroups, toStringList(acl.getDenyGroups()));
     assertEquals(acl, acl);
-    JSONObject jsonAcl = acl.getJson();
-    jsonAcl = new JSONObject(jsonAcl.toString());
-    Acl acl2 = Acl.fromJson(jsonAcl);
-    assertFalse(acl2.isPublic());
-    assertEquals(users, acl2.getUsers());
-    assertEquals(groups, acl2.getGroups());
-    assertEquals(denyusers, acl2.getDenyUsers());
-    assertEquals(denygroups, acl2.getDenyGroups());
-    assertEquals(acl, acl2);
-    assertEquals(acl.hashCode(), acl2.hashCode());
+    assertEquals(acl, Acl.newAcl(users, groups, denyusers, denygroups));
     if (users == null && groups == null 
         && denyusers == null && denygroups == null) {
-      assertFalse(acl2.isDeterminate());
+      assertFalse(acl.isDeterminate());
     } else {
-      assertTrue(acl2.isDeterminate());
+      assertTrue(acl.isDeterminate());
     }
   }
 
-  public void testUsersOnlyAcl() throws JSONException {
+  public void testUsersOnlyAcl() throws Exception {
     List<String> users = Arrays.asList("u1", "u2", "u3", "U2");
     validateAcl(users, null, null, null);
   }
 
-  public void testGroupAcl() throws JSONException {
+  public void testGroupAcl() throws Exception {
     List<String> groups = Arrays.asList("g1", "g2");
     validateAcl(null, groups, null, null);
   }
 
-  public void testDenyUsersOnlyAcl() throws JSONException {
+  public void testDenyUsersOnlyAcl() throws Exception {
     List<String> denyusers = Arrays.asList("du1", "du2", "du3", "dU2");
     validateAcl(null, null, denyusers, null);
   }
 
-  public void testDenyGroupOnlyAcl() throws JSONException {
+  public void testDenyGroupOnlyAcl() throws Exception {
     List<String> denygroups = Arrays.asList("dg1", "dg2");
     validateAcl(null, null, null, denygroups);
   }
 
-  public void testNullAcl() throws JSONException {
+  public void testNullAcl() throws Exception {
     validateAcl(null, null, null, null);
   }
 
-  public void testEmptyAcl() throws JSONException {
+  public void testEmptyAcl() throws Exception {
     List<String> users = Collections.emptyList();
     List<String> groups = Collections.emptyList();
     List<String> denyusers = Collections.emptyList();
@@ -144,11 +128,14 @@ public class AclTest extends TestCase {
         Acl.newAcl(Collections.singletonList("fred"), null, null, null)));
 
     // test with null acl
-    Acl nullacl = Acl.newAcl(null, null, null, null);
+    Acl nullacl = Acl.newAcl((List<String>) null, (List<String>) null, 
+        (List<String>) null, (List<String>) null);
     assertTrue(nullacl.equals(nullacl));
     assertFalse(nullacl.equals(null));
     assertFalse(nullacl.equals(new Object()));
-    assertTrue(nullacl.equals(Acl.newAcl(null, null, null, null)));
+    assertTrue(nullacl.equals(Acl.newAcl((List<String>) null, (List<String>) null, 
+        (List<String>) null, (List<String>) null)));
+
     assertFalse(nullacl.equals(Acl.newAcl(Collections.singletonList("barney"), 
         null, null, null)));
     assertFalse(nullacl.equals(Acl.newAcl(null, 
@@ -157,5 +144,17 @@ public class AclTest extends TestCase {
         null, Collections.singletonList("barney"), null)));
     assertFalse(nullacl.equals(Acl.newAcl(null, 
         null, null, Collections.singletonList("barney"))));
+  }
+
+  /** Returns a List of the principals' names. */
+  private List<String> toStringList(Collection<Principal> principals) {
+    if (principals == null) {
+      return null;
+    }
+    List<String> names = new ArrayList<String>(principals.size());
+    for (Principal principal : principals) {
+      names.add(principal.getName());
+    }
+    return names;
   }
 }

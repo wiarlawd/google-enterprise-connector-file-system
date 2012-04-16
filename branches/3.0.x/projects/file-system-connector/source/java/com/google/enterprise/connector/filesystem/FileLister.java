@@ -22,6 +22,9 @@ import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
 import com.google.enterprise.connector.spi.Lister;
+import com.google.enterprise.connector.spi.Principal;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
+import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SecureDocument;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.SpiConstants.FeedType;
@@ -29,11 +32,9 @@ import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalContextAware;
 import com.google.enterprise.connector.spi.TraversalSchedule;
 import com.google.enterprise.connector.spi.TraversalScheduleAware;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.Value;
 import com.google.enterprise.connector.util.Clock;
 import com.google.enterprise.connector.util.SystemClock;
-import com.google.enterprise.connector.spi.Value;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -376,13 +377,13 @@ class FileLister implements Lister, TraversalContextAware,
         if (shareAcl != null) {
           Map<String, List<Value>> aclValues = Maps.newHashMap();
           aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
-              getStringValueList(shareAcl.getUsers()));
+              getPrincipalValueList(shareAcl.getUsers()));
           aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
-              getStringValueList(shareAcl.getGroups()));
+              getPrincipalValueList(shareAcl.getGroups()));
           aclValues.put(SpiConstants.PROPNAME_ACLDENYUSERS,
-              getStringValueList(shareAcl.getDenyUsers()));
+              getPrincipalValueList(shareAcl.getDenyUsers()));
           aclValues.put(SpiConstants.PROPNAME_ACLDENYGROUPS,
-              getStringValueList(shareAcl.getDenyGroups()));
+              getPrincipalValueList(shareAcl.getDenyGroups()));
           aclValues.put(SpiConstants.PROPNAME_DOCID,
               getStringValueList(FileDocument.getRootShareAclId(root)));
           aclValues.put(SpiConstants.PROPNAME_FEEDTYPE,
@@ -402,11 +403,11 @@ class FileLister implements Lister, TraversalContextAware,
       }
     }
 
-    /** Creates a value list from a list of String values. */
-    private List<Value> getStringValueList(List<String> strValues) {
-      List<Value> valueList = Lists.newArrayListWithCapacity(strValues.size());
-      for (String str : strValues) {
-        valueList.add(Value.getStringValue(str));
+    /** Creates a value list from a list of Principal values. */
+    private List<Value> getPrincipalValueList(Collection<Principal> principals) {
+      List<Value> valueList = Lists.newArrayListWithCapacity(principals.size());
+      for (Principal principal : principals) {
+        valueList.add(Value.getPrincipalValue(principal));
       }
       return valueList;
     }

@@ -20,6 +20,7 @@ import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.Property;
 import com.google.enterprise.connector.spi.SimpleProperty;
 import com.google.enterprise.connector.spi.SpiConstants;
@@ -29,6 +30,7 @@ import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.io.IOException;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -250,6 +252,20 @@ public class FileDocument implements Document {
   private void addProperty(String name, List<String> values) {
     for (String value : values) {
       addProperty(name, value);
+    }
+  }
+
+  /**
+   * Adds a multi-value property to the property map. If the property
+   * already exists in the map, the given value is added to the
+   * list of values in the property.
+   *
+   * @param name a property name
+   * @param values a List of Principal property values
+   */
+  private void addProperty(String name, Collection<Principal> values) {
+    for (Principal value : values) {
+      addProperty(name, Value.getPrincipalValue(value));
     }
   }
 
