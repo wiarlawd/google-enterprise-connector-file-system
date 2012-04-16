@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.base.Strings;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.filesystem.WindowsFileSystemType.WindowsFileProperties;
@@ -73,6 +74,16 @@ public class FileSystemPropertyManager implements SmbFileProperties,
    * Represents user ACL format for the user ACEs.
    */
   private String userAclFormat;
+
+  /**
+   * The global namespace for users and groups.
+   */
+  private String globalNamespace;
+
+  /**
+   * The local namespace for users and groups.
+   */
+  private String localNamespace;
 
   /**
    * If-modified-since cushion to deal with unsynchronized clocks,
@@ -209,6 +220,34 @@ public class FileSystemPropertyManager implements SmbFileProperties,
    */
   public void setUserAclFormat(String userAclFormat) {
     this.userAclFormat = userAclFormat;
+  }
+
+  /**
+   * @return the global namespace
+   */
+  public String getGlobalNamespace() {
+    return globalNamespace;
+  }
+
+  /**
+   * @return the local namespace
+   */
+  public String getLocalNamespace() {
+    return localNamespace;
+  }
+
+  /**
+   * @param globalNamespace the global namespace
+   */
+  public void setGlobalNamespace(String globalNamespace) {
+    this.globalNamespace = Strings.emptyToNull(globalNamespace);
+  }
+
+  /**
+   * @param localNamespace the local namespace
+   */
+  public void setLocalNamespace(String localNamespace) {
+    this.localNamespace = Strings.emptyToNull(localNamespace);
   }
 
   /**

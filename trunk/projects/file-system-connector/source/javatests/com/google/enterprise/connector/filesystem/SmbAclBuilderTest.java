@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
+import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.SpiConstants.AclAccess;
 import com.google.enterprise.connector.spi.SpiConstants.AclScope;
 
@@ -28,7 +29,9 @@ import static org.easymock.EasyMock.verify;
 
 import java.io.IOException;
 import java.net.URL;
+
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import jcifs.smb.ACE;
@@ -43,6 +46,9 @@ public class SmbAclBuilderTest extends TestCase {
 
   private final String defaultAceFormat =
       AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
+
+  private static final String GLOBAL_NAMESPACE = "global";
+  private static final String LOCAL_NAMESPACE = "local";
 
   public void testACLForFileLevelAClOnly() throws IOException {
     SmbFile smbFile = createMock(SmbFile.class);
@@ -62,7 +68,7 @@ public class SmbAclBuilderTest extends TestCase {
     Acl acl = builder.getAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue((acl.getUsers()).contains("user1"));
+    assertTrue(toStringList(acl.getUsers()).contains("user1"));
     assertTrue(acl.getGroups().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
@@ -86,7 +92,7 @@ public class SmbAclBuilderTest extends TestCase {
     Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertTrue((acl.getUsers()).contains("user2"));
+    assertTrue(toStringList(acl.getUsers()).contains("user2"));
     assertTrue(acl.getGroups().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
@@ -110,7 +116,7 @@ public class SmbAclBuilderTest extends TestCase {
     Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("accountants"));
+    assertTrue(toStringList(acl.getGroups()).contains("accountants"));
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
@@ -172,7 +178,7 @@ public class SmbAclBuilderTest extends TestCase {
     Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("accountants"));
+    assertTrue(toStringList(acl.getGroups()).contains("accountants"));
     assertTrue(acl.getUsers().isEmpty());
     verify(smbFile);
   }
@@ -196,7 +202,7 @@ public class SmbAclBuilderTest extends TestCase {
     assertTrue(acl.getGroups().isEmpty());
     assertTrue((acl.getDenyGroups()).isEmpty());
     assertTrue(acl.getUsers().isEmpty());
-    assertTrue(acl.getDenyUsers().contains("John Doe"));
+    assertTrue(toStringList(acl.getDenyUsers()).contains("John Doe"));
     verify(smbFile);
   }
 
@@ -218,7 +224,7 @@ public class SmbAclBuilderTest extends TestCase {
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue(acl.getGroups().isEmpty());
-    assertTrue((acl.getDenyGroups()).contains("accountants"));
+    assertTrue(toStringList(acl.getDenyGroups()).contains("accountants"));
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     verify(smbFile);
@@ -254,13 +260,20 @@ public class SmbAclBuilderTest extends TestCase {
     replay(smbFile);
     TestAclProperties fetcher = new TestAclProperties(
         AceSecurityLevel.SHARE.name(),
-        samlAceFormat, samlAceFormat);
+        samlAceFormat, samlAceFormat,
+        GLOBAL_NAMESPACE, LOCAL_NAMESPACE);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
 
     Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("accountants@google"));
+    assertFalse(acl.getGroups().isEmpty());
+    Principal p = acl.getGroups().iterator().next();
+    assertNotNull(p);
+    assertEquals("accountants@google", p.getName());
+    assertEquals(GLOBAL_NAMESPACE, p.getNamespace());
+    assertEquals(AclFormat.USER_AT_DOMAIN.getPrincipalType(),
+                 p.getPrincipalType());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
@@ -278,12 +291,19 @@ public class SmbAclBuilderTest extends TestCase {
     replay(smbFile);
     TestAclProperties fetcher = new TestAclProperties(
         AceSecurityLevel.SHARE.name(),
-        httpAceFormat, httpAceFormat);
+        httpAceFormat, httpAceFormat,
+        GLOBAL_NAMESPACE, LOCAL_NAMESPACE);
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue((acl.getGroups()).contains("google\\accountants"));
+    assertFalse(acl.getGroups().isEmpty());
+    Principal p = acl.getGroups().iterator().next();
+    assertNotNull(p);
+    assertEquals("google\\accountants", p.getName());
+    assertEquals(GLOBAL_NAMESPACE, p.getNamespace());
+    assertEquals(AclFormat.DOMAIN_BACKSLASH_USER.getPrincipalType(),
+                 p.getPrincipalType());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
@@ -314,8 +334,12 @@ public class SmbAclBuilderTest extends TestCase {
     Acl shareAcl = builder.getShareAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
-    assertEquals("google\\superUser", acl.getUsers().get(0));
-    assertEquals("employees@google", shareAcl.getGroups().get(0));
+    assertFalse(acl.getUsers().isEmpty());
+    List<String> users = toStringList(acl.getUsers());
+    assertEquals("google\\superUser", users.get(0));
+    assertFalse(shareAcl.getGroups().isEmpty());
+    List<String> groups = toStringList(shareAcl.getGroups());
+    assertEquals("employees@google", groups.get(0));
     verify(smbFile);
     verify(fileAce);
     verify(fileAce1);
@@ -339,7 +363,7 @@ public class SmbAclBuilderTest extends TestCase {
     // group deny ace for "accountants" is expected
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
-    assertTrue(acl.getGroups().contains("accountants"));
+    assertTrue(toStringList(acl.getGroups()).contains("accountants"));
     assertTrue((acl.getDenyGroups()).isEmpty());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
@@ -368,8 +392,8 @@ public class SmbAclBuilderTest extends TestCase {
     assertNotNull(acl.getGroups());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getGroups().isEmpty());
-    assertTrue((acl.getDenyUsers()).contains("Sales Engineers"));
-    assertTrue(acl.getDenyGroups().contains("Sales Managers"));
+    assertTrue(toStringList(acl.getDenyUsers()).contains("Sales Engineers"));
+    assertTrue(toStringList(acl.getDenyGroups()).contains("Sales Managers"));
     verify(smbFile);
   }
 
@@ -400,10 +424,19 @@ public class SmbAclBuilderTest extends TestCase {
     builder.checkAndAddAces(fileAces, fileAllowAces, fileDenyAces, true);
     Acl acl = builder.getAclFromAceList(fileAllowAces, fileDenyAces);
     boolean b = fileAce1.toString().contains("test2");
-    assertTrue(acl.getUsers().contains("test2"));
-    assertTrue(acl.getGroups().contains("tester"));
-    assertTrue(acl.getDenyUsers().contains("test3"));
-    assertTrue(acl.getDenyGroups().contains("testing"));
+    assertTrue(contains(acl.getUsers(), "test2"));
+    assertTrue(contains(acl.getGroups(), "tester"));
+    assertTrue(contains(acl.getDenyUsers(), "test3"));
+    assertTrue(contains(acl.getDenyGroups(), "testing"));
+  }
+
+  private boolean contains(Collection<Principal> principals, String name) {
+    for (Principal p : principals) {
+      if (name.equals(p.getName())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public void testACEForcheckAndAddParentInheritOnlyAces() throws IOException {
@@ -440,10 +473,10 @@ public class SmbAclBuilderTest extends TestCase {
     builder.checkAndAddParentInheritOnlyAces(fileAces, fileAllowAces,
         fileDenyAces);
     Acl acl = builder.getAclFromAceList(fileAllowAces, fileDenyAces);
-    assertTrue(acl.getUsers().contains("testuser1"));
-    assertTrue(acl.getGroups().contains("testergroup"));
-    assertTrue(acl.getDenyUsers().contains("tester3"));
-    assertTrue(acl.getDenyGroups().contains("testing"));
+    assertTrue(contains(acl.getUsers(), "testuser1"));
+    assertTrue(contains(acl.getGroups(), "testergroup"));
+    assertTrue(contains(acl.getDenyUsers(), "tester3"));
+    assertTrue(contains(acl.getDenyGroups(), "testing"));
   }
 
   /**
@@ -457,7 +490,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   /**
-   * Returns a mock ACE object with the specified name 
+   * Returns a mock ACE object with the specified name
    * @return ACE
    * @param userOrGroupName Name of the user ACE
    * @param isUser if true then user ACE will be created otherwise Group ACE
@@ -473,7 +506,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   /**
-   * Returns a mock ACE object with the specified name 
+   * Returns a mock ACE object with the specified name
    * @return ACE.
    * @param userOrGroupName Name of the user ACE.
    * @param aclScope if USER then user ACE will be created, 
@@ -533,16 +566,34 @@ public class SmbAclBuilderTest extends TestCase {
     return ace;
   }
 
+  /** Returns a List of the principals' names. */
+  private List<String> toStringList(Collection<Principal> principals) {
+    List<String> names = new ArrayList<String>(principals.size());
+    for (Principal principal : principals) {
+      names.add(principal.getName());
+    }
+    return names;
+  }
+
   private static class TestAclProperties implements AclProperties {
 
     private final String aceLevel, groupAclFormat, userAclFormat;
+    private final String globalNamespace, localNamespace;
 
     private TestAclProperties(String aceLevel, String groupAclFormat,
-            String userAclFormat) {
-        this.aceLevel = aceLevel;
-        this.groupAclFormat = groupAclFormat;
-        this.userAclFormat = userAclFormat;
+        String userAclFormat) {
+      this(aceLevel, groupAclFormat, userAclFormat, null, null);
     }
+
+    private TestAclProperties(String aceLevel, String groupAclFormat,
+        String userAclFormat, String globalNamespace, String localNamespace) {
+      this.aceLevel = aceLevel;
+      this.groupAclFormat = groupAclFormat;
+      this.userAclFormat = userAclFormat;
+      this.globalNamespace = globalNamespace;
+      this.localNamespace = localNamespace;
+    }
+
 
     public String getAceSecurityLevel() {
         return aceLevel;
@@ -566,6 +617,14 @@ public class SmbAclBuilderTest extends TestCase {
 
     public boolean supportsInheritedAcls() {
       return true;
+    }
+
+    public String getGlobalNamespace() {
+      return globalNamespace;
+    }
+
+    public String getLocalNamespace() {
+      return localNamespace;
     }
   }
 }

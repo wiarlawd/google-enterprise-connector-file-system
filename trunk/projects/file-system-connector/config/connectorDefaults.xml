@@ -170,6 +170,8 @@
     <property name="pushAclFlag" value="true"/>
     <property name="groupAclFormat" value="group"/>
     <property name="userAclFormat" value="user"/>
+    <property name="globalNamespace" value="${googleGlobalNamespace}"/>
+    <property name="localNamespace" value="${googleLocalNamespace}"/>
     <property name="ifModifiedSinceCushionMinutes" value="60"/>
     <property name="threadPoolSize" value="10"/>
   </bean>
@@ -186,6 +188,8 @@
     <property name="properties">
       <props>
         <prop key="fulltraversal">7</prop>
+        <prop key="googleGlobalNamespace"></prop>
+        <prop key="googleLocalNamespace"></prop>
       </props>
     </property>
   </bean>
