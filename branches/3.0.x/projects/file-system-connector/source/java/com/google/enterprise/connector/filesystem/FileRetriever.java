@@ -15,9 +15,11 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.Document;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.Retriever;
+import com.google.enterprise.connector.spi.SkippedDocumentException;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalContextAware;
 
@@ -80,14 +82,17 @@ class FileRetriever implements Retriever, TraversalContextAware {
   private ReadonlyFile<?> getFile(String docid) throws RepositoryException {
     ReadonlyFile<?> file = pathParser.getFile(docid, context.getCredentials());
     if (file == null) {
-      throw new RepositoryDocumentException("Failed to open file: " + docid);
+      // Not one of our registered filesystems.
+      throw new DocumentNotFoundException("Failed to open file: " + docid);
     }
     if (!file.exists()) {
-      throw new RepositoryDocumentException("File not found: " + docid);
+      // File actually does not exist.
+      throw new DocumentNotFoundException("File not found: " + docid);
     }
     // Verify that we would have actually fed this document.
     if (!isQualifiedFile(file)) {
-      throw new RepositoryDocumentException("Access denied: " + docid);
+      // File may or may-not exist, but it is not available to us.
+      throw new SkippedDocumentException("Access denied: " + docid);
     }
     return file;
   }

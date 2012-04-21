@@ -46,11 +46,12 @@ interface AclBuilder {
    * Represents the ACL format.
    */
   public static enum AclFormat {
-    USER_AT_DOMAIN("user@domain", PrincipalType.DN),
-    DOMAIN_BACKSLASH_USER("domain\\user", PrincipalType.NETBIOS),
+    // TODO: Use PrincipalType.DNS and PrincipalType.NETBIOS instead of UNKNOWN.
+    USER_AT_DOMAIN("user@domain", PrincipalType.UNKNOWN),
+    DOMAIN_BACKSLASH_USER("domain\\user", PrincipalType.UNKNOWN),
     USER("user", PrincipalType.UNQUALIFIED),
-    GROUP_AT_DOMAIN("group@domain", PrincipalType.DN),
-    DOMAIN_BACKSLASH_GROUP("domain\\group", PrincipalType.NETBIOS),
+    GROUP_AT_DOMAIN("group@domain", PrincipalType.UNKNOWN),
+    DOMAIN_BACKSLASH_GROUP("domain\\group", PrincipalType.UNKNOWN),
     GROUP("group", PrincipalType.UNQUALIFIED);
 
     /**
