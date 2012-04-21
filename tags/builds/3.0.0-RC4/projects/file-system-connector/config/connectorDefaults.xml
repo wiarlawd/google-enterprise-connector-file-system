@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+  <bean id="java-file-system-type"
+        class="com.google.enterprise.connector.filesystem.JavaFileSystemType">
+  </bean>
+
+  <bean id="windows-file-system-type"
+        class="com.google.enterprise.connector.filesystem.WindowsFileSystemType">
+    <constructor-arg ref="document-context" />
+  </bean>
+
+  <bean id="smb-file-system-type"
+        class="com.google.enterprise.connector.filesystem.SmbFileSystemType">
+    <constructor-arg ref="document-context" />
+  </bean>
+
+  <bean id="nfs-file-system-type"
+        class="com.google.enterprise.connector.filesystem.NfsFileSystemType">
+  </bean>
+
+  <bean id="file-system-type-registry"
+    class="com.google.enterprise.connector.filesystem.FileSystemTypeRegistry">
+    <constructor-arg>
+      <list>
+        <ref bean="java-file-system-type" />
+        <ref bean="windows-file-system-type" />
+        <ref bean="smb-file-system-type" />
+        <ref bean="nfs-file-system-type" />
+      </list>
+    </constructor-arg>
+  </bean>
+
+  <bean id="path-parser" class="com.google.enterprise.connector.filesystem.PathParser">
+     <constructor-arg ref="file-system-type-registry"/>
+  </bean>
+
+  <bean id="mime-type-finder"
+        class="com.google.enterprise.connector.util.MimeTypeDetector"/>
+
+  <!-- The filesystem-property-manager bean is defined in connectorInstance.xml
+       as singleton="false", but it really needs to be a singleton per
+       connector instance.
+       For backward compatibility reasons, we can not fix it there;
+       so I will fix it here with only a single reference to that bean.
+  -->
+  <!-- WARNING: If you change anything here, also change connectorType.xml -->
+  <bean id="document-context"
+        class="com.google.enterprise.connector.filesystem.DocumentContext"
+        singleton="true">
+    <constructor-arg value="${domain}"/>
+    <constructor-arg value="${user}"/>
+    <constructor-arg value="${password}"/>
+    <constructor-arg ref="mime-type-finder"/>
+    <!-- This must be the only reference to the filesystem-property-manager. -->
+    <constructor-arg ref="filesystem-property-manager"/>
+    <constructor-arg>
+      <list>
+        <value>${start_0}</value>
+        <value>${start_1}</value>
+        <value>${start_2}</value>
+        <value>${start_3}</value>
+        <value>${start_4}</value>
+        <value>${start_5}</value>
+        <value>${start_6}</value>
+        <value>${start_7}</value>
+        <value>${start_8}</value>
+        <value>${start_9}</value>
+        <value>${start_10}</value>
+        <value>${start_11}</value>
+        <value>${start_12}</value>
+        <value>${start_13}</value>
+        <value>${start_14}</value>
+        <value>${start_15}</value>
+        <value>${start_16}</value>
+        <value>${start_17}</value>
+        <value>${start_18}</value>
+        <value>${start_19}</value>
+        <value>${start_20}</value>
+        <value>${start_21}</value>
+        <value>${start_22}</value>
+        <value>${start_23}</value>
+      </list>
+    </constructor-arg>
+    <constructor-arg>
+      <list>
+        <value>${include_0}</value>
+        <value>${include_1}</value>
+        <value>${include_2}</value>
+        <value>${include_3}</value>
+        <value>${include_4}</value>
+        <value>${include_5}</value>
+        <value>${include_6}</value>
+        <value>${include_7}</value>
+        <value>${include_8}</value>
+        <value>${include_9}</value>
+        <value>${include_10}</value>
+        <value>${include_11}</value>
+        <value>${include_12}</value>
+        <value>${include_13}</value>
+        <value>${include_14}</value>
+        <value>${include_15}</value>
+        <value>${include_16}</value>
+        <value>${include_17}</value>
+        <value>${include_18}</value>
+        <value>${include_19}</value>
+        <value>${include_20}</value>
+        <value>${include_21}</value>
+        <value>${include_22}</value>
+        <value>${include_23}</value>
+      </list>
+    </constructor-arg>
+    <constructor-arg>
+      <list>
+        <value>${exclude_0}</value>
+        <value>${exclude_1}</value>
+        <value>${exclude_2}</value>
+        <value>${exclude_3}</value>
+        <value>${exclude_4}</value>
+        <value>${exclude_5}</value>
+        <value>${exclude_6}</value>
+        <value>${exclude_7}</value>
+        <value>${exclude_8}</value>
+        <value>${exclude_9}</value>
+        <value>${exclude_10}</value>
+        <value>${exclude_11}</value>
+        <value>${exclude_12}</value>
+        <value>${exclude_13}</value>
+        <value>${exclude_14}</value>
+        <value>${exclude_15}</value>
+        <value>${exclude_16}</value>
+        <value>${exclude_17}</value>
+        <value>${exclude_18}</value>
+        <value>${exclude_19}</value>
+        <value>${exclude_20}</value>
+        <value>${exclude_21}</value>
+        <value>${exclude_22}</value>
+        <value>${exclude_23}</value>
+      </list>
+    </constructor-arg>
+  </bean>
+
+  <bean id="authz"
+        class="com.google.enterprise.connector.filesystem.FileAuthorizationManager"
+        singleton="false">
+    <constructor-arg ref="path-parser"/>
+  </bean>
+
+  <bean id="file-lister"
+       class="com.google.enterprise.connector.filesystem.FileLister"
+       singleton="true">
+    <constructor-arg ref="path-parser"/>
+    <constructor-arg ref="document-context"/>
+    <property name="fullTraversalIntervalDays" value="${fulltraversal}"/>
+  </bean>
+
+  <bean id="file-retriever"
+        class="com.google.enterprise.connector.filesystem.FileRetriever">
+    <constructor-arg ref="path-parser"/>
+    <constructor-arg ref="document-context"/>
+  </bean>
+
+  <!-- WARNING: If you change anything here, also change connectorType.xml -->
+  <bean id="filesystem-property-manager-defaults">
+    <property name="aceSecurityLevel" value="FILEANDSHARE"/>
+    <property name="markDocumentPublicFlag" value="false"/>
+    <property name="lastAccessResetFlagForSmb" value="true"/>
+    <property name="lastAccessResetFlagForLocalWindows" value="true"/>
+    <property name="supportsInheritedAcls" value="false"/>
+    <property name="pushAclFlag" value="true"/>
+    <property name="groupAclFormat" value="group"/>
+    <property name="userAclFormat" value="user"/>
+    <property name="globalNamespace" value="${googleGlobalNamespace}"/>
+    <property name="localNamespace" value="${googleLocalNamespace}"/>
+    <property name="ifModifiedSinceCushionMinutes" value="60"/>
+    <property name="threadPoolSize" value="10"/>
+  </bean>
+
+  <bean id="file-connector"
+        class="com.google.enterprise.connector.filesystem.FileConnector">
+    <constructor-arg ref="authz"/>
+    <constructor-arg ref="file-lister"/>
+    <constructor-arg ref="file-retriever"/>
+  </bean>
+
+  <bean id="propertyPlaceholderConfigurer"
+        class="com.google.enterprise.connector.instantiator.EncryptedPropertyPlaceholderConfigurer">
+    <property name="properties">
+      <props>
+        <prop key="fulltraversal">7</prop>
+        <prop key="googleGlobalNamespace"></prop>
+        <prop key="googleLocalNamespace"></prop>
+      </props>
+    </property>
+  </bean>
+
+
+  <!--
+    Dummy beans to overcome backward compatibility of connectorInstance.xml
+  -->
+  <bean id="activity-logger" class="java.lang.Object"/>
+  <bean id="change-queue" class="java.lang.Object"/>
+  <bean id="checkpoint-and-change-queue" class="java.lang.Object"/>
+  <bean id="checksum-generator" class="java.lang.Object"/>
+  <bean id="client-document-handle-factory" class="java.lang.Object"/>
+  <bean id="file-document-snapshot-factory" class="java.lang.Object"/>
+  <bean id="file-document-snapshot-repository-list" class="java.lang.Object"/>
+  <bean id="file-fetcher" class="java.lang.Object"/>
+  <bean id="filesystem-monitor-manager" class="java.lang.Object"/>
+  <bean id="internal-document-handle-factory" class="java.lang.Object"/>
+  <bean id="monitor-manager" class="java.lang.Object"/>
+  <bean id="queue-dir" class="java.lang.Object"/>
+  <bean id="snapshot-dir" class="java.lang.Object"/>
+  <bean id="traversal-context-manager" class="java.lang.Object"/>
+
+</beans>
