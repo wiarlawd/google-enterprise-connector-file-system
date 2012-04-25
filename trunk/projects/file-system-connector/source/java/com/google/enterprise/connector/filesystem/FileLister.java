@@ -388,6 +388,9 @@ class FileLister implements Lister, TraversalContextAware,
               getStringValueList(FileDocument.getRootShareAclId(root)));
           aclValues.put(SpiConstants.PROPNAME_FEEDTYPE,
               getStringValueList(FeedType.CONTENTURL.toString()));
+          aclValues.put(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
+              getStringValueList(
+                  SpiConstants.AclInheritanceType.AND_BOTH_PERMIT.toString()));
           return SecureDocument.createAcl(aclValues);
         } else {
           return null;
