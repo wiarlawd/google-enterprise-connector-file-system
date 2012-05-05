@@ -28,6 +28,11 @@ Issue 6109697: File system connector throws a NullPointerException and
                does not have permission to read the files in a
                directory.
 
+Issue 5589982: File-system connector fails to crawl Samba share,
+               SmbException: 0xC000011F is observed. The problem could
+               potentially occur on other SMB implementations, but has
+               only been reported on Samba shares.
+
 Known limitations:
 -----------------
 Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
