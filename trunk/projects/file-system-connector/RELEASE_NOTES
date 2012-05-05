@@ -10,8 +10,8 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
-Release 2.8.6, March 30, 2012
-=============================
+Release 2.8.6, May 4, 2012
+==========================
 
 Introduction
 ------------
@@ -27,7 +27,6 @@ Issue 6109697: File system connector throws a NullPointerException and
                version 2.8.4 and can occur when the traversal user
                does not have permission to read the files in a
                directory.
-
 Issue 5589982: File-system connector fails to crawl Samba share,
                SmbException: 0xC000011F is observed. The problem could
                potentially occur on other SMB implementations, but has
