@@ -14,8 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.Principal;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.enterprise.connector.spi.Principal;
+import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
 
 import jcifs.smb.ACE;
 import jcifs.smb.NtlmPasswordAuthentication;
@@ -215,17 +216,20 @@ class SmbAclBuilder implements AclBuilder {
       case SID.SID_TYPE_USER:
         // TODO: I don't think SID supports local users, so assume global.
         users.add(new Principal(userAclFormat.getPrincipalType(),
-                                globalNamespace, aclEntry));
+                globalNamespace, aclEntry,
+                CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
         break;
       case SID.SID_TYPE_DOM_GRP:
       case SID.SID_TYPE_DOMAIN:
         groups.add(new Principal(groupAclFormat.getPrincipalType(),
-                                 globalNamespace, aclEntry));
+                globalNamespace, aclEntry,
+                CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
         break;
       case SID.SID_TYPE_ALIAS:
       case SID.SID_TYPE_WKN_GRP:
         groups.add(new Principal(groupAclFormat.getPrincipalType(),
-                                 localNamespace, aclEntry));
+                localNamespace, aclEntry,
+                CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
         break;
     }
   }

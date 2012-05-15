@@ -20,6 +20,7 @@ import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.SpiConstants.AclAccess;
 import com.google.enterprise.connector.spi.SpiConstants.AclScope;
+import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
@@ -274,6 +275,8 @@ public class SmbAclBuilderTest extends TestCase {
     assertEquals(GLOBAL_NAMESPACE, p.getNamespace());
     assertEquals(AclFormat.USER_AT_DOMAIN.getPrincipalType(),
                  p.getPrincipalType());
+    assertEquals(CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE,
+        p.getCaseSensitivityType());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
@@ -304,6 +307,8 @@ public class SmbAclBuilderTest extends TestCase {
     assertEquals(GLOBAL_NAMESPACE, p.getNamespace());
     assertEquals(AclFormat.DOMAIN_BACKSLASH_USER.getPrincipalType(),
                  p.getPrincipalType());
+    assertEquals(CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE,
+        p.getCaseSensitivityType());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
