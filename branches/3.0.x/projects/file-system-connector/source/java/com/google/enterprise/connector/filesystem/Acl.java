@@ -82,6 +82,8 @@ public class Acl {
     if (list == null) {
       return null;
     }
+    // This call is used only by LegacySmbAclBuilder and the tests, so
+    // we don't need to add namespaces or the rest here.
     List<Principal> principals = new ArrayList<Principal>(list.size());
     for (String item : list) {
       principals.add(new Principal(item));

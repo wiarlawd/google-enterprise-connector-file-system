@@ -10,8 +10,6 @@
   <property name="COMPILE_TARGET" value="1.5" />
   <property name="COMPILE_BOOTCLASSPATH" value="${build.bootclasspath}" />
 
-  <property name="svn.base.dir" value="../.." />
-
   <property name="build.dir" value="build" />
   <property name="build-prod.dir" value="${build.dir}/prod" />
   <property name="build-prod-config.dir" value="${build-prod.dir}/config" />
@@ -57,9 +55,6 @@
     location="${connector-manager-thirdparty-jar.dir}/tests" />
   <property name="spi.jar.dir" value="${connector-manager.dir}/dist/jarfile" />
 
-  <property name="connector-filesystem-src.zip"
-        value="${downloads.dir}/connector-filesystem-${version}-src.zip" />
-
   <!--Cobertura properties -->
   <property file="${config.dir}/build_code_coverage.properties" />
 
@@ -77,6 +72,8 @@
 
   <target name="init" depends="svn.svn-status,svn.svn-branch-version">
     <tstamp />
+    <property name="connector-filesystem-src.zip"
+              value="${downloads.dir}/connector-filesystem-${svn.branch}-src.zip" />
 
     <echo message="Note 'svn status' should return no changes to indicate" />
     <echo message="a client with no changes when building ${jar-prod.file}" />
@@ -229,7 +226,7 @@
       <manifest>
         <attribute name="Implementation-Title" value="File System Connector"/>
         <attribute name="Implementation-Version"
-                   value="${version} (build ${svn.version}  ${TODAY})"/>
+                   value="${version} (build ${svn.branch.version} ${TODAY})"/>
         <attribute name="Implementation-Vendor" value="Google Inc."/>
         <attribute name="Specification-Title" value="Connector Manager SPI"/>
         <attribute name="Specification-Version" value="${version.spi}"/>
@@ -267,7 +264,7 @@
     </zip>
     <checksum algorithm="SHA-1" file="${connector-filesystem-src.zip}" />
 
-    <zip destfile="${downloads.dir}/connector-filesystem-${version}.zip">
+    <zip destfile="${downloads.dir}/connector-filesystem-${svn.branch}.zip">
       <zipfileset file="${jar-prod.file}" />
       <zipfileset file="${release-notes.file}" />
       <zipfileset file="${readme.file}" />
@@ -281,7 +278,7 @@
       <zipfileset dir="${license-prod.dir}" prefix="License" />
     </zip>
     <checksum algorithm="SHA-1" 
-              file="${downloads.dir}/connector-filesystem-${version}.zip" />
+              file="${downloads.dir}/connector-filesystem-${svn.branch}.zip" />
   </target>
 
   <target name="clean" description="Deletes all build files.">

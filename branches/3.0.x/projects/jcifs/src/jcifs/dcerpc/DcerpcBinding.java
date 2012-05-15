@@ -21,6 +21,7 @@ package jcifs.dcerpc;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 
 import jcifs.dcerpc.msrpc.*;
 
@@ -56,7 +57,7 @@ public class DcerpcBinding {
 
     void setOption(String key, Object val) throws DcerpcException {
         if (key.equals("endpoint")) {
-            endpoint = val.toString().toLowerCase();
+            endpoint = val.toString().toLowerCase(Locale.ENGLISH);
             if (endpoint.startsWith("\\pipe\\")) {
                 String iface = (String)INTERFACES.get(endpoint.substring(6));
                 if (iface != null) {
