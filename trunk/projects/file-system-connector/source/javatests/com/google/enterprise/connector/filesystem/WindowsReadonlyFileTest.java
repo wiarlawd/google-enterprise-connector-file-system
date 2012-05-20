@@ -16,27 +16,54 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTime;
 
+import java.io.IOException;
+import java.util.List;
+
 /**
+ * Tests for {@link WindowsReadonlyFile}.
+ * <p/>
+ * <img src="doc-files/ReadonlyFileTestsUML.png" alt="ReadonlyFile Test Class Hierarchy"/>
  */
-public class WindowsReadonlyFileTest extends JavaReadonlyFileTest {
+public class WindowsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
+    <WindowsFileSystemType, WindowsReadonlyFile, WindowsFileDelegate> {
+
+  protected WindowsFileSystemType getFileSystemType() {
+    return new WindowsFileSystemType(false);
+  }
+
+  protected String getAbsolutePath(WindowsFileDelegate delegate)
+      throws IOException {
+    return delegate.getAbsolutePath();
+  }
+
+  protected WindowsFileDelegate getDelegate(String absolutePath)
+      throws IOException {
+    return new WindowsFileDelegate(absolutePath);
+  }
+
+  protected WindowsFileDelegate getDelegate(WindowsFileDelegate parent,
+      String name) throws IOException {
+    return new WindowsFileDelegate(parent, name);
+  }
 
   @Override
-  protected void makeReadonlyFiles() {
-    type = new WindowsFileSystemType(false);
-    readonlyRoot =
-        new WindowsReadonlyFile(type, root.getAbsolutePath(), false);
-    readonlyFile1 =
-        new WindowsReadonlyFile(type, file1.getAbsolutePath(), false);
-    readonlyOtherFile1 =
-        new WindowsReadonlyFile(type, file1.getAbsolutePath(), false);
-    readonlyTest1 =
-        new WindowsReadonlyFile(type, test1.getAbsolutePath(), false);
-    readonlyTest2 =
-        new WindowsReadonlyFile(type, test2.getAbsolutePath(), false);
-    readonlyDirA =
-        new WindowsReadonlyFile(type, dirA.getAbsolutePath(), false);
-    readonlyDirB =
-        new WindowsReadonlyFile(type, dirB.getAbsolutePath(), false);
+  public void testGetPath() throws Exception {
+    assertEquals(getAbsolutePath(root) + "/", readonlyRoot.getPath());
+    assertEquals(getAbsolutePath(file1), readonlyFile1.getPath());
+    assertEquals(getAbsolutePath(test1), readonlyTest1.getPath());
+    assertEquals(getAbsolutePath(test2), readonlyTest2.getPath());
+    assertEquals(getAbsolutePath(dirA) + "/", readonlyDirA.getPath());
+  }
+
+  public void testListFiles() throws Exception {
+    List<WindowsReadonlyFile> x = readonlyRoot.listFiles();
+    assertNotNull(x);
+    assertEquals(5, x.size());
+    assertEquals(getAbsolutePath(fileA), x.get(0).getPath());
+    assertEquals(getAbsolutePath(dirA) + "/", x.get(1).getPath());
+    assertEquals(getAbsolutePath(dirB) + "/", x.get(2).getPath());
+    assertEquals(getAbsolutePath(file1), x.get(3).getPath());
+    assertEquals(getAbsolutePath(file2), x.get(4).getPath());
   }
 
   /**
@@ -44,7 +71,7 @@ public class WindowsReadonlyFileTest extends JavaReadonlyFileTest {
    */
   public void testGetSetAccessTime() throws Exception {
     WindowsReadonlyFile file =
-        new WindowsReadonlyFile(type, file1.getAbsolutePath(), false);
+        new WindowsReadonlyFile(fileSystemType, file1.getAbsolutePath(), false);
     FileTime fileTime = file.getLastAccessTime();
 
     // A null FileTime probably means we are not running on Windows.

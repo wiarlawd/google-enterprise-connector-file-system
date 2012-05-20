@@ -24,7 +24,7 @@ import java.util.List;
  * Test utility that builds a up directory structure of MockReadonlyFiles
  * for use by other tests.  As the directory structure is being constructed,
  * a list of expected results is also being constructed.
- * The ConfigurFile parameter is used to perform two tasks as files and
+ * The ConfigureFile parameter is used to perform two tasks as files and
  * directories are added to the hierarchy:
  * <ol>
  *   <li>The file or directory may be explicity configured using the

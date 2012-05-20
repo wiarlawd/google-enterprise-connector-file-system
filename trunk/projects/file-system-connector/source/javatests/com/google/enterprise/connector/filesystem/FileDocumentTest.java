@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.Property;
 import com.google.enterprise.connector.spi.Principal;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
@@ -44,14 +45,20 @@ public class FileDocumentTest extends TestCase {
   private static final String ADD = SpiConstants.ActionType.ADD.toString();
   private static final String DELETE = SpiConstants.ActionType.DELETE.toString();
 
+  private List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
+  private List<String> groups = Arrays.asList("domain1\\engineers",
+                                              "domain1\\product managers");
+  private List<String> denyUsers = Arrays.asList("domain1\\beelzebob");
+  private List<String> denyGroups = Arrays.asList("domain1\\sales",
+                                                  "domain1\\hr");
+  private Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
+
   private MockReadonlyFile root;
   private MockReadonlyFile foo;
-  private FileSystemType fileFactory;
 
   @Override
   public void setUp() {
     root = MockReadonlyFile.createRoot("/foo/bar");
-    fileFactory = new MockFileSystemType(root);
     foo = root.addFile("foo.html", "contents of foo");
     foo.setLastModified(LAST_MODIFIED.getTimeInMillis());
   }
@@ -67,6 +74,38 @@ public class FileDocumentTest extends TestCase {
       len = in.read(buf, pos, BUF_SIZE - pos);
     }
     return new String(buf, 0, pos);
+  }
+
+  public void testGetInputStreamException() throws Exception {
+    foo.setException(MockReadonlyFile.Where.GET_INPUT_STREAM,
+                     new IOException("Test Exception"));
+    Document doc = new FileDocument(foo, makeContext(false, true));
+    try {
+      getDocumentContents(doc);
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      assertTrue(expected.getMessage().contains("Failed to open"));
+    }
+  }
+
+  public void testGetAclException() throws Exception {
+    foo.setException(MockReadonlyFile.Where.GET_ACL,
+                     new IOException("Test Exception"));
+    try {
+      Document doc = new FileDocument(foo, makeContext(true, false));
+      doc.findProperty(SpiConstants.PROPNAME_ACLUSERS);
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      // Expected.
+    }
+  }
+
+  public void testGetLastModifiedException() throws Exception {
+    foo.setException(MockReadonlyFile.Where.GET_LAST_MODIFIED,
+                     new IOException("Test Exception"));
+    Document doc = new FileDocument(foo, makeContext(false, true));
+    assertNull(
+        Value.getSingleValueString(doc, SpiConstants.PROPNAME_LASTMODIFIED));
   }
 
   public void testAddFile() throws Exception {
@@ -97,13 +136,6 @@ public class FileDocumentTest extends TestCase {
   }
 
   public void testAddNotPublicFileWithAcl() throws RepositoryException {
-    List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
-    List<String> groups = Arrays.asList("domain1\\engineers",
-                                        "domain1\\product managers");
-    List<String> denyUsers = Arrays.asList("domain1\\beelzebob");
-    List<String> denyGroups = Arrays.asList("domain1\\sales", "domain1\\hr");
-
-    Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(true, false));
     validateNotPublic(doc);
@@ -125,13 +157,6 @@ public class FileDocumentTest extends TestCase {
   }
 
   public void testAddNotPublicFileWithLegacyAcl() throws RepositoryException {
-    List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
-    List<String> groups = Arrays.asList("domain1\\engineers",
-                                        "domain1\\product managers");
-    List<String> denyUsers = Arrays.asList("domain1\\beelzebob");
-    List<String> denyGroups = Arrays.asList("domain1\\sales", "domain1\\hr");
-
-    Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
     foo.setAcl(acl);
     DocumentContext context = makeContext(true, false);
     context.getPropertyManager().setSupportsInheritedAcls(false);
@@ -181,27 +206,26 @@ public class FileDocumentTest extends TestCase {
     validateNotPublic(doc);
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS));
   }
 
   public void testAddNotPublicFileWithPushAclsFalse()
       throws RepositoryException {
-    List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
-    List<String> groups = Arrays.asList("domain1\\engineers",
-                                        "domain1\\product managers");
-    Acl acl = Acl.newAcl(users, groups, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(false, false));
     validateNotPublic(doc);
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID));
   }
 
   public void testAddNotPublicFileWithMarkAllDocumentsPublic()
       throws RepositoryException {
-    List<String> users = Arrays.asList("domain1\\bob", "domain1\\sam");
-    List<String> groups = Arrays.asList("domain1\\engineers",
-                                        "domain1\\product managers");
-    Acl acl = Acl.newAcl(users, groups, null, null);
     foo.setAcl(acl);
     Document doc = new FileDocument(foo, makeContext(false, true));
     assertNotNull(doc.findProperty(SpiConstants.PROPNAME_ISPUBLIC));
@@ -209,43 +233,62 @@ public class FileDocumentTest extends TestCase {
         Value.getSingleValueString(doc, SpiConstants.PROPNAME_ISPUBLIC));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLUSERS));
     assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM));
+    assertNull(doc.findProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID));
   }
 
   public void testDirectoryWithAcl() throws RepositoryException {
-    root = MockReadonlyFile.createRoot("/foo/bar");
-    fileFactory = new MockFileSystemType(root);
-    foo = root.addSubdir("subFolder");
-    foo.setLastModified(LAST_MODIFIED.getTimeInMillis());
-    List<String> users = Arrays.asList("domain1\\James", "domain1\\Mike");
-    List<String> groups = Arrays.asList("domain1\\engineers",
-                                        "domain1\\managers");
-    Acl acl = Acl.newAcl(users, groups, null, null);
-    foo.setAcl(acl);
-    Document doc = new FileDocument(foo, makeContext(true, false));
+    MockReadonlyFile dir = root.addSubdir("subFolder");
+    dir.setLastModified(LAST_MODIFIED.getTimeInMillis());
+    dir.setAcl(acl);
+    Document doc = new FileDocument(dir, makeContext(true, false));
+    validateDirWithAcl(doc, dir.getParent());
+  }
+
+  public void testRootWithAcl() throws RepositoryException {
+    root.setAcl(acl);
+    Document doc = new FileDocument(root, makeContext(true, false), true);
+    validateDirWithAcl(doc, "/foo/bar");
+  }
+
+  private void validateDirWithAcl(Document doc, String inheritFrom)
+      throws RepositoryException {
     validateNotPublic(doc);
     Property usersProperty = doc.findProperty(SpiConstants.PROPNAME_ACLUSERS);
     validateRepeatedProperty(users, usersProperty);
     Property groupsProperty = doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS);
     validateRepeatedProperty(groups, groupsProperty);
+    Property denyUsersProperty =
+        doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS);
+    validateRepeatedProperty(denyUsers, denyUsersProperty);
+    Property denyGroupsProperty =
+        doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS);
+    validateRepeatedProperty(denyGroups, denyGroupsProperty);
 
-    if (foo.isDirectory()) {
-      Property aclDocumentTypeProperty =
-          doc.findProperty(SpiConstants.PROPNAME_DOCUMENTTYPE);
-      assertNotNull(aclDocumentTypeProperty);
-      assertEquals(SpiConstants.DocumentType.ACL.toString(),
-          aclDocumentTypeProperty.nextValue().toString());
+    Property aclDocumentTypeProperty =
+        doc.findProperty(SpiConstants.PROPNAME_DOCUMENTTYPE);
+    assertNotNull(aclDocumentTypeProperty);
+    assertEquals(SpiConstants.DocumentType.ACL.toString(),
+        aclDocumentTypeProperty.nextValue().toString());
 
-      Property aclInheritanceTypeProperty =
-          doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE);
-      assertNotNull(aclInheritanceTypeProperty);
-      assertEquals(SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString(),
-          aclInheritanceTypeProperty.nextValue().toString());
-    }
+    Property aclInheritanceTypeProperty =
+        doc.findProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE);
+    assertNotNull(aclInheritanceTypeProperty);
+    assertEquals(SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString(),
+        aclInheritanceTypeProperty.nextValue().toString());
 
     Property aclInheritFrom = doc.findProperty(
         SpiConstants.PROPNAME_ACLINHERITFROM_DOCID);
     assertNotNull(aclInheritFrom);
-    assertEquals(foo.getParent(), aclInheritFrom.nextValue().toString());
+    assertEquals(inheritFrom, aclInheritFrom.nextValue().toString());
+  }
+
+  public void testToString() throws RepositoryException {
+    Document doc = new FileDocument(foo, makeContext(false, true));
+    assertTrue(doc.toString().contains("/foo/bar/foo.html"));
   }
 
   private DocumentContext makeContext(boolean pushAcls,

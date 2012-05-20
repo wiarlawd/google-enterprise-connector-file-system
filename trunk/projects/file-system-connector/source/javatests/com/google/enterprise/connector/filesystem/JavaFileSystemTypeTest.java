@@ -82,7 +82,20 @@ public class JavaFileSystemTypeTest extends TestCase {
     assertTrue(f.canRead());
   }
 
-  public void testUserPassowrdRequired() throws Exception {
+  public void testGetReadableFileBadPath() throws Exception {
+    try {
+      ReadonlyFile f = fst.getReadableFile("gopher://test", null);
+      fail("Expected IllegalArgumentException, but got none.");
+    } catch (IllegalArgumentException expected) {
+      assertTrue(expected.getMessage().contains("Invalid path"));
+    }
+  }
+
+  public void testUserPasswordRequired() throws Exception {
     assertFalse(fst.isUserPasswordRequired());
+  }
+
+  public void testSupportsAcls() {
+    assertFalse(fst.supportsAcls());
   }
 }

@@ -22,9 +22,12 @@ import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.SecureDocument;
 import com.google.enterprise.connector.spi.SimpleTraversalContext;
+import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalSchedule;
+import com.google.enterprise.connector.spi.Value;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import junit.framework.TestCase;
@@ -40,7 +43,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class FileListerTest extends TestCase {
-
   private static final List<String> INCLUDE_ALL_PATTERNS = ImmutableList.of("/");
   private static final List<String> EXCLUDE_NONE_PATTERNS = ImmutableList.of();
   private static final TraversalSchedule TRAVERSAL_SCHEDULE =
@@ -189,6 +191,14 @@ public class FileListerTest extends TestCase {
     builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d1");
     builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d2");
     builder.addDir(d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
+    runLister(root);
+  }
+
+  public void testRootShareAcl() throws Exception {
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
+    List<String> empty = Collections.emptyList();
+    root.setShareAcl(Acl.newAcl(empty, Collections.singletonList("wheel"),
+                                empty, empty));
     runLister(root);
   }
 
@@ -531,8 +541,16 @@ public class FileListerTest extends TestCase {
     /* @Override */
     public void take(Document document)
         throws DocumentAcceptorException, RepositoryException {
-      assertTrue(document instanceof FileDocument);
-      add((FileDocument) document);
+      if (document instanceof FileDocument) {
+        add((FileDocument) document);
+      } else if (document instanceof SecureDocument) {
+        assertEquals(0, size());
+        assertEquals("ACL", Value.getSingleValueString(document,
+            SpiConstants.PROPNAME_DOCUMENTTYPE));
+      } else {
+        fail("Document is not instanceof FileDocument or SecureDocument: " +
+            Value.getSingleValueString(document, SpiConstants.PROPNAME_DOCID));
+      }
     }
 
     /* @Override */

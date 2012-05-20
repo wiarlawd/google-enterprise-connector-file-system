@@ -38,6 +38,7 @@ public class AclTest extends TestCase {
     assertNull(acl.getDenyUsers());
     assertEquals(acl, acl);
     assertTrue(acl.isDeterminate());
+    assertTrue(acl.toString().contains("isPublic = true"));
   }
 
   public void testUsersAndGroupsAcl() throws Exception {
@@ -56,11 +57,24 @@ public class AclTest extends TestCase {
     assertEquals(denygroups, toStringList(acl.getDenyGroups()));
     assertEquals(acl, acl);
     assertEquals(acl, Acl.newAcl(users, groups, denyusers, denygroups));
-    if (users == null && groups == null 
+    if (users == null && groups == null
         && denyusers == null && denygroups == null) {
       assertFalse(acl.isDeterminate());
     } else {
       assertTrue(acl.isDeterminate());
+    }
+    assertToStringContains(acl, users);
+    assertToStringContains(acl, groups);
+    assertToStringContains(acl, denyusers);
+    assertToStringContains(acl, denygroups);
+  }
+
+  private void assertToStringContains(Acl acl, List<String> names) {
+    String str = acl.toString();
+    if (names != null) {
+      for (String name : names) {
+        assertTrue(str.contains(name));
+      }
     }
   }
 
@@ -96,54 +110,60 @@ public class AclTest extends TestCase {
     validateAcl(users, groups, denyusers, denygroups);
   }
 
-  public void testEquals() throws Exception {
-    Acl acl = Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("barney"), Collections.singletonList("pebbles"), 
-        Collections.singletonList("bamm"));
-    assertTrue(acl.equals(acl));
+  public void testEqualsAndHashCode() throws Exception {
+    Acl acl = newAcl("fred", "barney", "pebbles", "bambam");
+    assertAclsEqual(acl, acl);
+    assertAclsEqual(acl, newAcl("fred", "barney", "pebbles", "bambam"));
     assertFalse(acl.equals(null));
     assertFalse(acl.equals(new Object()));
 
-    assertTrue(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("barney"), Collections.singletonList("pebbles"),
-        Collections.singletonList("bamm"))));
-    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("pebbles"),
-        Collections.singletonList("barney"), Collections.singletonList("pebbles"),
-        Collections.singletonList("bamm"))));
-    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("barney"), null, null)));
-    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("wilma"),
-        Collections.singletonList("barney"), null, null)));
-    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("barney"),
-        Collections.singletonList("fred"), Collections.singletonList("pebbles"),
-        null)));
-    assertFalse(acl.equals(Acl.newAcl(Collections.singletonList("fred"),
-        Collections.singletonList("barney"), Collections.singletonList("pebbles"),
-        Collections.singletonList("wilma"))));
+    Acl nullAcl = newAcl(null, null, null, null);
+    assertAclsEqual(nullAcl, nullAcl);
+    assertFalse(nullAcl.equals(null));
+    assertFalse(nullAcl.equals(new Object()));
+    assertAclsEqual(nullAcl, newAcl(null, null, null, null));
 
-    Acl publicAcl = Acl.newPublicAcl();
-    assertFalse(acl.equals(publicAcl));
-    assertFalse(publicAcl.equals(acl));
-    assertFalse(publicAcl.equals(
-        Acl.newAcl(Collections.singletonList("fred"), null, null, null)));
+    Acl[] acls = new Acl[] { acl, nullAcl, Acl.newPublicAcl(),
+        newAcl("pebbles", "barney", "pebbles", "bambam"),
+        newAcl("fred", "barney", null, null),
+        newAcl("wilma", "barney", null, null),
+        newAcl("barney", "fred", "pebbles", null),
+        newAcl("fred", "barney", "pebbles", "wilma"),
+        newAcl("barney", null, null, null),
+        newAcl(null, "barney", null, null),
+        newAcl(null, null, "barney", null),
+        newAcl(null, null, null, "barney") };
 
-    // test with null acl
-    Acl nullacl = Acl.newAcl((List<String>) null, (List<String>) null, 
-        (List<String>) null, (List<String>) null);
-    assertTrue(nullacl.equals(nullacl));
-    assertFalse(nullacl.equals(null));
-    assertFalse(nullacl.equals(new Object()));
-    assertTrue(nullacl.equals(Acl.newAcl((List<String>) null, (List<String>) null, 
-        (List<String>) null, (List<String>) null)));
+    for (int i = 0; i < acls.length; i++) {
+      for (int j = 0; j < acls.length; j++) {
+        if (i == j) {
+          assertAclsEqual(acls[i], acls[j]);
+        } else {
+          assertAclsNotEqual(acls[i], acls[j]);
+        }
+      }
+    }
+  }
 
-    assertFalse(nullacl.equals(Acl.newAcl(Collections.singletonList("barney"), 
-        null, null, null)));
-    assertFalse(nullacl.equals(Acl.newAcl(null, 
-        Collections.singletonList("barney"), null, null)));
-    assertFalse(nullacl.equals(Acl.newAcl(null, 
-        null, Collections.singletonList("barney"), null)));
-    assertFalse(nullacl.equals(Acl.newAcl(null, 
-        null, null, Collections.singletonList("barney"))));
+  private Acl newAcl(String user, String group, String denyUser,
+                     String denyGroup) {
+    return Acl.newAcl((user == null) ? null : Collections.singletonList(user),
+        (group == null) ? null : Collections.singletonList(group),
+        (denyUser == null) ? null : Collections.singletonList(denyUser),
+        (denyGroup == null) ? null : Collections.singletonList(denyGroup));
+  }
+
+  private void assertAclsEqual(Acl acl1, Acl acl2) {
+    assertEquals(acl1, acl2);
+    assertEquals(acl2, acl1);
+    assertEquals(acl1.hashCode(), acl2.hashCode());
+  }
+
+  private void assertAclsNotEqual(Acl acl1, Acl acl2) {
+    String msg = "acl1 = " + acl1 + "  acl2 = " + acl2;
+    assertFalse(msg, acl1.equals(acl2));
+    assertFalse(msg, acl2.equals(acl1));
+    assertFalse(msg, (acl1.hashCode() == acl2.hashCode()));
   }
 
   /** Returns a List of the principals' names. */
