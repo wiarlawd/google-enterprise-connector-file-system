@@ -39,8 +39,8 @@ public class FileSessionTest extends TestCase {
     FileSystemTypeRegistry fileSystemTypeRegistry = new FileSystemTypeRegistry(
         Collections.singletonList(new JavaFileSystemType()));
     TraversalContext traversalContext = new SimpleTraversalContext();
+    MimeTypeDetector.setTraversalContext(traversalContext);
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
-    mimeTypeDetector.setTraversalContext(traversalContext);
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     FileSystemPropertyManager propertyManager =
         new TestFileSystemPropertyManager(false);

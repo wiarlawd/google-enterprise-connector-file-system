@@ -63,7 +63,7 @@ public class FileListerTest extends TestCase {
 
     traversalContext = new SimpleTraversalContext();
     traversalContext.setSupportsInheritedAcls(true);
-    MIME_TYPE_DETECTOR.setTraversalContext(traversalContext);
+    MimeTypeDetector.setTraversalContext(traversalContext);
   }
 
   /** Run the Lister and validate the results. */

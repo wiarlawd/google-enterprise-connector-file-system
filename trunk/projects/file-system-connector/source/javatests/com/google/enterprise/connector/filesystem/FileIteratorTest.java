@@ -41,8 +41,8 @@ public class FileIteratorTest extends TestCase {
     traversalContext = new SimpleTraversalContext();
     traversalContext.setSupportsInheritedAcls(true);
 
+    MimeTypeDetector.setTraversalContext(traversalContext);
     mimeTypeDetector = new MimeTypeDetector();
-    mimeTypeDetector.setTraversalContext(traversalContext);
 
     propertyManager = new TestFileSystemPropertyManager();
   }

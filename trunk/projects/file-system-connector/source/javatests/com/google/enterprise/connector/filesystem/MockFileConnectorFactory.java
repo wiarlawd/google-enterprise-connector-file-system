@@ -42,8 +42,8 @@ public class MockFileConnectorFactory implements ConnectorFactory {
         new TestFileSystemPropertyManager();
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
     TraversalContext traversalContext = new FakeTraversalContext();
+    MimeTypeDetector.setTraversalContext(traversalContext);
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
-    mimeTypeDetector.setTraversalContext(traversalContext);
 
     DocumentContext context = new DocumentContext(
         null, null, null, mimeTypeDetector, propertyManager,

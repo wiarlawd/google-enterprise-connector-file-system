@@ -293,8 +293,8 @@ public class FileDocumentTest extends TestCase {
 
   private DocumentContext makeContext(boolean pushAcls,
       boolean markAllDocumentsPublic) {
+    MimeTypeDetector.setTraversalContext(new FakeTraversalContext());
     MimeTypeDetector mimeTypeDetector = new MimeTypeDetector();
-    mimeTypeDetector.setTraversalContext(new FakeTraversalContext());
     DocumentContext result = new DocumentContext(
         null, null, null, mimeTypeDetector,
         new TestFileSystemPropertyManager(pushAcls, markAllDocumentsPublic),
