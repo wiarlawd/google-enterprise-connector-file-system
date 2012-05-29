@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -45,21 +46,25 @@ public class SmbReadonlyFile
       Logger.getLogger(SmbReadonlyFile.class.getName());
 
   /** The delegate file implementation. */
-  private final SmbFileDelegate delegate;
+  @VisibleForTesting
+  protected final SmbFileDelegate delegate;
 
   /** The Credentials used to access the SMB share. */
-  private final Credentials credentials;
+  @VisibleForTesting
+  protected final Credentials credentials;
 
   /**
    * Implementation of {@link SmbFileProperties} that gives the
    * required properties for SMB crawling.
    */
-  private final SmbFileProperties smbPropertyFetcher;
+  @VisibleForTesting
+  protected final SmbFileProperties smbPropertyFetcher;
 
   /**
    * Cached AclBuilder for this file.
    */
-  private AclBuilder aclBuilder;
+  @VisibleForTesting
+  protected AclBuilder aclBuilder;
 
   /**
    * @param type a FileSystemType instance
@@ -85,7 +90,8 @@ public class SmbReadonlyFile
    *        for SMB crawling.
    * @throws RepositoryDocumentException
    */
-  private SmbReadonlyFile(FileSystemType type, SmbFileDelegate delegate,
+  @VisibleForTesting
+  SmbReadonlyFile(FileSystemType type, SmbFileDelegate delegate,
       Credentials credentials, SmbFileProperties propertyFetcher) {
     super(type, delegate, propertyFetcher.isLastAccessResetFlagForSmb());
     this.delegate = delegate;
@@ -189,8 +195,7 @@ public class SmbReadonlyFile
       LOG.warning("Failed to get ACL: " + e.getMessage());
       LOG.log(Level.FINEST, "Got SmbException while getting ACLs", e);
       return Acl.USE_HEAD_REQUEST;
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
               + "getting ACLs for " + this.getPath(), e);
       throw e;
@@ -236,7 +241,8 @@ public class SmbReadonlyFile
     return exists() ? super.isDirectory() : false;
   }
 
-  private synchronized AclBuilder getAclBuilder() {
+  @VisibleForTesting
+  protected synchronized AclBuilder getAclBuilder() {
     if (aclBuilder == null) {
       if (smbPropertyFetcher.supportsInheritedAcls()) {
         aclBuilder = new SmbAclBuilder(delegate, smbPropertyFetcher);

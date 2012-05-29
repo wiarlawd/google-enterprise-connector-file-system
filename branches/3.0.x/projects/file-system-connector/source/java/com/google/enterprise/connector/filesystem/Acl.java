@@ -143,13 +143,16 @@ public class Acl {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((groups == null) ? 0 : groups.hashCode());
     result = prime * result + (isPublic ? 1231 : 1237);
-    result = prime * result + ((users == null) ? 0 : users.hashCode());
-    result = prime * result + ((denyusers == null) ? 0 : denyusers.hashCode());
-    result = prime * result + ((denygroups == null)
-        ? 0 : denygroups.hashCode());
+    result = prime * result + hashCollection(users);
+    result = prime * result + hashCollection(groups);
+    result = prime * result + hashCollection(denyusers);
+    result = prime * result + hashCollection(denygroups);
     return result;
+  }
+
+  private static int hashCollection(Collection<Principal> c) {
+    return (c == null) ? 0 : new ArrayList<Principal>(c).hashCode();
   }
 
   @Override
@@ -164,7 +167,8 @@ public class Acl {
       return false;
     }
     Acl other = (Acl) obj;
-    return equalCollections(users, other.users) &&
+    return (isPublic == other.isPublic) &&
+      equalCollections(users, other.users) &&
       equalCollections(groups, other.groups) &&
       equalCollections(denyusers, other.denyusers) &&
       equalCollections(denygroups, other.denygroups);

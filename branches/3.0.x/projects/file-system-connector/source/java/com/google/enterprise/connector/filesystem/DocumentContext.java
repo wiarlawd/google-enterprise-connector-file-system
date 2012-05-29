@@ -91,9 +91,6 @@ public class DocumentContext {
     if (this.traversalContext == null) {
       traversalContext = context;
       propertyManager.setSupportsInheritedAcls(context.supportsInheritedAcls());
-      if (mimeTypeDetector != null) {
-        mimeTypeDetector.setTraversalContext(context);
-      }
     }
   }
 

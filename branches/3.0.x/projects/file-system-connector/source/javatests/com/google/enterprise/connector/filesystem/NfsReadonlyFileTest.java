@@ -14,43 +14,33 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
+ * Tests for {@link NfsReadonlyFile}.
+ * <p/>
+ * <img src="doc-files/ReadonlyFileTestsUML.png" alt="ReadonlyFile Test Class Hierarchy"/>
  */
-public class NfsReadonlyFileTest extends JavaReadonlyFileTest {
+public class NfsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
+    <NfsFileSystemType, NfsReadonlyFile, NfsFileDelegate> {
 
-  @Override
-  protected void makeReadonlyFiles() {
-    type = new NfsFileSystemType();
-    readonlyRoot = new NfsReadonlyFile(type, root.getAbsolutePath());
-    readonlyFile1 = new NfsReadonlyFile(type, file1.getAbsolutePath());
-    readonlyOtherFile1 = new NfsReadonlyFile(type, file1.getAbsolutePath());
-    readonlyTest1 = new NfsReadonlyFile(type, test1.getAbsolutePath());
-    readonlyTest2 = new NfsReadonlyFile(type, test2.getAbsolutePath());
-    readonlyDirA = new NfsReadonlyFile(type, dirA.getAbsolutePath());
-    readonlyDirB = new NfsReadonlyFile(type, dirB.getAbsolutePath());
+  protected NfsFileSystemType getFileSystemType() {
+    return new NfsFileSystemType();
   }
 
-  /** TODO: Why NFS getPath follows different rules wrt trailing slash? */
-  @Override
-  public void testGetPath() {
-    assertEquals(root.getAbsolutePath(), readonlyRoot.getPath());
-    assertEquals(file1.getAbsolutePath(), readonlyFile1.getPath());
-    assertEquals(test1.getAbsolutePath(), readonlyTest1.getPath());
-    assertEquals(test2.getAbsolutePath(), readonlyTest2.getPath());
-    assertEquals(dirA.getAbsolutePath(), readonlyDirA.getPath());
+  protected String getAbsolutePath(NfsFileDelegate delegate)
+      throws IOException {
+    return delegate.getAbsolutePath();
   }
 
-  @Override
-  public void testListFiles() throws Exception {
-    List<? extends ReadonlyFile<?>> x = readonlyRoot.listFiles();
-    assertNotNull(x);
-    assertEquals(5, x.size());
-    assertEquals(dirA.getAbsolutePath(), x.get(0).getPath());
-    assertEquals(fileA.getAbsolutePath(), x.get(1).getPath());
-    assertEquals(dirB.getAbsolutePath(), x.get(2).getPath());
-    assertEquals(file1.getAbsolutePath(), x.get(3).getPath());
-    assertEquals(file2.getAbsolutePath(), x.get(4).getPath());
+  protected NfsFileDelegate getDelegate(String absolutePath)
+      throws IOException {
+    return new NfsFileDelegate(absolutePath);
+  }
+
+  protected NfsFileDelegate getDelegate(NfsFileDelegate parent, String name)
+      throws IOException {
+    return new NfsFileDelegate(parent, name);
   }
 }

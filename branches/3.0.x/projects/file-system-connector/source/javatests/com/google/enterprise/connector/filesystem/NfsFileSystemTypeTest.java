@@ -42,7 +42,7 @@ public class NfsFileSystemTypeTest extends JavaFileSystemTypeTest {
   }
 
   @Override
-  public void testUserPassowrdRequired() throws Exception {
+  public void testUserPasswordRequired() throws Exception {
     assertTrue(fst.isUserPasswordRequired());
   }
 }

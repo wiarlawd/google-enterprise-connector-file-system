@@ -55,8 +55,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    * Locations from where MockReadonlyFile may throw its exceptions.
    */
   public static enum Where { NONE, ALL, IS_DIRECTORY, IS_REGULAR_FILE,
-      GET_LAST_MODIFIED, GET_ACL, CAN_READ, LIST_FILES, GET_DISPLAY_URL,
-      LENGTH, EXISTS, GET_INPUT_STREAM }
+      GET_LAST_MODIFIED, GET_ACL, GET_SHARE_ACL, GET_INHERITED_ACL, CAN_READ,
+      LIST_FILES, GET_DISPLAY_URL, LENGTH, EXISTS, GET_INPUT_STREAM }
 
   void setException(Where where, Exception exception) {
     this.where = where;
@@ -104,8 +104,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    * @param name
    * @param isDir
    */
-  private MockReadonlyFile(MockReadonlyFile parent, String name, boolean isDir,
-      Clock clock) {
+  protected MockReadonlyFile(MockReadonlyFile parent, String name,
+      boolean isDir, Clock clock) {
     if (parent == null && name.endsWith(SEPARATOR)) {
       throw new RuntimeException("mock root ends with " + SEPARATOR);
     }
@@ -232,6 +232,20 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     maybeThrowRepositoryException(Where.GET_ACL);
     maybeThrowIOException(Where.GET_ACL);
     return acl;
+  }
+
+  @Override
+  public Acl getShareAcl() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.GET_SHARE_ACL);
+    maybeThrowIOException(Where.GET_SHARE_ACL);
+    return shareAcl;
+  }
+
+  @Override
+  public Acl getInheritedAcl() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.GET_INHERITED_ACL);
+    maybeThrowIOException(Where.GET_INHERITED_ACL);
+    return inheritedAcl;
   }
 
   public void setAcl(Acl acl) {
@@ -392,15 +406,5 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    */
   public void setExists(boolean exists) {
     this.exists = exists;
-  }
-
-  @Override
-  public Acl getShareAcl() throws IOException {
-    return null;
-  }
-
-  @Override
-  public Acl getInheritedAcl() throws IOException {
-    return null;
   }
 }

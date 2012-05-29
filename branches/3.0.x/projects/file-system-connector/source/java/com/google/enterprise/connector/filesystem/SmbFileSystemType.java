@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -41,23 +42,29 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
   private static final Logger LOG =
       Logger.getLogger(SmbFileSystemType.class.getName());
 
+  /**
+   * Configures the jcifs library by loading configuration properties from
+   * the properties file with resource name
+   * {@link #JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME}.
+   */
   static {
-    configureJcifs();
+    configureJcifs(FileConnectorType.class.getResourceAsStream(
+                   JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME));
   }
 
-  private final SmbFileProperties propertyFetcher;
+  @VisibleForTesting
+  protected final SmbFileProperties propertyFetcher;
 
   /**
-   * Configures the jcifs library by loading configuration properties from the
-   * properties file with resource name
-   * {@link #JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME}. Note that this must
-   * be called before the jcifs library for this class loader is used.
+   * Configures the jcifs library by loading configuration properties from
+   * the supplied InputStream.  Note that this must be called before the jcifs
+   * library for this class loader is used.
    * Otherwise this function has no effect.
+   *
+   * @param is an InputStream, may be null
    */
-  private static void configureJcifs() {
-    InputStream is =
-        FileConnectorType.class.getResourceAsStream(
-            JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME);
+  @VisibleForTesting
+  static void configureJcifs(InputStream is) {
     if (is == null) {
       LOG.info("Resouce " + JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME
           + " not found. Accepting default jcifs configuration.");
@@ -120,7 +127,7 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
         throw new WrongSmbTypeException("Wrong SMB type", null);
       }
       return result;
-    } catch (FilesystemRepositoryDocumentException e) {
+    } catch (RepositoryDocumentException e) {
       LOG.info("Validation error occured: " + e.getMessage());
       throw e;
     }

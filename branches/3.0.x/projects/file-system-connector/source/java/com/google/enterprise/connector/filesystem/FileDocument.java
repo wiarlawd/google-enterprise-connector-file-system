@@ -210,7 +210,7 @@ public class FileDocument implements Document {
    * Adds ACL properties to the property map.
    */
   private void addAclProperties(Acl acl) {
-    if (!acl.isDeterminate()) {
+    if (acl == null || !acl.isDeterminate()) {
       return;
     }
     if (acl.getUsers() != null) {

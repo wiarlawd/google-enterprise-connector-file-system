@@ -43,7 +43,7 @@ public class FileRetrieverTest extends TestCase {
       new MimeTypeDetector();
 
   static {
-    MIME_TYPE_DETECTOR.setTraversalContext(TRAVERSAL_CONTEXT);
+    MimeTypeDetector.setTraversalContext(TRAVERSAL_CONTEXT);
   }
 
   private MockReadonlyFile root;
