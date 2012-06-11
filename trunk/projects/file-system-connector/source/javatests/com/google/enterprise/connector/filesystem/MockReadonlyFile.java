@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.Clock;
 import com.google.enterprise.connector.util.SystemClock;
@@ -83,14 +84,14 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   /** Maybe throw one of listFiles() many exceptions. */
   private void maybeThrowListingException() throws RepositoryException,
-    DirectoryListingException, IOException, InsufficientAccessException {
+    DirectoryListingException, IOException {
     if (where == Where.ALL || where == Where.LIST_FILES) {
       if (exception instanceof RepositoryException)
         throw (RepositoryException) exception;
       else if (exception instanceof DirectoryListingException)
         throw (DirectoryListingException) exception;
-      else if (exception instanceof InsufficientAccessException)
-        throw (InsufficientAccessException) exception;
+      else if (exception instanceof DocumentAccessException)
+        throw (DocumentAccessException) exception;
       else if (exception instanceof IOException)
         throw (IOException) exception;
     }
@@ -362,7 +363,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   /* @Override */
   public List<MockReadonlyFile> listFiles() throws DirectoryListingException,
-      InsufficientAccessException, RepositoryException, IOException {
+      RepositoryException, IOException {
     maybeThrowListingException();
     if (!isDir) {
       throw new IOException("not a directory: " + getPath());

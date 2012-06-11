@@ -16,6 +16,8 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.base.Strings;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
@@ -221,9 +223,9 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
     checkGeneralError(file, SmbException.NT_STATUS_LOGON_FAILURE,
                       InvalidUserException.class);
     checkGeneralError(file, SmbException.NT_STATUS_ACCESS_DENIED,
-                      InsufficientAccessException.class);
+                      DocumentAccessException.class);
     checkGeneralError(file, SmbException.NT_STATUS_BAD_NETWORK_NAME,
-                      NonExistentResourceException.class);
+                      DocumentNotFoundException.class);
   }
 
   private void checkGeneralError(TestSmbReadonlyFile file, int ntStatus,

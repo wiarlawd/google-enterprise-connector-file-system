@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import jcifs.smb.SmbException;
@@ -130,8 +132,8 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.getType()).andReturn(SmbFile.TYPE_SHARE).anyTimes();
     try {
       ReadonlyFile f = fst.getReadableFile("smb://root/non-existent", null);
-      fail("Expected NonExistentResourceException, but got none.");
-    } catch (NonExistentResourceException expected) {
+      fail("Expected DocumentNotFoundException, but got none.");
+    } catch (DocumentNotFoundException expected) {
       // Expected.
     }
   }
@@ -143,8 +145,8 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.getType()).andReturn(SmbFile.TYPE_SHARE).anyTimes();
     try {
       ReadonlyFile f = fst.getReadableFile("smb://root/", null);
-      fail("Expected InsufficientAccessException, but got none.");
-    } catch (InsufficientAccessException expected) {
+      fail("Expected DocumentAccessException, but got none.");
+    } catch (DocumentAccessException expected) {
       // Expected.
     }
   }

@@ -223,7 +223,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
 
   /* @Override */
   public List<T> listFiles() throws IOException, RepositoryException,
-      DirectoryListingException, InsufficientAccessException {
+      DirectoryListingException {
     String[] fileNames;
     try {
       fileNames = delegate.list();

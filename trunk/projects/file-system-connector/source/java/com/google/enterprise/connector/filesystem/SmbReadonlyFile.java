@@ -16,6 +16,8 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
@@ -159,10 +161,10 @@ public class SmbReadonlyFile
           "Please specify correct user name and password for " + getPath(),
           smbe);
     } else if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-      throw new InsufficientAccessException(
+      throw new DocumentAccessException(
           "Access denied for " + getPath(), smbe);
     } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
-      throw new NonExistentResourceException(
+      throw new DocumentNotFoundException(
           "Path does not exist: " + getPath(), smbe);
     }
   }

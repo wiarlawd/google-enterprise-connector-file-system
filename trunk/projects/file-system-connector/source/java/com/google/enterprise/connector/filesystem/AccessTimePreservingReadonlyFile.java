@@ -111,7 +111,7 @@ public abstract class
 
   @Override
   public List<T> listFiles() throws IOException, RepositoryException,
-      DirectoryListingException, InsufficientAccessException {
+      DirectoryListingException {
     if (accessTimeResetFlag) {
       addToMap(this);
       try {

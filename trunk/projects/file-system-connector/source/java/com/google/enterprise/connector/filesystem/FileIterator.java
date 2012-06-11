@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
+import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.MimeTypeDetector;
@@ -212,7 +213,7 @@ public class FileIterator {
     } catch (IOException e) {
       LOGGER.log(Level.WARNING, "Failed to list files in " + dir.getPath(),
                  e);
-    } catch (InsufficientAccessException e) {
+    } catch (DocumentAccessException e) {
       LOGGER.log(Level.WARNING,
                  "Due to insufficient privileges, failed to list files in "
                  + dir.getPath(), e);

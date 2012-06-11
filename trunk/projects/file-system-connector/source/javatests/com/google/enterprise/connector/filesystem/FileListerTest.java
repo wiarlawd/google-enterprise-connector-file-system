@@ -20,6 +20,7 @@ import com.google.enterprise.connector.filesystem.MockDirectoryBuilder.Configure
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
 import com.google.enterprise.connector.spi.DocumentAcceptorException;
+import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.SecureDocument;
@@ -393,9 +394,9 @@ public class FileListerTest extends TestCase {
     testRootListFilesException(new IOException("Test Exception"));
   }
 
-  public void testRootListFilesInsufficientAccessException() throws Exception {
+  public void testRootListFilesDocumentAccessException() throws Exception {
     testRootListFilesException(
-        new InsufficientAccessException("Test Exception"));
+        new DocumentAccessException("Test Exception"));
   }
 
   private void testRootListFilesException(final Exception e) throws Exception {
@@ -441,13 +442,13 @@ public class FileListerTest extends TestCase {
     runLister(root);
   }
 
-  public void testNonRootInsufficientAccess() throws Exception {
+  public void testNonRootDocumentAccessException() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) {
           if ("top-secret".equals(file.getName())) {
             file.setCanRead(false);
             file.setException(MockReadonlyFile.Where.LIST_FILES,
-                 new InsufficientAccessException("Test Exception"));
+                 new DocumentAccessException("Test Exception"));
           }
           return false;
         }
