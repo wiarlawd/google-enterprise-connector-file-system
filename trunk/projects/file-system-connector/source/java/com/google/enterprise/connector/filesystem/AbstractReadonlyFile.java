@@ -162,10 +162,6 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       throw IOExceptionHelper.newIOException(
           "Failed to get last modified time for " + getPath(), e);
     }
-    if (lastModified == 0) {
-      throw new IOException("Failed to get last modified time for "
-                            + getPath());
-    }
     return lastModified;
   }
 

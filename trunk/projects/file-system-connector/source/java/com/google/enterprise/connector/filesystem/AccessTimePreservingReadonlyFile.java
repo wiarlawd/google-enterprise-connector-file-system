@@ -73,8 +73,8 @@ public abstract class
               new Object[] { delegate.getPath(), accessTime });
       return accessTime;
     } catch (IOException e) {
-      LOG.log(Level.FINEST, "Failed to get last access time for "
-              + delegate.getPath(), e);
+      LOG.log(Level.FINEST, "Failed to get the last access time for {0}: {1}",
+              new Object[] { delegate.getPath(), e });
     }
     return null;
   }
@@ -85,13 +85,13 @@ public abstract class
   @VisibleForTesting
   protected void setLastAccessTime(FileTime accessTime) {
     if (accessTime != null) {
-      LOG.log(Level.FINEST, "Setting last access time for {0} as {1}",
+      LOG.log(Level.FINEST, "Setting the last access time for {0} as {1}",
               new Object[] { delegate.getPath(), accessTime });
       try {
         delegate.setLastAccessTime(accessTime);
       } catch (IOException e) {
-        LOG.log(Level.WARNING, "Failed to set the last access time for "
-                + delegate.getPath(), e);
+        LOG.log(Level.FINEST, "Failed to set the last access time for {0}: {1}",
+                new Object[] { delegate.getPath(), e });
       }
     }
   }
