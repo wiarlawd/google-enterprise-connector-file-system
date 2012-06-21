@@ -374,23 +374,22 @@ class FileLister implements Lister, TraversalContextAware,
     private Document createRootShareAcl(ReadonlyFile<?> root) {
       try {
         Acl shareAcl = root.getShareAcl();
-        if (shareAcl != null) {
+        if (shareAcl != null && !shareAcl.equals(Acl.USE_HEAD_REQUEST)) {
           Map<String, List<Value>> aclValues = Maps.newHashMap();
-          aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
-              getPrincipalValueList(shareAcl.getUsers()));
-          aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
-              getPrincipalValueList(shareAcl.getGroups()));
-          aclValues.put(SpiConstants.PROPNAME_ACLDENYUSERS,
-              getPrincipalValueList(shareAcl.getDenyUsers()));
-          aclValues.put(SpiConstants.PROPNAME_ACLDENYGROUPS,
-              getPrincipalValueList(shareAcl.getDenyGroups()));
-          aclValues.put(SpiConstants.PROPNAME_DOCID,
-              getStringValueList(FileDocument.getRootShareAclId(root)));
-          aclValues.put(SpiConstants.PROPNAME_FEEDTYPE,
-              getStringValueList(FeedType.CONTENTURL.toString()));
-          aclValues.put(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
-              getStringValueList(
-                  SpiConstants.AclInheritanceType.AND_BOTH_PERMIT.toString()));
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLUSERS,
+              shareAcl.getUsers());
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLGROUPS,
+              shareAcl.getGroups());
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLDENYUSERS,
+              shareAcl.getDenyUsers());
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLDENYGROUPS,
+              shareAcl.getDenyGroups());
+          putStringValue(aclValues, SpiConstants.PROPNAME_DOCID,
+              FileDocument.getRootShareAclId(root));
+          putStringValue(aclValues, SpiConstants.PROPNAME_FEEDTYPE,
+              FeedType.CONTENTURL.toString());
+          putStringValue(aclValues, SpiConstants.PROPNAME_ACLINHERITANCETYPE,
+              SpiConstants.AclInheritanceType.AND_BOTH_PERMIT.toString());
           return SecureDocument.createAcl(aclValues);
         } else {
           return null;
@@ -406,18 +405,26 @@ class FileLister implements Lister, TraversalContextAware,
       }
     }
 
-    /** Creates a value list from a list of Principal values. */
-    private List<Value> getPrincipalValueList(Collection<Principal> principals) {
-      List<Value> valueList = Lists.newArrayListWithCapacity(principals.size());
-      for (Principal principal : principals) {
-        valueList.add(Value.getPrincipalValue(principal));
+    /** Adds an optional ACL Property of Principal values to the map. */
+    private void putPrincipalValues(Map<String, List<Value>> aclValues,
+        String key, Collection<Principal> principals) {
+      if (principals != null) {
+        List<Value> valueList =
+            Lists.newArrayListWithCapacity(principals.size());
+        for (Principal principal : principals) {
+          valueList.add(Value.getPrincipalValue(principal));
+        }
+        aclValues.put(key, valueList);
       }
-      return valueList;
     }
 
-    /** Creates a value list from single string. */
-    private List<Value> getStringValueList(String value) {
-      return Collections.singletonList(Value.getStringValue(value));
+    /** Adds an optional String Property to the map. */
+    private void putStringValue(Map<String, List<Value>> aclValues,
+        String key, String value) {
+      if (value != null) {
+        aclValues.put(key,
+            Collections.singletonList(Value.getStringValue(value)));
+      }
     }
   }
 }
