@@ -78,6 +78,29 @@ class WindowsFileTimeUtil {
     implements FileTime {}
 
   /**
+   * Returns the newer of either the create timestamp or the last write
+   * timestamp of the file, as milliseconds since the epoc 01 January 1970.
+   * <p>
+   * According to <a href="http://support.microsoft.com/kb/299648">this
+   * Microsoft document</a>, moving or renaming a file within the same file
+   * system does not change either the last-modify timestamp of a file or
+   * the create timestamp of a file.  However, copying a file or moving it
+   * across filesystems (which involves an implicit copy) sets a new create
+   * timestamp, but does not alter the last modified timestamp.
+   *
+   * @param fileName Name of the file whose time is to be fetched
+   * @return last modify time of the file as milliseconds since the epoc
+   *         01 January 1970
+   */
+  static long getLastModifiedTime(String fileName) throws IOException {
+    WindowsFileTime createTime = new WindowsFileTime();
+    WindowsFileTime modifyTime = new WindowsFileTime();
+    getFileTimes(fileName, createTime, null, modifyTime);
+    return Math.max(createTime.toDate().getTime(), 
+                    modifyTime.toDate().getTime());
+  }
+
+  /**
    * Method to get the last access time of a WINDOWS file.
    *
    * @param fileName Name of the file whose time is to be fetched
@@ -85,23 +108,9 @@ class WindowsFileTimeUtil {
    *         or null if the filetime can not be retrieved
    */
   static FileTime getFileAccessTime(String fileName) throws IOException {
-    if (win32 == null) {
-      throw new IOException("Not a native Windows environment.");
-    }
-    WinNT.HANDLE file = openFile(fileName, GENERIC_READ);
-    try {
-      WindowsFileTime lastAccessTime = new WindowsFileTime();
-      if (win32.GetFileTime(file, null, lastAccessTime, null)) {
-        return lastAccessTime;
-      } else {
-        int errorCode = win32.GetLastError();
-        throw new IOException("Error code " + errorCode + " returned while "
-            + "getting the last access time for file " + fileName);
-      }
-    } finally {
-      // TODO: Figure out whether we need to do this.
-      win32.CloseHandle(file);
-    }
+    WindowsFileTime lastAccessTime = new WindowsFileTime();
+    getFileTimes(fileName, null, lastAccessTime, null);
+    return lastAccessTime;
   }
 
   /**
@@ -128,6 +137,36 @@ class WindowsFileTimeUtil {
       }
     } finally {
       // TODO Figure out whether we need to do this.
+      win32.CloseHandle(file);
+    }
+  }
+
+  /**
+   * Get the file create, modify, and access times of a WINDOWS file.
+   *
+   * @param fileName Name of the file whose time is to be fetched
+   * @param createTime a WindowsFileTime to populate with the file create time
+   * @param accessTime a WindowsFileTime to populate with the file access time
+   * @param modifyTime a WindowsFileTime to populate with the file write time
+   */
+  static void getFileTimes(String fileName, WindowsFileTime createTime,
+       WindowsFileTime accessTime, WindowsFileTime modifyTime)
+       throws IOException {
+    if (win32 == null) {
+      throw new IOException("Not a native Windows environment.");
+    }
+    WinNT.HANDLE file = openFile(fileName, GENERIC_READ);
+    try {
+      WindowsFileTime lastAccessTime = new WindowsFileTime();
+      if (win32.GetFileTime(file, createTime, accessTime, modifyTime)) {
+        return;
+      } else {
+        int errorCode = win32.GetLastError();
+        throw new IOException("Error code " + errorCode + " returned while "
+            + "getting the file times for " + fileName);
+      }
+    } finally {
+      // TODO: Figure out whether we need to do this.
       win32.CloseHandle(file);
     }
   }

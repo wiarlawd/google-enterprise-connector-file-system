@@ -160,6 +160,29 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
     assertEquals(getAbsolutePath(file2), x.get(4).getPath());
   }
 
+  /**
+   * Test lastModified returns the newer of create timestamp and last modified.
+   * Windows doesn't update last modified when copying, moving files, but
+   * does update create time (in some cases).
+   */
+  @Override
+  public void testLastModified() throws Exception {
+    testLastModified(0L, 0L);
+    testLastModified(10000L, 10000L);
+    testLastModified(10000L, 12000L);
+    testLastModified(12000L, 10000L);
+  }
+
+  private void testLastModified(long createTime, long modifyTime)
+      throws Exception {
+    TestSmbReadonlyFile file = getReadonlyFileToTest();
+    SmbFileDelegate delegate = file.getDelegate();
+    expect(delegate.createTime()).andStubReturn(createTime);
+    expect(delegate.lastModified()).andStubReturn(modifyTime);
+    replay(delegate);
+    assertEquals(Math.max(createTime, modifyTime), file.getLastModified());
+  }
+
   public void testDetectServerDown() throws Exception {
     TestSmbReadonlyFile file = getReadonlyFileToTest();
     replay(file.getDelegate());
