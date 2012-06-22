@@ -189,7 +189,7 @@
         class="com.google.enterprise.connector.instantiator.EncryptedPropertyPlaceholderConfigurer">
     <property name="properties">
       <props>
-        <prop key="fulltraversal">7</prop>
+        <prop key="fulltraversal">1</prop>
         <prop key="googleGlobalNamespace"></prop>
         <prop key="googleLocalNamespace"></prop>
       </props>
