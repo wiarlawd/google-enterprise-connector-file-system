@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -84,8 +84,12 @@ public class FileListerTest extends TestCase {
   private void runLister(MockReadonlyFile root, List<String> includePatterns,
       List<String> excludePatterns, TraversalSchedule traversalSchedule,
       boolean pushAcls) throws RepositoryException {
-    final FileLister lister = newLister(root, includePatterns, excludePatterns,
-                                        traversalSchedule, pushAcls);
+    runLister(newLister(root, includePatterns, excludePatterns,
+                        traversalSchedule, pushAcls));
+  }
+
+  /** Run the Lister and validate the results. */
+  private void runLister(final FileLister lister) throws RepositoryException {
     // Let the Lister run for 1 second, then shut it down.
     Timer timer = new Timer("Shutdown Lister");
     TimerTask timerTask = new TimerTask() {
@@ -193,6 +197,23 @@ public class FileListerTest extends TestCase {
     builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d2");
     builder.addDir(d2, "d2d3", "d2d3f1", "d2d3a2", "d2d3f3");
     runLister(root);
+  }
+
+  public void testRestartTraversal() throws Exception {
+    MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1", "f2");
+    FileLister lister = newLister(root, INCLUDE_ALL_PATTERNS,
+        EXCLUDE_NONE_PATTERNS, TRAVERSAL_SCHEDULE, PUSH_ACLS);
+
+    // Run the lister and verify it feed the documents.
+    runLister(lister);
+
+    // Shutdown has already been called but we should be able to call it again.
+    assertTrue(lister.isShutdown());
+    lister.shutdown();
+
+    // Now clear the results, and run it again.
+    documentAcceptor.clear();
+    runLister(lister);
   }
 
   public void testRootShareAcl() throws Exception {
