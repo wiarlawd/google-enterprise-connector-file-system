@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.logging.NDC;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
@@ -328,11 +329,16 @@ class FileLister implements Lister, TraversalContextAware,
         return;
       }
       long startTime = clock.getTimeMillis();
+      AclProperties aclProps = context.getPropertyManager();
+      boolean returnDirectories = root.getFileSystemType().supportsAcls()
+        && aclProps.isPushAcls() && aclProps.supportsInheritedAcls()
+        && !aclProps.isMarkAllDocumentsPublic();
+
       try {
         FileIterator iter = new FileIterator(root, context,
-            getIfModifiedSince(startTime));
+            getIfModifiedSince(startTime), returnDirectories);
 
-        if (traversalContext.supportsInheritedAcls()) {
+        if (returnDirectories) {
           Document rootShareAclDoc = createRootShareAcl(root);
           if (rootShareAclDoc != null) {
             try {

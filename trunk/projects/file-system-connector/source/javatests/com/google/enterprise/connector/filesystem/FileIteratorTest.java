@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -137,7 +137,13 @@ public class FileIteratorTest extends TestCase {
         Collections.singletonList("/"), (List<String>) Collections.EMPTY_LIST);
     context.setTraversalContext(traversalContext);
 
-    FileIterator it = new FileIterator(root, context, ifModifiedSince);
+    boolean returnDirectories = root.getFileSystemType().supportsAcls()
+        && propertyManager.isPushAcls()
+        && propertyManager.supportsInheritedAcls()
+        && !propertyManager.isMarkAllDocumentsPublic();
+
+    FileIterator it =
+        new FileIterator(root, context, ifModifiedSince, returnDirectories);
     for (MockReadonlyFile file : builder.getExpected()) {
       assertTrue(it.hasNext());
       assertEquals(file.getPath(), it.next().getPath());
