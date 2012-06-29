@@ -55,7 +55,7 @@ public class FileConnectorType implements ConnectorType {
 
   private static final Logger LOG = Logger.getLogger(FileConnectorType.class.getName());
   private static final Map<String, String> EMPTY_CONFIG =
-      Collections.singletonMap("fulltraversal", "7");
+      Collections.singletonMap("fulltraversal", "1");
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
      * Our field values come from HTML input boxes which get maped to

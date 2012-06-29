@@ -72,8 +72,10 @@
 
   <target name="init" depends="svn.svn-status,svn.svn-branch-version">
     <tstamp />
+    <property name="downloads.prefix"
+              value="connector-filesystem-${svn.branch}"/>
     <property name="connector-filesystem-src.zip"
-              value="${downloads.dir}/connector-filesystem-${svn.branch}-src.zip" />
+              value="${downloads.dir}/${downloads.prefix}-src.zip" />
 
     <echo message="Note 'svn status' should return no changes to indicate" />
     <echo message="a client with no changes when building ${jar-prod.file}" />
@@ -224,7 +226,8 @@
       <fileset dir="${build-prod.dir}" includes="config/**"/>
       <fileset dir="${build-prod.dir}" includes="*.properties"/>
       <manifest>
-        <attribute name="Implementation-Title" value="File System Connector"/>
+        <attribute name="Implementation-Title"
+                   value="Google Search Appliance Connector for File Systems"/>
         <attribute name="Implementation-Version"
                    value="${version} (build ${svn.branch.version} ${TODAY})"/>
         <attribute name="Implementation-Vendor" value="Google Inc."/>
@@ -259,26 +262,30 @@
           description="Build distribution zip files.">
     <zip destfile="${connector-filesystem-src.zip}" >
       <zipfileset dir="."
-        prefix="connector-filesystem-${version}/projects/file-system-connector"
+        prefix="${downloads.prefix}/projects/file-system-connector"
         includes="${release-notes.file}, ${readme.file}, ${copying.file}, Build_ReadMe.txt, build.xml, config/**/*, third_party/**/*, License/**/*, source/**/*" />
     </zip>
     <checksum algorithm="SHA-1" file="${connector-filesystem-src.zip}" />
 
-    <zip destfile="${downloads.dir}/connector-filesystem-${svn.branch}.zip">
-      <zipfileset file="${jar-prod.file}" />
-      <zipfileset file="${release-notes.file}" />
-      <zipfileset file="${readme.file}" />
-      <zipfileset file="${copying.file}" />
-      <zipfileset file="${logging-properties.file}" prefix="Config" />
+    <zip destfile="${downloads.dir}/${downloads.prefix}.zip">
+      <zipfileset file="${jar-prod.file}" prefix="${downloads.prefix}" />
+      <zipfileset file="${release-notes.file}" prefix="${downloads.prefix}" />
+      <zipfileset file="${readme.file}" prefix="${downloads.prefix}" />
+      <zipfileset file="${copying.file}" prefix="${downloads.prefix}" />
+      <zipfileset file="${logging-properties.file}"
+                  prefix="${downloads.prefix}/Config" />
       <!-- Add connector instance xml files for manual upgrade process -->
-      <zipfileset file="config/connectorInstance.xml" prefix="Config" />
-      <zipfileset dir="${thirdparty-prod-jar.dir}" prefix="Lib">
+      <zipfileset file="config/connectorInstance.xml"
+                  prefix="${downloads.prefix}/Config" />
+      <zipfileset dir="${thirdparty-prod-jar.dir}"
+                  prefix="${downloads.prefix}/Lib">
         <include name="**/*.jar" />
       </zipfileset>
-      <zipfileset dir="${license-prod.dir}" prefix="License" />
+      <zipfileset dir="${license-prod.dir}"
+                  prefix="${downloads.prefix}/License" />
     </zip>
-    <checksum algorithm="SHA-1" 
-              file="${downloads.dir}/connector-filesystem-${svn.branch}.zip" />
+    <checksum algorithm="SHA-1"
+              file="${downloads.dir}/${downloads.prefix}.zip" />
   </target>
 
   <target name="clean" description="Deletes all build files.">

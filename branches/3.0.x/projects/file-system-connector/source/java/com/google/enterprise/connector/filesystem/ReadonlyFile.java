@@ -130,7 +130,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
    * @throws DirectoryListingException if the user is not authorized to read
    */
   public List<T> listFiles() throws IOException, DirectoryListingException,
-      InsufficientAccessException, RepositoryException;
+      RepositoryException;
 
   /**
    * Returns the display url for this file.

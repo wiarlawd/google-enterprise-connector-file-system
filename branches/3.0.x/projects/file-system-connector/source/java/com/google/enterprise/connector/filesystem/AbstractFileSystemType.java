@@ -14,6 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
 /** An abstract implementation of FileSystemType. */
@@ -40,11 +42,11 @@ public abstract class AbstractFileSystemType<T extends ReadonlyFile<T>>
     }
     T result = getFile(path, credentials);
     if (!result.exists()) {
-      throw new NonExistentResourceException("Path does not exist: " + path);
+      throw new DocumentNotFoundException("Path does not exist: " + path);
     }
     if (!result.canRead()) {
-      throw new InsufficientAccessException("User does not have access to "
-                                            + path);
+      throw new DocumentAccessException("User does not have access to "
+                                        + path);
     }
     return result;
   }

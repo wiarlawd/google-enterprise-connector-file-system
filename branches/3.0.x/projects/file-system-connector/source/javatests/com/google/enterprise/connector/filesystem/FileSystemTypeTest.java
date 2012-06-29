@@ -14,6 +14,9 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
+
 import junit.framework.TestCase;
 
 /**
@@ -71,8 +74,8 @@ public class FileSystemTypeTest extends TestCase {
     file.setExists(false);
     try {
       ReadonlyFile f = fst.getReadableFile(file.getPath(), null);
-      fail("Expected NonExistentResourceException, but got none.");
-    } catch  (NonExistentResourceException expected) {
+      fail("Expected DocumentNotFoundException, but got none.");
+    } catch  (DocumentNotFoundException expected) {
       assertTrue(expected.getMessage().contains("Path does not exist: "));
     }
   }
@@ -81,8 +84,8 @@ public class FileSystemTypeTest extends TestCase {
     file.setCanRead(false);
     try {
       ReadonlyFile f = fst.getReadableFile(file.getPath(), null);
-      fail("Expected InsufficientAccessException, but got none.");
-    } catch  (InsufficientAccessException expected) {
+      fail("Expected DocumentAccessException, but got none.");
+    } catch  (DocumentAccessException expected) {
       assertTrue(expected.getMessage().contains("User does not have access to"));
     }
   }

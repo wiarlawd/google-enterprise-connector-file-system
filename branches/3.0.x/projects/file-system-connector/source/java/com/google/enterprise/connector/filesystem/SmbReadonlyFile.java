@@ -16,6 +16,8 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
@@ -159,10 +161,10 @@ public class SmbReadonlyFile
           "Please specify correct user name and password for " + getPath(),
           smbe);
     } else if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
-      throw new InsufficientAccessException(
+      throw new DocumentAccessException(
           "Access denied for " + getPath(), smbe);
     } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
-      throw new NonExistentResourceException(
+      throw new DocumentNotFoundException(
           "Path does not exist: " + getPath(), smbe);
     }
   }
@@ -239,6 +241,22 @@ public class SmbReadonlyFile
     // There appears to be a bug in (at least) v1.2.13 that causes
     // non-existent paths to return true.
     return exists() ? super.isDirectory() : false;
+  }
+
+  /**
+   * Returns the newer of either the create timestamp or the last modified
+   * timestamp of the file.
+   * <p>
+   * According to <a href="http://support.microsoft.com/kb/299648">this
+   * Microsoft document</a>, moving or renaming a file within the same file
+   * system does not change either the last-modify timestamp of a file or
+   * the create timestamp of a file.  However, copying a file or moving it
+   * across filesystems (which involves an implicit copy) sets a new create
+   * timestamp, but does not alter the last modified timestamp.
+   */
+  @Override
+  public long getLastModified() throws SmbException {
+    return Math.max(delegate.lastModified(), delegate.createTime());
   }
 
   @VisibleForTesting

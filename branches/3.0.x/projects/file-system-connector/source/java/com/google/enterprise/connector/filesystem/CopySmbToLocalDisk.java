@@ -60,11 +60,11 @@ class CopySmbToLocalDisk {
          "smb://172.25.51.99/office/50k/" \
          "/smbdup/50k"
      </pre></code>
-   * @throws InsufficientAccessException if user does not have enough
+   * @throws DocumentAccessException if user does not have enough
    *         privileges to crawl the files.
    */
   public static void main(String a[]) throws IOException, RepositoryException,
-      DirectoryListingException, InsufficientAccessException {
+      DirectoryListingException {
     String startPath = a[0];
     String endPath = a[1];
     FileSystemPropertyManager smbProperties = new SmbProperties();
@@ -93,7 +93,7 @@ class CopySmbToLocalDisk {
   }
 
   private void copy() throws IOException, DirectoryListingException,
-                             InsufficientAccessException, RepositoryException {
+                             RepositoryException {
     processDirectory(src);
   }
 
@@ -126,8 +126,7 @@ class CopySmbToLocalDisk {
   }
 
   private void processDirectory(ReadonlyFile<? extends ReadonlyFile<?>> d)
-      throws IOException, DirectoryListingException,
-             InsufficientAccessException, RepositoryException {
+      throws IOException, DirectoryListingException, RepositoryException {
     if (!d.isDirectory()) {
       throw new IllegalStateException("not dir: " + d);
     }

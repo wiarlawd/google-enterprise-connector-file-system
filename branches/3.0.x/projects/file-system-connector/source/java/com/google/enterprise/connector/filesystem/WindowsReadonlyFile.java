@@ -18,6 +18,7 @@ import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTim
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * An implementation of {@link ReadonlyFile} that delegates to an underlying
@@ -57,5 +58,21 @@ public class WindowsReadonlyFile
   public String getPath() {
     String path = delegate.getAbsolutePath();
     return (delegate.isDirectory()) ? path + File.separatorChar : path;
+  }
+
+  /**
+   * Returns the newer of either the create timestamp or the last modified
+   * timestamp of the file.
+   * <p>
+   * According to <a href="http://support.microsoft.com/kb/299648">this
+   * Microsoft document</a>, moving or renaming a file within the same file
+   * system does not change either the last-modify timestamp of a file or
+   * the create timestamp of a file.  However, copying a file or moving it
+   * across filesystems (which involves an implicit copy) sets a new create
+   * timestamp, but does not alter the last modified timestamp.
+   */
+  @Override
+  public long getLastModified() throws IOException {
+    return WindowsFileTimeUtil.getLastModifiedTime(delegate.getAbsolutePath());
   }
 }

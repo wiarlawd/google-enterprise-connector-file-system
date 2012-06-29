@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.logging.NDC;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.DocumentAcceptor;
@@ -42,11 +43,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,10 +74,9 @@ class FileLister implements Lister, TraversalContextAware,
 
   private final PathParser pathParser;
   private final DocumentContext context;
-  private final ExecutorService traverserService;
+  private final AtomicReference<TraversalService> traversalService =
+      new AtomicReference<TraversalService>();;
 
-  private boolean isShutdown = false;
-  private Thread listerThread;
   private Clock clock = new SystemClock();
 
   /**
@@ -112,8 +114,6 @@ class FileLister implements Lister, TraversalContextAware,
       throws RepositoryException {
     this.pathParser = pathParser;
     this.context = context;
-    this.traverserService = Executors.newFixedThreadPool(
-        context.getPropertyManager().getThreadPoolSize());
     setIfModifiedSinceCushion(
         context.getPropertyManager().getIfModifiedSinceCushion());
   }
@@ -133,9 +133,10 @@ class FileLister implements Lister, TraversalContextAware,
   public synchronized void setTraversalSchedule(
         TraversalSchedule traversalSchedule) {
     this.schedule = traversalSchedule;
-    if (listerThread != null) {
+    TraversalService service = traversalService.get();
+    if (service != null) {
       // Wake thread from sleep() to notice the change.
-      listerThread.interrupt();
+      service.interrupt();
     }
   }
 
@@ -168,7 +169,16 @@ class FileLister implements Lister, TraversalContextAware,
 
   /* @Override */
   public void start() throws RepositoryException {
-    this.listerThread = Thread.currentThread();
+    TraversalService service = new TraversalService(Thread.currentThread(),
+        context.getPropertyManager().getThreadPoolSize());
+    TraversalService oldService = traversalService.getAndSet(service);
+
+    // If already running, shut it down and wait for all threads to exit.
+    if (oldService != null) {
+      oldService.shutdownNow();
+      oldService.awaitTermination();
+    }
+
     LOGGER.fine("Starting File Lister");
 
     Collection<Callable<Void>> traversers = Lists.newArrayList();
@@ -177,16 +187,20 @@ class FileLister implements Lister, TraversalContextAware,
     }
 
     try {
-      while (notShutdown()) {
+      while (!service.isShutdown()) {
         sleep(Sleep.SCHEDULE_DELAY);
         try {
-          for (Future future : traverserService.invokeAll(traversers)) {
+          for (Future future : service.invokeAll(traversers)) {
             future.get();
           }
-          sleep(Sleep.RETRY_DELAY);
+          if (!service.isShutdown()) {
+            sleep(Sleep.RETRY_DELAY);
+          }
         } catch (ExecutionException e) {
           // Already logged in child thread context.
-          sleep(Sleep.ERROR_DELAY);
+          if (!service.isShutdown()) {
+            sleep(Sleep.ERROR_DELAY);
+          }
         } catch (InterruptedException ie) {
           // Awoken from sleep. Maybe shutdown, maybe not.
         }
@@ -199,31 +213,31 @@ class FileLister implements Lister, TraversalContextAware,
         documentAcceptor.cancel();
       } catch (DocumentAcceptorException e) {
         LOGGER.log(Level.WARNING, "Error shutting down Lister", e);
-      }
+      } finally {
+        service.clearListerThread();
+        Thread.interrupted();
+      }        
     }
   }
 
-  private synchronized boolean notShutdown() {
-    return !isShutdown;
+  /** Returns true if we are in a shutdown scenario. */
+  @VisibleForTesting
+  boolean isShutdown() {
+    TraversalService service = traversalService.get();
+    return (service == null || service.isShutdown());
   }
 
   /* @Override */
-  public synchronized void shutdown() throws RepositoryException {
-    isShutdown = true;
-    traverserService.shutdownNow();
-    if (listerThread != null) {
-      // Wake thread from sleep() to notice the change.
-      listerThread.interrupt();
+  public void shutdown() throws RepositoryException {
+    TraversalService service = traversalService.get();
+    if (service != null) {
+      service.shutdownNow();
     }
   }
 
   private void sleep(Sleep delay) {
     int seconds = 0;
     synchronized (this) {
-      if (isShutdown) {
-        return;
-      }
-
       if (schedule.isDisabled()) {
         seconds = Integer.MAX_VALUE;
       } else {
@@ -253,9 +267,57 @@ class FileLister implements Lister, TraversalContextAware,
       LOGGER.finest("Sleeping for " + seconds + " seconds.");
       Thread.sleep(1000L * seconds);
     } catch (InterruptedException ie) {
-      Thread.interrupted();
+      // Awakened early from sleep.
     }
     LOGGER.finest("Awake from sleep.");
+  }
+
+  private class TraversalService extends ThreadPoolExecutor {
+    private Thread listerThread;
+
+    TraversalService(Thread listerThread, int numThreads) {
+      super(numThreads, numThreads, 60, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>());
+      this.listerThread = listerThread;
+    }
+
+    synchronized void clearListerThread() {
+      listerThread = null;
+    }
+      
+    /** Wake thread from sleep() to notice a change. */
+    synchronized void interrupt() {
+      if (listerThread != null) {
+        listerThread.interrupt();
+      }
+    }
+
+    /** Waits for the service to terminate. */
+    void awaitTermination() {
+      try {
+        super.awaitTermination(5 * 60, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        // Fall through to check for successful termination.
+      }
+      if (!super.isTerminated()) {
+        LOGGER.warning("File Lister did not shut down in a timely fashion.");
+      }
+    }
+
+    @Override
+    public synchronized void shutdown() {
+      super.shutdown();
+      // Wake thread from sleep() to notice the change.
+      interrupt();
+    }
+
+    @Override
+    public synchronized List<Runnable> shutdownNow() {
+      List<Runnable> list = super.shutdownNow();
+      // Wake thread from sleep() to notice the change.
+      interrupt();
+      return list;
+    }
   }
 
   @VisibleForTesting
@@ -318,6 +380,15 @@ class FileLister implements Lister, TraversalContextAware,
       lastTraversal = startTime;
     }
 
+    /** Returns true if we are in a shutdown scenario. */
+    private boolean isShutdown() {
+      // ThreadPoolExecutor.shutdownNow() sets the interrupted flag as a
+      // signal to shutdown.  Note that we want to leave the interrupted
+      // flag as-is and not clear it before returning, which is why we are
+      // using isInterrupted() instead of interrupted().
+      return Thread.currentThread().isInterrupted();
+    }
+
     private void traverse() throws DocumentAcceptorException,
         RepositoryException {
       LOGGER.fine("Start traversal: " + startPath);
@@ -328,11 +399,16 @@ class FileLister implements Lister, TraversalContextAware,
         return;
       }
       long startTime = clock.getTimeMillis();
+      AclProperties aclProps = context.getPropertyManager();
+      boolean returnDirectories = root.getFileSystemType().supportsAcls()
+        && aclProps.isPushAcls() && aclProps.supportsInheritedAcls()
+        && !aclProps.isMarkAllDocumentsPublic();
+
       try {
         FileIterator iter = new FileIterator(root, context,
-            getIfModifiedSince(startTime));
+            getIfModifiedSince(startTime), returnDirectories);
 
-        if (traversalContext.supportsInheritedAcls()) {
+        if (returnDirectories) {
           Document rootShareAclDoc = createRootShareAcl(root);
           if (rootShareAclDoc != null) {
             try {
@@ -344,7 +420,7 @@ class FileLister implements Lister, TraversalContextAware,
             }
           }
         }
-        while (notShutdown() && iter.hasNext()) {
+        while (!isShutdown() && iter.hasNext()) {
           String path = "";
           try {
             ReadonlyFile<?> file = iter.next();
@@ -374,23 +450,22 @@ class FileLister implements Lister, TraversalContextAware,
     private Document createRootShareAcl(ReadonlyFile<?> root) {
       try {
         Acl shareAcl = root.getShareAcl();
-        if (shareAcl != null) {
+        if (shareAcl != null && !shareAcl.equals(Acl.USE_HEAD_REQUEST)) {
           Map<String, List<Value>> aclValues = Maps.newHashMap();
-          aclValues.put(SpiConstants.PROPNAME_ACLUSERS,
-              getPrincipalValueList(shareAcl.getUsers()));
-          aclValues.put(SpiConstants.PROPNAME_ACLGROUPS,
-              getPrincipalValueList(shareAcl.getGroups()));
-          aclValues.put(SpiConstants.PROPNAME_ACLDENYUSERS,
-              getPrincipalValueList(shareAcl.getDenyUsers()));
-          aclValues.put(SpiConstants.PROPNAME_ACLDENYGROUPS,
-              getPrincipalValueList(shareAcl.getDenyGroups()));
-          aclValues.put(SpiConstants.PROPNAME_DOCID,
-              getStringValueList(FileDocument.getRootShareAclId(root)));
-          aclValues.put(SpiConstants.PROPNAME_FEEDTYPE,
-              getStringValueList(FeedType.CONTENTURL.toString()));
-          aclValues.put(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
-              getStringValueList(
-                  SpiConstants.AclInheritanceType.AND_BOTH_PERMIT.toString()));
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLUSERS,
+              shareAcl.getUsers());
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLGROUPS,
+              shareAcl.getGroups());
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLDENYUSERS,
+              shareAcl.getDenyUsers());
+          putPrincipalValues(aclValues, SpiConstants.PROPNAME_ACLDENYGROUPS,
+              shareAcl.getDenyGroups());
+          putStringValue(aclValues, SpiConstants.PROPNAME_DOCID,
+              FileDocument.getRootShareAclId(root));
+          putStringValue(aclValues, SpiConstants.PROPNAME_FEEDTYPE,
+              FeedType.CONTENTURL.toString());
+          putStringValue(aclValues, SpiConstants.PROPNAME_ACLINHERITANCETYPE,
+              SpiConstants.AclInheritanceType.AND_BOTH_PERMIT.toString());
           return SecureDocument.createAcl(aclValues);
         } else {
           return null;
@@ -406,18 +481,26 @@ class FileLister implements Lister, TraversalContextAware,
       }
     }
 
-    /** Creates a value list from a list of Principal values. */
-    private List<Value> getPrincipalValueList(Collection<Principal> principals) {
-      List<Value> valueList = Lists.newArrayListWithCapacity(principals.size());
-      for (Principal principal : principals) {
-        valueList.add(Value.getPrincipalValue(principal));
+    /** Adds an optional ACL Property of Principal values to the map. */
+    private void putPrincipalValues(Map<String, List<Value>> aclValues,
+        String key, Collection<Principal> principals) {
+      if (principals != null) {
+        List<Value> valueList =
+            Lists.newArrayListWithCapacity(principals.size());
+        for (Principal principal : principals) {
+          valueList.add(Value.getPrincipalValue(principal));
+        }
+        aclValues.put(key, valueList);
       }
-      return valueList;
     }
 
-    /** Creates a value list from single string. */
-    private List<Value> getStringValueList(String value) {
-      return Collections.singletonList(Value.getStringValue(value));
+    /** Adds an optional String Property to the map. */
+    private void putStringValue(Map<String, List<Value>> aclValues,
+        String key, String value) {
+      if (value != null) {
+        aclValues.put(key,
+            Collections.singletonList(Value.getStringValue(value)));
+      }
     }
   }
 }

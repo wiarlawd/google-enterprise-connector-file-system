@@ -110,11 +110,14 @@ public class FileDocument implements Document {
     addProperty(SpiConstants.PROPNAME_DOCID, getDocumentId());
     addProperty(SpiConstants.PROPNAME_DISPLAYURL, file.getDisplayUrl());
     try {
-      Calendar calendar = Calendar.getInstance();
-      calendar.setTimeInMillis(file.getLastModified());
-      addProperty(SpiConstants.PROPNAME_LASTMODIFIED, Value.getDateValue(calendar));
+      long lastModified = file.getLastModified();
+      if (lastModified > 0L) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(lastModified);
+        addProperty(SpiConstants.PROPNAME_LASTMODIFIED, Value.getDateValue(calendar));
+      }
     } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "Failed to get last-modified time for file: "
+      LOGGER.log(Level.WARNING, "Failed to get last-modified time for "
           + file.getPath(), e);
     }
 

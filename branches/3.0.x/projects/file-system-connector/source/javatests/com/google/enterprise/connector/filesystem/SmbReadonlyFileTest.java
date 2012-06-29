@@ -16,6 +16,8 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.base.Strings;
 import com.google.enterprise.connector.filesystem.SmbFileSystemType.SmbFileProperties;
+import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
@@ -158,6 +160,29 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
     assertEquals(getAbsolutePath(file2), x.get(4).getPath());
   }
 
+  /**
+   * Test lastModified returns the newer of create timestamp and last modified.
+   * Windows doesn't update last modified when copying, moving files, but
+   * does update create time (in some cases).
+   */
+  @Override
+  public void testLastModified() throws Exception {
+    testLastModified(0L, 0L);
+    testLastModified(10000L, 10000L);
+    testLastModified(10000L, 12000L);
+    testLastModified(12000L, 10000L);
+  }
+
+  private void testLastModified(long createTime, long modifyTime)
+      throws Exception {
+    TestSmbReadonlyFile file = getReadonlyFileToTest();
+    SmbFileDelegate delegate = file.getDelegate();
+    expect(delegate.createTime()).andStubReturn(createTime);
+    expect(delegate.lastModified()).andStubReturn(modifyTime);
+    replay(delegate);
+    assertEquals(Math.max(createTime, modifyTime), file.getLastModified());
+  }
+
   public void testDetectServerDown() throws Exception {
     TestSmbReadonlyFile file = getReadonlyFileToTest();
     replay(file.getDelegate());
@@ -221,9 +246,9 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
     checkGeneralError(file, SmbException.NT_STATUS_LOGON_FAILURE,
                       InvalidUserException.class);
     checkGeneralError(file, SmbException.NT_STATUS_ACCESS_DENIED,
-                      InsufficientAccessException.class);
+                      DocumentAccessException.class);
     checkGeneralError(file, SmbException.NT_STATUS_BAD_NETWORK_NAME,
-                      NonExistentResourceException.class);
+                      DocumentNotFoundException.class);
   }
 
   private void checkGeneralError(TestSmbReadonlyFile file, int ntStatus,

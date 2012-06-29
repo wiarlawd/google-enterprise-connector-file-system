@@ -55,6 +55,28 @@ public class WindowsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
     assertEquals(getAbsolutePath(dirA) + "/", readonlyDirA.getPath());
   }
 
+  @Override
+  public void testLastModified() throws Exception {
+    try {
+      super.testLastModified();
+    } catch (IOException e) {
+      // This probably means we are not running on Windows.
+      assertNotWindows(e.toString());
+    }
+  }
+
+  @Override
+  public void testLastModifiedNonExistFile() throws Exception {
+    try {
+      readonlyTest1.getLastModified();
+    } catch (IOException e) {
+      if (!e.getMessage().contains("last modified time")) {
+        assertNotWindows(e.toString());
+      }
+    }
+  }
+
+  @Override
   public void testListFiles() throws Exception {
     List<WindowsReadonlyFile> x = readonlyRoot.listFiles();
     assertNotNull(x);
@@ -77,8 +99,7 @@ public class WindowsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
     // A null FileTime probably means we are not running on Windows.
     // But this at least checks that we didn't blow up trying.
     if (fileTime == null) {
-      String os = System.getProperty("os.name").toLowerCase();
-      assertTrue(os.indexOf("win") == -1);
+      assertNotWindows("access time");
       return;
     }
 
@@ -94,5 +115,11 @@ public class WindowsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
     // Restore the original access time and make sure it sticks.
     file.setLastAccessTime(fileTime);
     assertTrue(fileTime.equals(file.getLastAccessTime()));
+  }
+
+  /** Assert that we are not running on Windows. */
+  private void assertNotWindows(String message) {
+    String os = System.getProperty("os.name").toLowerCase();
+    assertTrue(message, os.indexOf("win") == -1);
   }
 }
