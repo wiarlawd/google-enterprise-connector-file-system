@@ -123,9 +123,9 @@ cd ${CATALINA_HOME}/bin
 
 Enable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Uncheck *Disable Traversal*.
 
-If you had a set the `delayBetweenTwoScansInMillis`  advanced configuration property in a previous version of the connector, you my wish to adjust the *Retry Delay* value accordingly.
+If you had a set the `delayBetweenTwoScansInMillis`  advanced configuration property in a previous version of the connector, you my wish to adjust the *Retry Delay* value accordingly.  The *Retry Delay* governs the delay between traversals of the repository.  Most traversals are _incremental traversals_ and look only for items that have changed since the last traversal, based upon the file's last-modified timestamp.  Some traversals are _full traversals_ (see below), which feed all appropriate contents of the repository to the Search Appliance.
 
-You may also wish to configure the forced *Full Traversal Interval* for the needs of your organization.  File and directory adds, deletes, and copies and changes to file contents are detected during the connector's incremental traversals (which notice changes in the modified timestamp of files and directories).  However, moved or renamed files and changes to ACLs and other metadata may only be detected during full traversals.  Frequent full traversals may overwhelm the Search Appliance, bogging down its feed processing.  Long full traversal intervals increase the time it takes for the Search Appliance to notice certain types of changes.
+You may also wish to configure the forced *Full Traversal Interval* for the needs of your organization.  File and directory adds, deletes, and copies and changes to file contents are detected during the connector's incremental traversals.  However, moved or renamed files and changes to ACLs and other metadata may only be detected during full traversals.  Frequent full traversals may overwhelm the Search Appliance, bogging down its feed processing.  Long full traversal intervals increase the time it takes for the Search Appliance to notice certain types of changes.
 
 A full traversal may also be triggered manually at any time by resetting the connector in the Search Appliance Admin Console.
 
