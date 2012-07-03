@@ -169,16 +169,7 @@ class FileLister implements Lister, TraversalContextAware,
 
   /* @Override */
   public void start() throws RepositoryException {
-    TraversalService service = new TraversalService(Thread.currentThread(),
-        context.getPropertyManager().getThreadPoolSize());
-    TraversalService oldService = traversalService.getAndSet(service);
-
-    // If already running, shut it down and wait for all threads to exit.
-    if (oldService != null) {
-      oldService.shutdownNow();
-      oldService.awaitTermination();
-    }
-
+    TraversalService service = newTraversalService();
     LOGGER.fine("Starting File Lister");
 
     Collection<Callable<Void>> traversers = Lists.newArrayList();
@@ -202,7 +193,12 @@ class FileLister implements Lister, TraversalContextAware,
             sleep(Sleep.ERROR_DELAY);
           }
         } catch (InterruptedException ie) {
-          // Awoken from sleep. Maybe shutdown, maybe not.
+          // Awoken from sleep. If not shutdown, then there was a schedule
+          // change.  Terminate the traversers, then restart them with the
+          // new schedule.
+          if (!service.isShutdown()) {
+            service = newTraversalService();
+          }
         }
       }
     } catch (Exception e) {
@@ -270,6 +266,23 @@ class FileLister implements Lister, TraversalContextAware,
       // Awakened early from sleep.
     }
     LOGGER.finest("Awake from sleep.");
+  }
+
+  /**
+   * Returns a new TraversalService. Waits for an existing one to terminate.
+   */
+  private TraversalService newTraversalService() {
+    TraversalService service = new TraversalService(Thread.currentThread(),
+        context.getPropertyManager().getThreadPoolSize());
+    TraversalService oldService = traversalService.getAndSet(service);
+
+    // If already running, shut it down and wait for all threads to exit.
+    if (oldService != null) {
+      oldService.shutdownNow();
+      oldService.awaitTermination();
+    }
+    
+    return service;
   }
 
   private class TraversalService extends ThreadPoolExecutor {
