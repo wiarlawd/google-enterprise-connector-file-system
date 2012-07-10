@@ -129,6 +129,16 @@ public interface FileDelegate extends InputStreamFactory {
   public boolean canRead() throws IOException;
 
   /**
+   * Tests whether the file named by this abstract pathname is a hidden file.
+   * The exact definition of "hidden" is system-dependent.
+   *
+   * @return {@code true} if and only if the file denoted by this abstract
+   *         pathname is hidden according to the conventions of the underlying
+   *         platform.
+   */
+  public boolean isHidden() throws IOException;
+
+  /**
    * Returns an array of strings naming the files and directories in the
    * directory denoted by this abstract pathname.
    *

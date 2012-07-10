@@ -27,7 +27,7 @@ public class ExceptionalFileDelegate implements FileDelegate {
    * Locations from where ExceptionalFileDelegate may throw its IOExceptions.
    */
   public static enum Where { NONE, ALL, EXISTS, IS_DIRECTORY, IS_FILE, LENGTH,
-      LAST_MODIFIED, CAN_READ, LIST, GET_INPUT_STREAM }
+      LAST_MODIFIED, CAN_READ, IS_HIDDEN, LIST, GET_INPUT_STREAM }
 
   private final FileDelegate delegate;
   private Where where;
@@ -95,6 +95,7 @@ public class ExceptionalFileDelegate implements FileDelegate {
     return delegate.length();
   }
 
+  @Override
   public long lastModified() throws IOException {
     maybeThrowIOException(Where.LAST_MODIFIED);
     return delegate.lastModified();
@@ -104,6 +105,12 @@ public class ExceptionalFileDelegate implements FileDelegate {
   public boolean canRead() throws IOException {
     maybeThrowIOException(Where.CAN_READ);
     return delegate.canRead();
+  }
+
+  @Override
+  public boolean isHidden() throws IOException {
+    maybeThrowIOException(Where.IS_HIDDEN);
+    return delegate.isHidden();
   }
 
   /* @Override */

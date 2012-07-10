@@ -117,7 +117,8 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   public Acl getShareAcl() throws IOException, RepositoryException;
 
   /**
-   * @return true if the file exists and can be read; false otherwise
+   * @return true if the file exists, is not hidden, and can be read;
+   *         false otherwise
    */
   public boolean canRead() throws RepositoryException;
 

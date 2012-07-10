@@ -76,6 +76,11 @@ public class MockLastAccessFileDelegate implements LastAccessFileDelegate {
     return true;
   }
 
+  @Override
+  public boolean isHidden() {
+    return false;
+  }
+
   /* @Override */
   public long length() {
     return FILE_CONTENTS.length();
