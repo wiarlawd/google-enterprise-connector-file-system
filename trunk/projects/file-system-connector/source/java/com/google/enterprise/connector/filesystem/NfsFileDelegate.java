@@ -41,4 +41,14 @@ public class NfsFileDelegate extends XFile implements FileDelegate {
   public InputStream getInputStream() throws IOException {
     return new XFileInputStream(this);
   }
+
+  /**
+   * Returns {@code false}, since WebNFS does not support isHidden().
+   */
+  @Override
+  public boolean isHidden() throws IOException {
+    // TODO: Consider mimicking Unix conventions:
+    // return getName().startsWith(".");    
+    return false;
+  }
 }

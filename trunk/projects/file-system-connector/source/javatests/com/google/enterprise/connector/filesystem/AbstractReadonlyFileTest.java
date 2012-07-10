@@ -68,6 +68,25 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
     assertFalse(nullFile1.equals(readonlyFile1));
   }
 
+  /** Tests that ReadonlyFile.canRead() does not allow hidden files. */
+  public void testCanRead() throws Exception {
+    testCanRead(true, false, true);
+    testCanRead(true, true, false);
+    testCanRead(false, true, false);
+    testCanRead(false, false, false);
+  }
+
+  private void testCanRead(boolean canRead, boolean hidden, boolean expected)
+      throws Exception {
+    AbstractReadonlyFileTest.MockFileSystemType type = getFileSystemType();
+    FileDelegate delegate = getMockDelegate();
+    expect(delegate.canRead()).andStubReturn(canRead);
+    expect(delegate.isHidden()).andStubReturn(hidden);
+    replay(delegate);
+    MockReadonlyFile file = new MockReadonlyFile(type, delegate);
+    assertEquals(expected, file.canRead());
+  }
+
   public void testExistsException() throws Exception {
     testException(new CheckException() {
         public void configure(FileDelegate delegate) throws Exception {
