@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
@@ -21,8 +22,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class DocumentContext {
+  private static final Logger LOGGER =
+      Logger.getLogger(DocumentContext.class.getName());
+
   private final Credentials credentials;
   private final MimeTypeDetector mimeTypeDetector;
   private final FileSystemPropertyManager propertyManager;
@@ -91,6 +96,24 @@ public class DocumentContext {
     if (this.traversalContext == null) {
       traversalContext = context;
       propertyManager.setSupportsInheritedAcls(context.supportsInheritedAcls());
+
+      // User/Group principal formats without the domain are not recommended
+      // for GSA 7.0.
+      // TODO (bmj): Revert or change this for GSA 7.2?
+      if (context.supportsInheritedAcls()) {
+        if (AclFormat.USER.equals(AclFormat.getAclFormat(
+            propertyManager.getUserAclFormat()))) {
+          LOGGER.warning("Advanced configuration property userAclFormat=\""
+                         + propertyManager.getUserAclFormat() + "\" is not "
+                         + "recommended for this version of Search Appliance.");
+        }
+        if (AclFormat.GROUP.equals(AclFormat.getAclFormat(
+            propertyManager.getGroupAclFormat()))) {
+          LOGGER.warning("Advanced configuration property groupAclFormat=\""
+                         + propertyManager.getGroupAclFormat() + "\" is not "
+                         + "recommended for this version of Search Appliance.");
+        }
+      }
     }
   }
 

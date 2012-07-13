@@ -31,8 +31,8 @@ public class TestFileSystemPropertyManager extends FileSystemPropertyManager {
     super.setLastAccessResetFlagForLocalWindows(true);
     super.setMarkDocumentPublicFlag(markAllDocumentsPublic);
     super.setPushAclFlag(pushAcls);
-    super.setGroupAclFormat("group");
-    super.setUserAclFormat("user");
+    super.setGroupAclFormat("domain\\group");
+    super.setUserAclFormat("domain\\user");
     super.setIfModifiedSinceCushionMinutes(60);
     super.setThreadPoolSize(10);
     super.setSupportsInheritedAcls(true);
