@@ -56,10 +56,16 @@
 
     <!--
     Represents the format in which ACE entries should be fed to GSA for groups
-    Possible values are
-    1.group@domain
-    2.domain\group
-    3.group   (only group name without domain information)
+    Possible values are:
+      domain\group
+      group@domain
+      group   (only group name without domain information)
+
+    Note: For GSA 7.0 and above, user and group names without the domain is
+    rarely the correct choice.  Use it only if your authentication mechanism
+    also does not supply a domain.
+
+    The default value is "domain\group".
     -->
     <!--
     <property name="groupAclFormat" value="group"/>
@@ -67,13 +73,19 @@
 
     <!--
     Represents the format in which ACE entries should be fed to GSA for users
-    Possible values are
-    1.user@domain
-    2.domain\user
-    3.user   (only user name without domain information)
+    Possible values are:
+      domain\user
+      user@domain
+      user   (only user name without domain information)
+
+    Note: For GSA 7.0 and above, user and group names without the domain is
+    rarely the correct choice.  Use it only if your authentication mechanism
+    also does not supply a domain.
+
+    The default value is "domain\user".
     -->
     <!--
-    <property name="userAclFormat" value="user"/>
+    <property name="userAclFormat" value="domain\user"/>
     -->
 
     <!--
