@@ -19,11 +19,11 @@ delegate authorization checking to the File System Connector.  Due to a known
 GSA issue access will be denied for all users.
 
 Because the File System Connector sends the GSA secure documents with ACLs you
-must configure the GSA to
+must configure the GSA to:
   # Authenticate the user.
   # Determine the authenticated user's groups.
 
-For detailed information please refer to these links
+For detailed information please refer to these links:
   # [http://code.google.com/apis/searchappliance/documentation/68/secure_search/secure_search_overview.html Managing Search for Controlled-Access Content]
   # [http://code.google.com/apis/searchappliance/documentation/68/secure_search/secure_search_crwlsrv.html#serve_for_controlled_access_content Authenticating users]
   # [http://code.google.com/apis/searchappliance/documentation/68/secure_search/secure_search_crwlsrv.html#PolicyAccessControlLists Policy ACLs] 
@@ -46,9 +46,7 @@ follow the conventions of the patterns supported by the GSA. For more informatio
 http://code.google.com/apis/searchappliance/documentation/68/admin_crawl/URL_patterns.html
 
 =Form Elements=
-The following sections describe the information to enter in the File System Connector
-configuration form.
-  # *Connector Name*: The name of the connector. 
+The following sections describe the information to enter in the File System Connector configuration form:
   # *Start paths*: Enter SMB URLs directorys you want the File System Connector to traverse in the boxes (1 URL per box). See http://jcifs.samba.org/src/docs/api/ for additional information on SMB URLs. Do not add domain, user name or password elements to start paths. 
   # *Include patterns*: Enter include patterns for files you want sent to the GSA in the boxes (1 pattern per box). The File System Connector will only send a file if it matches an include pattern.
   # *Exclude patterns*: Enter exclude patterns for files that match an include pattern that you do not want sent to the GSA (1 pattern per box). 
