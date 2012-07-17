@@ -1,4 +1,6 @@
+#summary Configuring the File System Connector
 #labels Featured
+
 =Overview=
 The File System Connector traverses Windows directories and contained sub directories.
 During an initial traversal files and their ACLs are sent to the GSA for indexing 
