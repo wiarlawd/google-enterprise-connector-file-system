@@ -218,7 +218,7 @@ public class SmbReadonlyFile implements ReadonlyFile<SmbReadonlyFile> {
   /* @Override */
   public InputStream getInputStream() throws IOException {
     if (!isRegularFile()) {
-      throw new UnsupportedOperationException("not a regular file: " + getPath());
+      throw new IOException("Not a regular file: " + getPath());
     }
     return new SmbInputStream(delegate, lastAccessTimeResetFlag, lastAccessTime);
   }

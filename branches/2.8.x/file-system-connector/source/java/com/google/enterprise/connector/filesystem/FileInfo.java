@@ -56,9 +56,8 @@ public interface FileInfo {
   //     access the stream anyway.
   /**
    * @return an input stream that reads this file.
-   * @throws IOException if this is a regular file but cannot be opened
-   * @throws UnsupportedOperationException if this is a directory, or if it
-   *         represents a defunct file.
+   * @throws IOException if this is not a regular file or regular file that
+   *         cannot be opened.
    */
   public InputStream getInputStream() throws IOException;
 

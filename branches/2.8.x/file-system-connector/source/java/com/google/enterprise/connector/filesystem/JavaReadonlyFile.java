@@ -61,7 +61,7 @@ public class JavaReadonlyFile implements ReadonlyFile<JavaReadonlyFile> {
   /* @Override */
   public InputStream getInputStream() throws IOException {
     if (!isRegularFile()) {
-      throw new UnsupportedOperationException("not a regular file: " + getPath());
+      throw new IOException("Not a regular file: " + getPath());
     }
     return new BufferedInputStream(new FileInputStream(delegate));
   }
