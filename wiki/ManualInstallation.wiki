@@ -1,4 +1,4 @@
-#summary Steps to install Google Enterprise Connector for File Systems
+#summary Steps to Install Google Enterprise Connector for File Systems
 #labels Featured
 
 =Introduction=
