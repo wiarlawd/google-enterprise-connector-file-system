@@ -2,7 +2,7 @@
 
 =Introduction=
 
-The File System Connector uses the [http://jcifs.samba.org JCIFS client library] for communicating with Windows Files Shares using the Server Message Block (SMB) protocol.  This document describes the mechanism for setting JCIFS configuration properties to alter the JCIFS client library behavior to suit your environment.
+The File System Connector uses the [http://jcifs.samba.org JCIFS client library] for communicating with Windows File Shares using the Server Message Block (SMB) protocol.  This document describes the mechanism for setting JCIFS configuration properties to alter the JCIFS client library behavior to suit your environment.
 
 For instance, if your file server is particularly sluggish under load, you may wish to increase the SMB client response timeout to avoid dropped requests.
 
