@@ -24,6 +24,7 @@ Before applying an update you should have the following available to you:
 
   # Disable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Check *Disable Traversal* and save the configuration.
   # Delete the feed for your connector.  On the GSA admin console, navigate to the *Crawl and Index > Feeds* page, then click on the *Delete* link for your connector's feed.
+  # *Optional* Upgrade your GSA to version 7.0.
   # Enable crawling of Retriever URLs.  On the GSA admin console, navigate to the *Crawl and Index > Crawl URLs* page.  Add the following item to the *Follow and Crawl Only URLs with the Following Patterns* section:<br/>{{{/connector-manager/getDocumentContent}}}
 
 
