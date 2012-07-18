@@ -2,23 +2,38 @@
 #labels Featured
 
 =Overview=
-The File System Connector traverses Windows directories and contained sub directories.
-During an initial traversal files and their ACLs are sent to the GSA for indexing 
+The File System Connector traverses network and local directories and contained subdirectories.
+During a full traversal, files and their ACLs are sent to the GSA for indexing 
 and serve time security checking purposes.
-During subsequent traversals, the File System Connector notices change that are not
+During incremental traversals, the File System Connector notices change that are not
 yet reflected in GSA index and updates the GSA accordingly.
 
-All file access is through the JCIFS library. A supported directory must be
+Access to SMB file shares is through the JCIFS library.  A supported directory must be
 accessible as a Windows share. You can verify access from a Windows system with
 File Explorer. Linux users can verify access with the smbclient utility.
 
+Access to NFS file shares is through the WebNFS library.  Access to local file systems
+uses the  Java File or JNA interfaces.   Note that the File System Connector on-board
+the GSA has local file system access disabled.
+
 The File System Connector marks documents it sends to the GSA as secure
 and attempts to include an ACL with each document. The GSA
-uses these ACLs to authorize user access when responding to queries. If a file
-has an ACL with a deny ACE File System connector sends the file to the GSA without
-an ACL. If the document qualifies as a potential result for a query GSA will
+uses these ACLs to authorize user access when responding to queries. 
+
+At this time, ACLs are only supported for Windows File Shares, not NFS or local file systems.
+
+File System Connector version 3.0 and later, when used with GSA version 7.0 and later,
+supports deny ACLs and ACL inheritance.  To support ACL inheritance, the connector 
+sends the ACLs for the file share and all traversed directories to the GSA, in addition
+to the ACLs for fed documents.  Changes to ACLs are generally not recognized during 
+incremental traversals, but will be detected during full traversals.
+
+For File System Connector version 2.x or GSA version 6.x,  deny ACLs and ACL 
+inheritance are not supported. If a file
+has an ACL with a deny ACE, the connector sends the file to the GSA without
+an ACL. If the document qualifies as a potential result for a query, the GSA will
 delegate authorization checking to the File System Connector.  Due to a known
-GSA issue access will be denied for all users.
+GSA issue, access will be denied for all users.
 
 Because the File System Connector sends the GSA secure documents with ACLs you
 must configure the GSA to:
