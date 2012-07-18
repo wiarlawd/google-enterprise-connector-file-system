@@ -41,7 +41,7 @@ group ACL format is "domain\group".  These new defaults will be the most appropr
 formats to use with GSA version 7.0 and later.  The previous ACL formats, "user" and "group"
 (without the domain), are unlikely to work with GSA version 7.0.  If, when using 
 File System Connector version 3, you wish to use the older formats, you must 
-explicitly enable in the [Advanced Configuration AdvancedConfiguration].
+explicitly enable those formats in the [AdvancedConfiguration Advanced Configuration].
 
 Because the File System Connector sends the GSA secure documents with ACLs you
 must configure the GSA to:
