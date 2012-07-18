@@ -119,6 +119,14 @@ cd ${CATALINA_HOME}/bin
 ./startup.sh 
 }}}
 
+== The Default User and Group ACL Formats Have Changed ==
+
+The default ACL format changed between File System Connector version 2 and version 3. The new default user ACL format is "domain\user". The new default group ACL format is "domain\group". These new defaults will be the most appropriate formats to use with GSA version 7.0 and later. The previous ACL formats, "user" and "group" (without the domain), are unlikely to work with GSA version 7.0.  If the Authentication mechanism for this connector returns a domain element, then the user and group ACLs *must* also include the domain.
+
+If you have previously explicitly configured the user and group ACL formats in the [AdvancedConfiguration Advanced Configuration], that explicit configuration will still be honored (although you may wish to change it if upgrading the GSA as well).  If you have not explicitly configured the user and group ACL formats, the new default format will be used.
+
+If, when using File System Connector version 3, you wish to use the unadorned "user" and "group" formats, you must explicitly enable those formats in the [AdvancedConfiguration Advanced Configuration] before re-enabling traversal.
+
 == Re-enable File System Connector Traversals  ==
 
 Enable Traversals for your connector.  On the GSA admin console, navigate to the *Connector Administration > Connectors* page and click *Edit* for your File System Connector instance.  Uncheck *Disable Traversal*.
