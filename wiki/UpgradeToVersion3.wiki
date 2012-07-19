@@ -26,7 +26,15 @@ Before applying an update you should have the following available to you:
   # Delete the feed for your connector.  On the GSA admin console, navigate to the *Crawl and Index > Feeds* page, then click on the *Delete* link for your connector's feed.
   # *Optional* Upgrade your GSA to version 7.0.
   # Enable crawling of Retriever URLs.  On the GSA admin console, navigate to the *Crawl and Index > Crawl URLs* page.  Add the following item to the *Follow and Crawl Only URLs with the Following Patterns* section:<br/>{{{/connector-manager/getDocumentContent}}}
-
+  # If using GSA version 6.14 or earlier, you must enable HTTP Basic Authentication to allow crawling of non-public Retriever URLs.  To do so, navigate to the *Crawl and Index > Crawler Access* page.  Add the following rule to the *Users and Passwords for Crawling* section:
+{{{
+For URLs Matching Pattern: /connector-manager/getDocumentContent
+Username: anything
+In Domain: <leave this blank>
+Password: anything
+Confirm Password: <same as Password>
+Make Public: <leave this unchecked>
+}}}
 
 == Upgrade to Connector Manager version 3==
 
