@@ -6,6 +6,11 @@ Download the .tgz versions, rather than .zip versions to minimize
 diffs.  The line endings for all the text files are different between
 the two archives.
 
+Remove the docs/api directory and the jcifs-xxx.jar file before
+adding the new version as a vendor branch.  The javadocs tend
+to generate tree conflicts when merging.  They are also full
+of tiny diffs in the javadoc generated timestamps.
+
 The strategy employed here is loosely based upon vendor branches
 as described in the "Third-Party Code" chapter of Mike Mason's book,
 "Pragmatic Version Control Using Subversion".
