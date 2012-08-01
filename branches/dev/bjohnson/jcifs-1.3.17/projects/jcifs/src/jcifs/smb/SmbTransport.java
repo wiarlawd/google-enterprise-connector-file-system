@@ -181,12 +181,21 @@ public class SmbTransport extends Transport implements SmbConstants {
     void ssn139() throws IOException {
         Name calledName = new Name( address.firstCalledName(), 0x20, null );
         do {
+/* These Socket constructors attempt to connect before SO_TIMEOUT can be applied
             if (localAddr == null) {
                 socket = new Socket( address.getHostAddress(), 139 );
             } else {
                 socket = new Socket( address.getHostAddress(), 139, localAddr, localPort );
             }
             socket.setSoTimeout( SO_TIMEOUT );
+*/
+
+            socket = new Socket();
+            if (localAddr != null)
+                socket.bind(new InetSocketAddress(localAddr, localPort));
+            socket.connect(new InetSocketAddress(address.getHostAddress(), 139), CONN_TIMEOUT);
+            socket.setSoTimeout( SO_TIMEOUT );
+
             out = socket.getOutputStream();
             in = socket.getInputStream();
 
@@ -241,12 +250,20 @@ public class SmbTransport extends Transport implements SmbConstants {
             } else {
                 if (port == 0)
                     port = DEFAULT_PORT; // 445
+/* These Socket constructors attempt to connect before SO_TIMEOUT can be applied
                 if (localAddr == null) {
                     socket = new Socket( address.getHostAddress(), port );
                 } else {
                     socket = new Socket( address.getHostAddress(), port, localAddr, localPort );
                 }
                 socket.setSoTimeout( SO_TIMEOUT );
+*/
+                socket = new Socket();
+                if (localAddr != null)
+                    socket.bind(new InetSocketAddress(localAddr, localPort));
+                socket.connect(new InetSocketAddress(address.getHostAddress(), port), CONN_TIMEOUT);
+                socket.setSoTimeout( SO_TIMEOUT );
+
                 out = socket.getOutputStream();
                 in = socket.getInputStream();
             }
@@ -344,15 +361,20 @@ public class SmbTransport extends Transport implements SmbConstants {
     }
     protected void doDisconnect( boolean hard ) throws IOException {
         ListIterator iter = sessions.listIterator();
-        while (iter.hasNext()) {
-            SmbSession ssn = (SmbSession)iter.next();
-            ssn.logoff( hard );
+        try {
+            while (iter.hasNext()) {
+                SmbSession ssn = (SmbSession)iter.next();
+                ssn.logoff( hard );
+            }
+            socket.shutdownOutput();
+            out.close();
+            in.close();
+            socket.close();
+        } finally {
+            digest = null;
+            socket = null;
+            tconHostName = null;
         }
-        socket.shutdownOutput();
-        out.close();
-        in.close();
-        socket.close();
-        digest = null;
     }
 
     protected void makeKey( Request request ) throws IOException {
