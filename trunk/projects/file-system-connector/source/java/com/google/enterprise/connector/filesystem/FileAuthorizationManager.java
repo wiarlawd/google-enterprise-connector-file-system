@@ -14,6 +14,7 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.base.Strings;
 import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
@@ -53,6 +54,12 @@ public class FileAuthorizationManager implements AuthorizationManager {
       // Null credentials mean identity has a null or zero length userName.
       return false;
     }
+
+    if (Strings.isNullOrEmpty(identity.getPassword())
+        && pathParser.isUserNamePasswordNeeded(docId)) {
+      return false;
+    }
+
     try {
       ReadonlyFile<?> file = pathParser.getFile(docId, credentials);
       return file.getFileSystemType().supportsAuthz() && file.canRead();
