@@ -181,16 +181,17 @@ class FileLister implements Lister, TraversalContextAware,
       while (!service.isShutdown()) {
         sleep(Sleep.SCHEDULE_DELAY);
         try {
+          boolean gotError = false;
           for (Future future : service.invokeAll(traversers)) {
-            future.get();
+            try {
+              future.get();
+            } catch (ExecutionException e) {
+              // Already logged in child thread context.
+              gotError = true;
+            }
           }
           if (!service.isShutdown()) {
-            sleep(Sleep.RETRY_DELAY);
-          }
-        } catch (ExecutionException e) {
-          // Already logged in child thread context.
-          if (!service.isShutdown()) {
-            sleep(Sleep.ERROR_DELAY);
+            sleep(gotError ? Sleep.ERROR_DELAY : Sleep.RETRY_DELAY);
           }
         } catch (InterruptedException ie) {
           // Awoken from sleep. If not shutdown, then there was a schedule
