@@ -48,6 +48,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -164,19 +165,16 @@ class FileLister implements Lister, TraversalContextAware,
 
   @VisibleForTesting
   Traverser newTraverser(String startPath) {
-    return new Traverser(startPath, documentAcceptor);
+    return new Traverser(startPath, documentAcceptor,
+                         newTraversalService(false));
   }
 
   /* @Override */
   public void start() throws RepositoryException {
-    TraversalService service = newTraversalService();
+    TraversalService service = newTraversalService(true);
+    Collection<Callable<Void>> traversers = newTraversers(service);
+
     LOGGER.fine("Starting File Lister");
-
-    Collection<Callable<Void>> traversers = Lists.newArrayList();
-    for (String startPath : context.getStartPaths()) {
-      traversers.add(newTraverser(startPath));
-    }
-
     try {
       while (!service.isShutdown()) {
         sleep(Sleep.SCHEDULE_DELAY);
@@ -198,9 +196,14 @@ class FileLister implements Lister, TraversalContextAware,
           // change.  Terminate the traversers, then restart them with the
           // new schedule.
           if (!service.isShutdown()) {
-            service = newTraversalService();
+            service = newTraversalService(false);
+            traversers = newTraversers(service);
           }
         }
+      }
+    } catch (RejectedExecutionException e) {
+      if (!service.isShutdown()) {
+        LOGGER.log(Level.WARNING, "Lister execution failed.", e);
       }
     } catch (Exception e) {
       LOGGER.log(Level.WARNING, "Lister feed failed.", e);
@@ -229,6 +232,7 @@ class FileLister implements Lister, TraversalContextAware,
     TraversalService service = traversalService.get();
     if (service != null) {
       service.shutdownNow();
+      service.interrupt();
     }
   }
 
@@ -271,8 +275,10 @@ class FileLister implements Lister, TraversalContextAware,
 
   /**
    * Returns a new TraversalService. Waits for an existing one to terminate.
+   *
+   * @param interruptLister if true, interrupt the old service lister thread.
    */
-  private TraversalService newTraversalService() {
+  private TraversalService newTraversalService(boolean interruptLister) {
     TraversalService service = new TraversalService(Thread.currentThread(),
         context.getPropertyManager().getThreadPoolSize());
     TraversalService oldService = traversalService.getAndSet(service);
@@ -281,9 +287,23 @@ class FileLister implements Lister, TraversalContextAware,
     if (oldService != null) {
       oldService.shutdownNow();
       oldService.awaitTermination();
+      if (interruptLister) {
+        oldService.interrupt();
+      }
     }
     
     return service;
+  }
+
+  /**
+   * Returns a Collection of Traversers targeted for the TraversalService.
+   */
+  private Collection<Callable<Void>> newTraversers(TraversalService service) {
+    Collection<Callable<Void>> traversers = Lists.newArrayList();
+    for (String startPath : context.getStartPaths()) {
+      traversers.add(new Traverser(startPath, documentAcceptor, service));
+    }
+    return traversers;
   }
 
   private class TraversalService extends ThreadPoolExecutor {
@@ -299,7 +319,7 @@ class FileLister implements Lister, TraversalContextAware,
       listerThread = null;
     }
       
-    /** Wake thread from sleep() to notice a change. */
+    /** Wake listerThread from sleep() to notice a change. */
     synchronized void interrupt() {
       if (listerThread != null) {
         listerThread.interrupt();
@@ -317,34 +337,22 @@ class FileLister implements Lister, TraversalContextAware,
         LOGGER.warning("File Lister did not shut down in a timely fashion.");
       }
     }
-
-    @Override
-    public synchronized void shutdown() {
-      super.shutdown();
-      // Wake thread from sleep() to notice the change.
-      interrupt();
-    }
-
-    @Override
-    public synchronized List<Runnable> shutdownNow() {
-      List<Runnable> list = super.shutdownNow();
-      // Wake thread from sleep() to notice the change.
-      interrupt();
-      return list;
-    }
   }
 
   @VisibleForTesting
   class Traverser implements Callable<Void> {
     private final String startPath;
     private final DocumentAcceptor documentAcceptor;
+    private final TraversalService service;
     private final String ndc;
     private long lastFullTraversal = 0L;
     private long lastTraversal = 0L;
 
-    public Traverser(String startPath, DocumentAcceptor documentAcceptor) {
+    public Traverser(String startPath, DocumentAcceptor documentAcceptor,
+                     TraversalService service) {
       this.startPath = startPath;
       this.documentAcceptor = documentAcceptor;
+      this.service = service;
       this.ndc = NDC.peek();
     }
 
@@ -396,11 +404,7 @@ class FileLister implements Lister, TraversalContextAware,
 
     /** Returns true if we are in a shutdown scenario. */
     private boolean isShutdown() {
-      // ThreadPoolExecutor.shutdownNow() sets the interrupted flag as a
-      // signal to shutdown.  Note that we want to leave the interrupted
-      // flag as-is and not clear it before returning, which is why we are
-      // using isInterrupted() instead of interrupted().
-      return Thread.currentThread().isInterrupted();
+      return service.isShutdown();
     }
 
     private void traverse() throws DocumentAcceptorException,
