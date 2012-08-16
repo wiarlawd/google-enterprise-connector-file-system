@@ -405,7 +405,10 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
           expect(builder.getShareAcl()).andThrow(smbException);
         }
         public void test(TestSmbReadonlyFile file) throws Exception {
-          assertEquals(Acl.USE_HEAD_REQUEST, file.getShareAcl());
+          file.getShareAcl();
+        }
+        public Class getExpectedException() {
+          return smbException.getClass();
         }
       });
   }

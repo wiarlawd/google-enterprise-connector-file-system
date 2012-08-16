@@ -114,6 +114,7 @@ public class SmbReadonlyFile
       }
       return delegate;
     } catch (SmbException e) {
+      _detectGeneralErrors(e, path);
       throw new RepositoryDocumentException(e);
     } catch (MalformedURLException e) {
       throw new IncorrectURLException("Malformed SMB path: " + path, e);
@@ -128,7 +129,7 @@ public class SmbReadonlyFile
   }
 
   /** If repository cannot be contacted throws RepositoryException. */
-  protected void detectServerDown(IOException e)
+  private static void _detectServerDown(IOException e)
       throws RepositoryException {
     if (!(e instanceof SmbException))
       return;
@@ -141,32 +142,65 @@ public class SmbReadonlyFile
         (null == rootCause) ? "" : " " + smbe.getRootCause().getClass();
     boolean noTransport =
         rootCause instanceof jcifs.util.transport.TransportException;
-    boolean noConnection = ("" + smbe).contains("Failed to connect");
     LOG.finest("server down variables:" + smbe.getNtStatus() + rootCauseString
         + " " + smbe.getMessage());
-    if (badCommunication && noTransport && noConnection) {
+
+    /* TODO (bmj): Restore this once FileLister.Traverser is able to retry
+       failed documents after transient communication failures.
+    // All pipe instances are busy.
+    if (SmbException.NT_STATUS_INSTANCE_NOT_AVAILABLE == smbe.getNtStatus()
+        || SmbException.NT_STATUS_PIPE_NOT_AVAILABLE == smbe.getNtStatus()
+        || SmbException.NT_STATUS_PIPE_BUSY == smbe.getNtStatus()
+        || SmbException.NT_STATUS_REQUEST_NOT_ACCEPTED == smbe.getNtStatus()) {
+      throw new RepositoryException("Server busy", smbe);
+    }
+
+    // Timeouts waiting for response.
+    if (badCommunication && noTransport &&
+        ("" + smbe).contains("timedout waiting for response")) {
+      throw new RepositoryException("Server busy", smbe);
+    }
+    */
+
+    // Cannot connect to server.
+    if (badCommunication && noTransport &&
+        ("" + smbe).contains("Failed to connect")) {
       throw new RepositoryException("Server down", smbe);
     }
   }
 
   /** Checks for general document access problems, including server down. */
-  protected void detectGeneralErrors(IOException e)
+  private static void _detectGeneralErrors(IOException e, String path)
       throws RepositoryException {
     if (!(e instanceof SmbException))
       return;
-    detectServerDown(e);
+    _detectServerDown(e);
     SmbException smbe = (SmbException) e;
     if (smbe.getNtStatus() == SmbException.NT_STATUS_LOGON_FAILURE) {
       throw new InvalidUserException(
-          "Please specify correct user name and password for " + getPath(),
+          "Please specify correct user name and password for " + path,
           smbe);
     } else if (smbe.getNtStatus() == SmbException.NT_STATUS_ACCESS_DENIED) {
       throw new DocumentAccessException(
-          "Access denied for " + getPath(), smbe);
+          "Access denied for " + path, smbe);
     } else if (smbe.getNtStatus() == SmbException.NT_STATUS_BAD_NETWORK_NAME) {
       throw new DocumentNotFoundException(
-          "Path does not exist: " + getPath(), smbe);
+          "Path does not exist: " + path, smbe);
     }
+  }
+
+  /** If repository cannot be contacted throws RepositoryException. */
+  @Override
+  protected void detectServerDown(IOException e)
+      throws RepositoryException {
+    _detectServerDown(e);
+  }
+
+  /** Checks for general document access problems, including server down. */
+  @Override
+  protected void detectGeneralErrors(IOException e)
+      throws RepositoryException {
+    _detectGeneralErrors(e, getPath());
   }
 
   @Override
@@ -224,14 +258,10 @@ public class SmbReadonlyFile
   public Acl getShareAcl() throws IOException, RepositoryException {
     try {
       return getAclBuilder().getShareAcl();
-    } catch (SmbException e) {
-      detectServerDown(e);
-      LOG.warning("Failed to get share ACL: " + e.getMessage());
-      LOG.log(Level.FINEST, "Got SmbException while getting share ACLs", e);
-      return Acl.USE_HEAD_REQUEST;
     } catch (IOException e) {
-      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
-          + "getting share ACLs for " + this.getPath(), e);
+      detectServerDown(e);
+      LOG.log(Level.WARNING, "Failed to get share ACL for " + this.getPath(),
+              e);
       throw e;
     }
   }

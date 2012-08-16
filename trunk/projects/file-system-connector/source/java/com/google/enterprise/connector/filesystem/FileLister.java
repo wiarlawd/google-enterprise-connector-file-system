@@ -423,21 +423,24 @@ class FileLister implements Lister, TraversalContextAware,
             getIfModifiedSince(startTime), returnDirectories);
 
         if (returnDirectories) {
-          Document rootShareAclDoc = createRootShareAcl(root);
-          if (rootShareAclDoc != null) {
-            try {
+          try {          
+            Document rootShareAclDoc = createRootShareAcl(root);
+            if (rootShareAclDoc != null) {
               documentAcceptor.take(rootShareAclDoc);
-            } catch (RepositoryDocumentException rde) {
-              LOGGER.log(Level.WARNING,
-                  "Failed to feed root share ACL document " + root.getPath(),
-                  rde);
             }
+          } catch (RepositoryException e) {
+            LOGGER.log(Level.WARNING,
+                "Failed to feed root share ACL document " + root.getPath(), e);
+            throw e;
           }
         }
-        while (!isShutdown() && iter.hasNext()) {
+        while (!isShutdown()) {
           String path = "";
           try {
             ReadonlyFile<?> file = iter.next();
+            if (file == null) {
+              break;	// No more files.
+            }          
             path = file.getPath();
             if (startPath.equals(path)) {
               documentAcceptor.take(new FileDocument(file, context, true));
@@ -446,6 +449,18 @@ class FileLister implements Lister, TraversalContextAware,
             }
           } catch (RepositoryDocumentException rde) {
             LOGGER.log(Level.WARNING, "Failed to feed document " + path, rde);
+          } catch (RepositoryException e) {
+            // TODO (bmj): Ideally we should retry the failed file a few times
+            // after increasing delays (1, 2, 4, 8 minutes to see if we can
+            // overcome apparently transient errors) before skipping
+            // over it. However, we will need to differentiate between
+            // RepositoryExceptions thrown by FileIterator.next() and ones
+            // throw after we have a ReadonlyFile already in hand.
+            LOGGER.log(Level.WARNING, "Encountered an error traversing "
+                       + startPath + " at document " + path, e);
+            if (!isShutdown()) {
+              sleep(Sleep.ERROR_DELAY);
+            }
           }
         }
         // If we succeeded, remember the last completed pass.
@@ -457,11 +472,12 @@ class FileLister implements Lister, TraversalContextAware,
     }
 
     /*
-     * Create and return share ACL as secure document for the root
+     * Create and return share ACL as secure document for the root.
      *
-     * @throws IOException
+     * @throws RepositoryException
      */
-    private Document createRootShareAcl(ReadonlyFile<?> root) {
+    private Document createRootShareAcl(ReadonlyFile<?> root)
+        throws RepositoryException {
       try {
         Acl shareAcl = root.getShareAcl();
         if (shareAcl != null && !shareAcl.equals(Acl.USE_HEAD_REQUEST)) {
@@ -485,13 +501,8 @@ class FileLister implements Lister, TraversalContextAware,
           return null;
         }
       } catch (IOException e) {
-        LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
+        throw new RepositoryDocumentException("Failed to create share ACL for "
             + root.getPath(), e);
-        return null;
-      } catch (RepositoryException e) {
-        LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
-            + root.getPath(), e);
-        return null;
       }
     }
 
