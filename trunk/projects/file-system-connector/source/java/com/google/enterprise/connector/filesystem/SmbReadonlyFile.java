@@ -114,7 +114,7 @@ public class SmbReadonlyFile
       }
       return delegate;
     } catch (SmbException e) {
-      _detectGeneralErrors(e, path);
+      staticDetectGeneralErrors(e, path);
       throw new RepositoryDocumentException(e);
     } catch (MalformedURLException e) {
       throw new IncorrectURLException("Malformed SMB path: " + path, e);
@@ -129,7 +129,7 @@ public class SmbReadonlyFile
   }
 
   /** If repository cannot be contacted throws RepositoryException. */
-  private static void _detectServerDown(IOException e)
+  private static void staticDetectServerDown(IOException e)
       throws RepositoryException {
     if (!(e instanceof SmbException))
       return;
@@ -170,11 +170,11 @@ public class SmbReadonlyFile
   }
 
   /** Checks for general document access problems, including server down. */
-  private static void _detectGeneralErrors(IOException e, String path)
+  private static void staticDetectGeneralErrors(IOException e, String path)
       throws RepositoryException {
     if (!(e instanceof SmbException))
       return;
-    _detectServerDown(e);
+    staticDetectServerDown(e);
     SmbException smbe = (SmbException) e;
     if (smbe.getNtStatus() == SmbException.NT_STATUS_LOGON_FAILURE) {
       throw new InvalidUserException(
@@ -193,14 +193,14 @@ public class SmbReadonlyFile
   @Override
   protected void detectServerDown(IOException e)
       throws RepositoryException {
-    _detectServerDown(e);
+    staticDetectServerDown(e);
   }
 
   /** Checks for general document access problems, including server down. */
   @Override
   protected void detectGeneralErrors(IOException e)
       throws RepositoryException {
-    _detectGeneralErrors(e, getPath());
+    staticDetectGeneralErrors(e, getPath());
   }
 
   @Override
