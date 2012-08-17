@@ -48,6 +48,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -164,42 +165,45 @@ class FileLister implements Lister, TraversalContextAware,
 
   @VisibleForTesting
   Traverser newTraverser(String startPath) {
-    return new Traverser(startPath, documentAcceptor);
+    return new Traverser(startPath, documentAcceptor,
+                         newTraversalService(false));
   }
 
   /* @Override */
   public void start() throws RepositoryException {
-    TraversalService service = newTraversalService();
+    TraversalService service = newTraversalService(true);
+    Collection<Callable<Void>> traversers = newTraversers(service);
+
     LOGGER.fine("Starting File Lister");
-
-    Collection<Callable<Void>> traversers = Lists.newArrayList();
-    for (String startPath : context.getStartPaths()) {
-      traversers.add(newTraverser(startPath));
-    }
-
     try {
       while (!service.isShutdown()) {
         sleep(Sleep.SCHEDULE_DELAY);
         try {
+          boolean gotError = false;
           for (Future future : service.invokeAll(traversers)) {
-            future.get();
+            try {
+              future.get();
+            } catch (ExecutionException e) {
+              // Already logged in child thread context.
+              gotError = true;
+            }
           }
           if (!service.isShutdown()) {
-            sleep(Sleep.RETRY_DELAY);
-          }
-        } catch (ExecutionException e) {
-          // Already logged in child thread context.
-          if (!service.isShutdown()) {
-            sleep(Sleep.ERROR_DELAY);
+            sleep(gotError ? Sleep.ERROR_DELAY : Sleep.RETRY_DELAY);
           }
         } catch (InterruptedException ie) {
           // Awoken from sleep. If not shutdown, then there was a schedule
           // change.  Terminate the traversers, then restart them with the
           // new schedule.
           if (!service.isShutdown()) {
-            service = newTraversalService();
+            service = newTraversalService(false);
+            traversers = newTraversers(service);
           }
         }
+      }
+    } catch (RejectedExecutionException e) {
+      if (!service.isShutdown()) {
+        LOGGER.log(Level.WARNING, "Lister execution failed.", e);
       }
     } catch (Exception e) {
       LOGGER.log(Level.WARNING, "Lister feed failed.", e);
@@ -228,6 +232,7 @@ class FileLister implements Lister, TraversalContextAware,
     TraversalService service = traversalService.get();
     if (service != null) {
       service.shutdownNow();
+      service.interrupt();
     }
   }
 
@@ -270,8 +275,10 @@ class FileLister implements Lister, TraversalContextAware,
 
   /**
    * Returns a new TraversalService. Waits for an existing one to terminate.
+   *
+   * @param interruptLister if true, interrupt the old service lister thread.
    */
-  private TraversalService newTraversalService() {
+  private TraversalService newTraversalService(boolean interruptLister) {
     TraversalService service = new TraversalService(Thread.currentThread(),
         context.getPropertyManager().getThreadPoolSize());
     TraversalService oldService = traversalService.getAndSet(service);
@@ -280,9 +287,23 @@ class FileLister implements Lister, TraversalContextAware,
     if (oldService != null) {
       oldService.shutdownNow();
       oldService.awaitTermination();
+      if (interruptLister) {
+        oldService.interrupt();
+      }
     }
     
     return service;
+  }
+
+  /**
+   * Returns a Collection of Traversers targeted for the TraversalService.
+   */
+  private Collection<Callable<Void>> newTraversers(TraversalService service) {
+    Collection<Callable<Void>> traversers = Lists.newArrayList();
+    for (String startPath : context.getStartPaths()) {
+      traversers.add(new Traverser(startPath, documentAcceptor, service));
+    }
+    return traversers;
   }
 
   private class TraversalService extends ThreadPoolExecutor {
@@ -298,7 +319,7 @@ class FileLister implements Lister, TraversalContextAware,
       listerThread = null;
     }
       
-    /** Wake thread from sleep() to notice a change. */
+    /** Wake listerThread from sleep() to notice a change. */
     synchronized void interrupt() {
       if (listerThread != null) {
         listerThread.interrupt();
@@ -316,34 +337,22 @@ class FileLister implements Lister, TraversalContextAware,
         LOGGER.warning("File Lister did not shut down in a timely fashion.");
       }
     }
-
-    @Override
-    public synchronized void shutdown() {
-      super.shutdown();
-      // Wake thread from sleep() to notice the change.
-      interrupt();
-    }
-
-    @Override
-    public synchronized List<Runnable> shutdownNow() {
-      List<Runnable> list = super.shutdownNow();
-      // Wake thread from sleep() to notice the change.
-      interrupt();
-      return list;
-    }
   }
 
   @VisibleForTesting
   class Traverser implements Callable<Void> {
     private final String startPath;
     private final DocumentAcceptor documentAcceptor;
+    private final TraversalService service;
     private final String ndc;
     private long lastFullTraversal = 0L;
     private long lastTraversal = 0L;
 
-    public Traverser(String startPath, DocumentAcceptor documentAcceptor) {
+    public Traverser(String startPath, DocumentAcceptor documentAcceptor,
+                     TraversalService service) {
       this.startPath = startPath;
       this.documentAcceptor = documentAcceptor;
+      this.service = service;
       this.ndc = NDC.peek();
     }
 
@@ -395,11 +404,7 @@ class FileLister implements Lister, TraversalContextAware,
 
     /** Returns true if we are in a shutdown scenario. */
     private boolean isShutdown() {
-      // ThreadPoolExecutor.shutdownNow() sets the interrupted flag as a
-      // signal to shutdown.  Note that we want to leave the interrupted
-      // flag as-is and not clear it before returning, which is why we are
-      // using isInterrupted() instead of interrupted().
-      return Thread.currentThread().isInterrupted();
+      return service.isShutdown();
     }
 
     private void traverse() throws DocumentAcceptorException,
@@ -422,21 +427,24 @@ class FileLister implements Lister, TraversalContextAware,
             getIfModifiedSince(startTime), returnDirectories);
 
         if (returnDirectories) {
-          Document rootShareAclDoc = createRootShareAcl(root);
-          if (rootShareAclDoc != null) {
-            try {
+          try {          
+            Document rootShareAclDoc = createRootShareAcl(root);
+            if (rootShareAclDoc != null) {
               documentAcceptor.take(rootShareAclDoc);
-            } catch (RepositoryDocumentException rde) {
-              LOGGER.log(Level.WARNING,
-                  "Failed to feed root share ACL document " + root.getPath(),
-                  rde);
             }
+          } catch (RepositoryException e) {
+            LOGGER.log(Level.WARNING,
+                "Failed to feed root share ACL document " + root.getPath(), e);
+            throw e;
           }
         }
-        while (!isShutdown() && iter.hasNext()) {
+        while (!isShutdown()) {
           String path = "";
           try {
             ReadonlyFile<?> file = iter.next();
+            if (file == null) {
+              break;	// No more files.
+            }          
             path = file.getPath();
             if (startPath.equals(path)) {
               documentAcceptor.take(new FileDocument(file, context, true));
@@ -445,6 +453,18 @@ class FileLister implements Lister, TraversalContextAware,
             }
           } catch (RepositoryDocumentException rde) {
             LOGGER.log(Level.WARNING, "Failed to feed document " + path, rde);
+          } catch (RepositoryException e) {
+            // TODO (bmj): Ideally we should retry the failed file a few times
+            // after increasing delays (1, 2, 4, 8 minutes to see if we can
+            // overcome apparently transient errors) before skipping
+            // over it. However, we will need to differentiate between
+            // RepositoryExceptions thrown by FileIterator.next() and ones
+            // throw after we have a ReadonlyFile already in hand.
+            LOGGER.log(Level.WARNING, "Encountered an error traversing "
+                       + startPath + " at document " + path, e);
+            if (!isShutdown()) {
+              sleep(Sleep.ERROR_DELAY);
+            }
           }
         }
         // If we succeeded, remember the last completed pass.
@@ -456,11 +476,12 @@ class FileLister implements Lister, TraversalContextAware,
     }
 
     /*
-     * Create and return share ACL as secure document for the root
+     * Create and return share ACL as secure document for the root.
      *
-     * @throws IOException
+     * @throws RepositoryException
      */
-    private Document createRootShareAcl(ReadonlyFile<?> root) {
+    private Document createRootShareAcl(ReadonlyFile<?> root)
+        throws RepositoryException {
       try {
         Acl shareAcl = root.getShareAcl();
         if (shareAcl != null && !shareAcl.equals(Acl.USE_HEAD_REQUEST)) {
@@ -484,13 +505,8 @@ class FileLister implements Lister, TraversalContextAware,
           return null;
         }
       } catch (IOException e) {
-        LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
+        throw new RepositoryDocumentException("Failed to create share ACL for "
             + root.getPath(), e);
-        return null;
-      } catch (RepositoryException e) {
-        LOGGER.log(Level.WARNING, "Failed to create share ACL for : "
-            + root.getPath(), e);
-        return null;
       }
     }
 
