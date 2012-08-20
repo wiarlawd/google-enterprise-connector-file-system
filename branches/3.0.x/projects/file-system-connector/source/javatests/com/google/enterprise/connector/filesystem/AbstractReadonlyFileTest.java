@@ -182,7 +182,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
           file.getInputStream();
         }
         public Class getExpectedException() {
-          return UnsupportedOperationException.class;
+          return IOException.class;
         }
       });
   }

@@ -222,8 +222,8 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType,
   public void testGetInputStreamDir() throws Exception {
     try {
       InputStream in = readonlyDirA.getInputStream();
-      fail("Expected UnsupportedOperationException, but got none.");
-    } catch (UnsupportedOperationException expected) {
+      fail("Expected IOException, but got none.");
+    } catch (IOException expected) {
       // Expected.
     }
   }
@@ -231,8 +231,8 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType,
   public void testGetInputStreamNonExistFile() throws Exception {
     try {
       InputStream in = readonlyTest2.getInputStream();
-      fail("Expected UnsupportedOperationException, but got none.");
-    } catch (UnsupportedOperationException expected) {
+      fail("Expected IOException, but got none.");
+    } catch (IOException expected) {
       // Expected.
     }
   }

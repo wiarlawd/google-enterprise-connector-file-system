@@ -200,8 +200,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     // isRegularFile or detectServerDown.
     try {
       if (!delegate.isFile()) {
-        throw new UnsupportedOperationException("Not a regular file: "
-                                                + getPath());
+        throw new IOException("Not a regular file: " + getPath());
       }
       return delegate.getInputStream();
     } catch (IOException e) {

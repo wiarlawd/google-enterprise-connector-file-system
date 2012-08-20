@@ -62,9 +62,6 @@ class FileRetriever implements Retriever, TraversalContextAware {
       } catch (IOException e) {
         throw new RepositoryDocumentException("Failed to open file: " + docid,
                                               e);
-      } catch (UnsupportedOperationException e) {
-        throw new RepositoryDocumentException("Failed to open file: " + docid,
-                                              e);
       }
     }
     LOGGER.finest("Returning no content for " + docid);

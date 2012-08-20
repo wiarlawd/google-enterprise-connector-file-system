@@ -48,6 +48,8 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
    * {@link #JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME}.
    */
   static {
+    LOG.config("Loading JCIFS configuration properties from: " +
+        FileConnectorType.class.getResource(JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME));
     configureJcifs(FileConnectorType.class.getResourceAsStream(
                    JCIFS_CONFIGURATION_PROPERTIES_RESOURCE_NAME));
   }

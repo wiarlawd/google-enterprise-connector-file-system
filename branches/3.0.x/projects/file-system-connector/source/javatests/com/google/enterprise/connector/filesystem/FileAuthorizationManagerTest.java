@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
@@ -109,6 +110,18 @@ public class FileAuthorizationManagerTest extends TestCase {
     // Technically the jetsons should pass this (I think).
     Set<String> expected = Sets.newTreeSet();
     testIdentity(new SimpleAuthenticationIdentity(null), expected);
+  }
+
+  /** Null password is not authorized for any documents. */
+  public void testNullPassword() throws Exception {
+    MockReadonlyFile flintstone = MockReadonlyFile.createRoot("/flintstone");
+    ImmutableSet<String> docid =
+        ImmutableSet.of(flintstone.addFile("fred", TEST_DATA).getPath());
+
+    Set<String> expected = Sets.newTreeSet();
+    Set<String> authorized =
+        authorizeDocids(docid, new SimpleAuthenticationIdentity("rock"));
+    assertTrue(authorized.toString(), authorized.isEmpty());
   }
 
   /** Test identity1 works for jetsons and flintstones, but not rubbles. */

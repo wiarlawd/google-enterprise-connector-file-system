@@ -143,7 +143,7 @@ public class FileDocument implements Document {
       try {
         MimeTypeDetector mimeTypeDetector = context.getMimeTypeDetector();
         addProperty(SpiConstants.PROPNAME_MIMETYPE,
-                    mimeTypeDetector.getMimeType(file.getPath(), file));
+                    mimeTypeDetector.getMimeType(file.getName(), file));
       } catch (IOException e) {
         LOGGER.log(Level.WARNING, "Failed to determine MimeType for "
                    + file.getPath(), e);
