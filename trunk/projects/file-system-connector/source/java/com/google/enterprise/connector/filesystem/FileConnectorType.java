@@ -55,7 +55,7 @@ public class FileConnectorType implements ConnectorType {
 
   private static final Logger LOG = Logger.getLogger(FileConnectorType.class.getName());
   private static final Map<String, String> EMPTY_CONFIG =
-      Collections.singletonMap("fulltraversal", "1");
+      Collections.emptyMap();
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
      * Our field values come from HTML input boxes which get maped to
@@ -183,21 +183,26 @@ public class FileConnectorType implements ConnectorType {
 
     private final boolean isPassword;
 
+    private final String defaultValue;
+
     private String value;  // user's one input line value
 
     SingleLineField(String name, boolean mandatory, boolean isPassword) {
+      this(name, mandatory, isPassword, "");
+    }
+
+    SingleLineField(String name, boolean mandatory, boolean isPassword,
+        String defaultValue) {
       super(name, mandatory);
       this.isPassword = isPassword;
-      value = "";
+      this.defaultValue = defaultValue;
+      this.value = defaultValue;
     }
 
     @Override
     void setValueFrom(Map<String, String> config) {
-      this.value = "";
       String newValue = config.get(getName());
-      if (hasContent(newValue)) {
-        this.value = newValue.trim();
-      }
+      this.value = hasContent(newValue) ? newValue.trim() : defaultValue;
     }
 
     @Override
@@ -393,7 +398,8 @@ public class FileConnectorType implements ConnectorType {
       tempFields.add(domainField = new SingleLineField("domain", false, false));
       tempFields.add(userField = new SingleLineField("user", false, false));
       tempFields.add(passwordField = new SingleLineField("password", false, true));
-      tempFields.add(fullTraversalField = new SingleLineField("fulltraversal", false, false));
+      tempFields.add(fullTraversalField =
+          new SingleLineField("fulltraversal", false, false, "1"));
       fields = Collections.unmodifiableList(tempFields);
 
       this.bundle = bundle;
