@@ -376,4 +376,43 @@ public class FileConnectorTypeTest extends TestCase {
     assertTrue(response.getMessage().contains("missing fields"));
     verify(mockFileType);
   }
+
+  /** Tests that the full traversal interval uses the default value. */
+  public void testFullTraversal() {
+    testFullTraversal(type.getConfigForm(Locale.getDefault()), "1");
+  }
+
+  /** Tests that the full traversal interval uses the configured value. */
+  public void testPopulatedFullTraversal() {
+    testFullTraversal(type.getPopulatedConfigForm(config, Locale.getDefault()),
+        "0");
+  }
+
+  /**
+   * Tests that the full traversal interval uses the default value
+   * when no value is configured.
+   */
+  public void testPopulatedNoFullTraversal() {
+    config.remove("fulltraversal");
+    testFullTraversal(type.getPopulatedConfigForm(config, Locale.getDefault()),
+        "1");
+  }
+
+  /** Tests that the response contains the expected value of fulltraversal. */
+  private void testFullTraversal(ConfigureResponse response,
+      String expectedValue) {
+    assertEquals("", response.getMessage());
+    String formSnippet = response.getFormSnippet();
+    assertBalancedTags(formSnippet);
+    String expectedInput = "<input name=\"fulltraversal\" "
+        + "id=\"fulltraversal\" type=\"text\" value=\"";
+    assertTrue("Unexpected form snippet " + formSnippet,
+        formSnippet.contains(expectedInput));
+    int index = formSnippet.indexOf(expectedInput);
+    int valueStart = index + expectedInput.length();
+    int valueEnd = formSnippet.indexOf("\"", valueStart);
+    String actualValue =
+        formSnippet.substring(valueStart, valueEnd);
+    assertEquals(expectedValue, actualValue);
+  }
 }

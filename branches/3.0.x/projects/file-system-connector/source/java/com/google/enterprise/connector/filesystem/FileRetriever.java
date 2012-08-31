@@ -137,6 +137,12 @@ class FileRetriever implements Retriever, TraversalContextAware {
         // That means the startPoint was the root and we are done.
         break;
       }
+      // Note: There is a subtle, yet beneficial side-effect happening here.
+      // The call to fileSystemType.getFile(), indirectly calls
+      // ReaonlyFile.canRead(), which fails if the file is hidden.
+      // So if any of our ancestors is hidden, a DocumentAccessException
+      // will get thrown out of here.  This prevents us from returning
+      // content that is under a hidden directory.
       file = fileSystemType.getFile(parentPath, credentials);
       pathName = file.getPath();
     }
