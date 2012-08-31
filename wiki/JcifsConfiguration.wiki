@@ -29,14 +29,14 @@ The JCIFS configuration properties are documented [http://jcifs.samba.org/src/do
 cd %CATALINA_HOME%\bin
 stopService.bat
 }}}
-  # The JCIFS configuration properties file must be in a `config` subdirectory of the `classes` directory for the connector web application.  By default, this directory does not exist, so you must create it.
+  # The JCIFS configuration properties file must be in a `com\google\enterprise\connector\filesystem\config` subdirectory of the `classes` directory for the connector web application.  By default, this directory does not exist, so you must create it.
 {{{
 cd %CATALINA_HOME%\webapps\connector-manager\WEB-INF\classes
-mkdir config
+mkdir com\google\enterprise\connector\filesystem\config
 }}}
   # Use your favorite plain-text editor to create a `jcifsConfiguration.properties` file with the JCIFS properties you wish to set.  Since this properties file will be used instead of the built-in one, you should probably include the `jcifs.smb.client.responseTimeout` and `jcifs.smb.client.soTimeout` mentioned above, in addition to any other custom properties you wish to configure.  For instance, suppose we wish to increase the SMB response timeout to 60 seconds (60,000 milliseconds):
 {{{
-cd config
+cd com\google\enterprise\connector\filesystem\config
 echo jcifs.smb.client.responseTimeout=60000 >> jcifsConfiguration.properties
 echo jcifs.smb.client.soTimeout=35000 >> jcifsConfiguration.properties
 }}}
@@ -57,14 +57,14 @@ The syntax used here is Bash shell syntax.  You may need to adjust the syntax ap
 cd ${CATALINA_HOME}/bin
 ./shutdown.sh
 }}}
-  # The JCIFS configuration properties file must be in a `config` subdirectory of the `classes` directory for the connector web application.  By default, this directory does not exist, so you must create it.
+  # The JCIFS configuration properties file must be in a `com/google/enterprise/connector/filesystem/config` subdirectory of the `classes` directory for the connector web application.  By default, this directory does not exist, so you must create it.
 {{{
 cd ${CATALINA_HOME}/webapps/connector-manager/WEB-INF/classes
-mkdir config
+mkdir -p com/google/enterprise/connector/filesystem/config
 }}}
   # Use your favorite plain-text editor to create a `jcifsConfiguration.properties` file with the JCIFS properties you wish to set.  Since this properties file will be used instead of the built-in one, you should probably include the `jcifs.smb.client.responseTimeout` and `jcifs.smb.client.soTimeout` mentioned above, in addition to any other custom properties you wish to configure.  For instance, suppose we wish to increase the SMB response timeout to 60 seconds (60,000 milliseconds):
 {{{
-cd config
+cd com/google/enterprise/connector/filesystem/config
 echo 'jcifs.smb.client.responseTimeout=60000' >> jcifsConfiguration.properties
 echo 'jcifs.smb.client.soTimeout=35000' >> jcifsConfiguration.properties
 }}}
