@@ -9,6 +9,172 @@ documentation.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
+Release 3.0.0, 20 August 2012
+=============================
+
+Introduction
+------------
+The file system connector version 3.0.0 is a significant re-engineering of the
+connector implementation. 
+
+The most notable improvements are:
+  - The connector moves from a Diffing Connector model to a Lister/Retriever
+    model. This is a major architectural change for the connector.
+  - Vastly improved feed and indexing performance.
+  - Support for ACL inheritance and deny for SMB file systems.
+  - The connector is now aware of the Traversal Schedule.
+  - Upgraded third party components to JCIFS v1.3.17 and MimeUtil v2.1.2.
+
+File system connector version 3.0.0 requires Connector Manager version 3.0.0.
+For information about manually upgrading an earlier file system connector
+installation to version 3.0.0, please see:
+http://code.google.com/p/google-enterprise-connector-file-system/wiki/UpgradeToVersion3
+
+Lister/Retriever Conversion
+---------------------------
+The file system connector version 3.0.0 uses a Lister/Retriever model to feed
+documents to the Google Search Appliance.  Rather than pushing a Content feed
+to the GSA, the Lister pushes a Metadata-and-URL feed, where the URL (referred
+to as the ContentURL) points back to the connector's document content Retriever.
+The document content is then fetched by the GSA using the ContentURL.  Since the
+document content is no longer contained within the feed itself, the feeds are
+much smaller.
+
+Another benefit to the Lister/Retriever model is the responsibility for 
+document change detection moves from the connector to the search appliance,
+which uses HTTP "If-Modified-Since" request header to conditionally retrieve
+changed content.  This change simplifies the connector implementation
+considerably, removing its dependence on the "Diffing Connector" infrastructure.
+
+As a result of the move away from the Diffing Connector infrastructure,
+the "queueSize" Advanced Configuration option has been deprecated, and
+will be ignored if set.
+
+Google recommends that you use GSA version 6.14 Patch 2 or later, for improved
+"If-Modified-Since" handling and Flexible Authorization support.
+
+For improved document security, use HTTPS communications between the 
+GSA and the Tomcat web application server hosting the connector. See:
+http://code.google.com/p/google-enterprise-connector-manager/wiki/SettingUpHTTPS
+
+ACL Namespaces, ACL Inheritance, and Deny ACLs
+----------------------------------------------
+The file system connector version 3.0.0 supports Access Control Lists (ACLs)
+that may be inherited from a parent folder or file share.  This reduces the
+number of files/directories that must be re-indexed as a result of an ACL 
+change to a folder far up the directory hierarchy.
+
+This version of the file system connector also supports Deny ACLs - ACLs which
+deny access to specific individuals or groups.
+
+The file system connector also supports local and global namespaces
+for ACL users and groups.
+
+Note GSA version 7.0 or newer is required to support ACL namespaces, 
+inheritance, and Deny ACLs.  The file system connector only supports ACLs
+for SMB file systems at this time.
+
+Default User and Group ACL Formats Have Changed
+-----------------------------------------------
+The default ACL format changed between file system connector version 2.x and 
+version 3.0.0.  The new default user ACL format is "domain\user".  The new 
+default group ACL format is "domain\group".  These new defaults will be the
+most appropriate formats to use with GSA version 7.0 and later.  The previous
+ACL formats, "user" and "group" (without the domain), are unlikely to work with
+GSA version 7.0.  If the Authentication mechanism for this connector returns a
+domain element, then the user and group ACLs must also include the domain.
+
+If you have previously explicitly configured the user and group ACL formats
+in the Advanced Configuration, that explicit configuration will still be
+honored (although you may wish to change it if upgrading the GSA as well).
+If you have not explicitly configured the user and group ACL formats, the
+new default format will be used.
+
+If, when using file system connector version 3.0.0, you wish to use the
+unadorned "user" and "group" formats, you must explicitly enable those
+formats in the Advanced Configuration.
+
+Traversal Schedule Aware
+------------------------
+The file system connector version 3.0.0 is aware of the Traversal Schedule,
+including scheduled traversal intervals, Retry Delay, and run-once traversals
+(Retry Delay of -1).  Previous versions of the connector ignored the Traversal
+Schedule, continually scanning the repository outside of the traversal 
+intervals.  Older versions of the connector also ignored the Retry Delay, 
+replicating its functionality with advanced configuration options.
+
+Since the connector is now aware of the Traversal Schedule, the
+"delayBetweenTwoScansInMillis" and "introduceDelayAfterEveryScan" advanced 
+configuration options are now deprecated and will be ignored if set.
+
+The Retry Delay governs the delay between traversals of the repository.
+Most traversals are incremental traversals and look only for items that have
+changed since the last traversal, based upon the file's last-modified timestamp.
+Some traversals are full traversals (see below), which feed all appropriate
+contents of the repository to the Search Appliance.
+
+The Full Traversal Interval governs the interval between full, rather than
+incremental, traversals of the repository.  You may wish to configure the
+forced Full Traversal Interval for the needs of your organization.  File
+and directory adds and copies and changes to file contents are detected
+during the connector's incremental traversals.  However, moved or renamed
+files and changes to ACLs and other metadata may only be detected during full
+traversals.  Frequent full traversals may overwhelm the Search Appliance,
+bogging down its feed processing.  Long full traversal intervals increase the
+time it takes for the Search Appliance to notice certain types of changes.
+
+A full traversal may also be triggered manually at any time by resetting 
+the connector in the Search Appliance Admin Console.  A full traversal is
+automatically triggered if you change the connector's configuration or
+schedule, or restart the Tomcat web application server.
+
+If you have a large number of files in your repository (more than 1 million),
+the default Retry Delay and Full Traversal Interval values are likely too 
+small.  Consider Retry Delay values of hours (4 hours = 240 minutes).
+Consider a Full Traversal Interval that is at least 2 days for each million
+documents fed.
+
+At this time, the connector ignores the Traversal Rate configuration.
+
+Issues fixed from last release:
+-------------------------------
+Issue 5269133: File system connector is not able to feed pptx file format.
+Issues 5409517,5453293: File system connector should feed in Deny ACL.
+Issue 5833106: File system connector running slowly.
+Issue 6299009: File system connector has multiple issues in crawling when the
+               file name has unicode characters.
+Issue 6311078: Onboard file system connector accepts / as Start path and fails
+               to crawl it.
+Issue 6386228: File system connector can lockout Windows users in some
+               authorization scenarios.
+Issue 6443288: Fix principal name formats in file system connector. See
+               "Default User and Group ACL Formats Have Changed" above.
+Issue 6514063: Support for Built-in Groups on Windows shares.
+Issue 6530759: Make "domain\username" and "domain\groupname" the default user
+               and group name format for file system connector ACL feed option.
+Issue 6679622: File system connector not detecting changes to the file share.
+Issue 6686185: File system connector throws NullPointerException when the
+               crawler user has no permission on the file share.
+Issue 6712875: File system connector sends ACL records for the folders even
+               if not configured to feed ACLs.
+Issues 6746600,6867242: Toggling "Disable traversal" check box multiplies the
+               file system traversal threads and the connector goes into an
+               inconsistent state.
+Issue 6779253: Timeouts in file system connector cause it to hang; requires
+               restart of Tomcat.
+Issue 6929748: File system connector sending duplicates after reset or changes
+               to configuration or schedule.
+Issue 6977695: File system connector traversal restarts from scratch after
+               timeout exception.
+Issue 6494509: File system connector ACL case-sensitivity should be
+               configurable. ACLs are now case-insensitive by default, and
+               can be configured to be case-sensitive by adding a document
+               filter bean definition to the file system connector Advanced
+               Configuration XML on the connector configuration form:
+               <bean class="com.google.enterprise.connector.util.filter.AclPropertyFilter">
+                 <property name="caseSensitivityType" value="everything-case-sensitive"/>
+               </bean>
+
 
 Release 2.8.6, May 4, 2012
 ==========================
@@ -31,6 +197,9 @@ Issue 5589982: File-system connector fails to crawl Samba share,
                SmbException: 0xC000011F is observed. The problem could
                potentially occur on other SMB implementations, but has
                only been reported on Samba shares.
+Issue 5546078: Restart of FileSystem Connector when share is down causes
+               exception which halts the traversal. No new content would
+               be crawled.
 
 Known limitations:
 -----------------
