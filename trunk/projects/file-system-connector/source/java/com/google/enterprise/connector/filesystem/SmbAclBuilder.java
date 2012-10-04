@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
 
@@ -39,6 +40,7 @@ class SmbAclBuilder implements AclBuilder {
       SmbAclBuilder.class.getName());
 
   private final SmbFile file;
+
   /**
    * Represents the format in which the ACEs are to be returned for users.
    */
@@ -199,13 +201,12 @@ class SmbAclBuilder implements AclBuilder {
   private void addAceToSet(Set<Principal> users, Set<Principal> groups,
       ACE finalAce) {
     SID sid = finalAce.getSID();
+    int sidType = sid.getType();
     String aclEntry = sid.toDisplayString();
-    int sidType = finalAce.getSID().getType();
     int ix = aclEntry.indexOf('\\');
-    String userOrGroup, domain;
     if (ix > 0) {
-      domain = aclEntry.substring(0, ix);
-      userOrGroup = aclEntry.substring(ix + 1);
+      String domain = aclEntry.substring(0, ix);
+      String userOrGroup = aclEntry.substring(ix + 1);
       if (sidType == SID.SID_TYPE_USER) {
         aclEntry = AclFormat.formatString(userAclFormat, userOrGroup, domain);
       } else {
@@ -227,8 +228,12 @@ class SmbAclBuilder implements AclBuilder {
         break;
       case SID.SID_TYPE_ALIAS:
       case SID.SID_TYPE_WKN_GRP:
+        if (ix < 0 && !Strings.isNullOrEmpty(sid.getDomainName())) {
+          aclEntry = AclFormat.formatString(groupAclFormat, aclEntry,
+                                            sid.getDomainName());
+        }
         groups.add(new Principal(groupAclFormat.getPrincipalType(),
-                localNamespace, aclEntry,
+                globalNamespace, aclEntry,
                 CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
         break;
     }
