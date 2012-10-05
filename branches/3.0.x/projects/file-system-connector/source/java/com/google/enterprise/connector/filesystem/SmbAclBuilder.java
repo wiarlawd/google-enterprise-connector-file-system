@@ -404,22 +404,22 @@ class SmbAclBuilder implements AclBuilder {
   /**
    * {@link String} representations of {@link SID} objects that qualify for
    * inclusion in an ACL regardless of the value returned by
-   * {@link SID#getType}
-   * or by {@link #isBuiltin(SID)}.
+   * {@link #isSupportedSidType(int type)} or by {@link #isBuiltin(SID)}.
    */
   private static final Set<String> SUPPORTED_WINDOWS_SIDS =
       new HashSet<String>(Arrays.asList(
           "S-1-5-32-544",  // Administrators
-          EVERYONE_SID,       // Everyone
+          EVERYONE_SID,    // Everyone
           "S-1-5-32-545",  // Users
-          "S-1-5-32-546"   // Guests
+          "S-1-5-32-546",  // Guests
+          "S-1-5-4",       // NT AUTHORITY\INTERACTIVE   
+          "S-1-5-11"       // NT AUTHORITY\Authenticated Users
       ));
 
   /**
-   * Returns true if the provided {@link SID} can qualify for inclusion in an
-   * ACL
-   * regardless of the value returned by {@link SID#getType} or by
-   * {@link #isBuiltin(SID)}.
+   * Returns true if the supplied {@link SID} qualifies for inclusion in an ACL,
+   * regardless of the value returned by {@link #isSupportedSidType(int type)}
+   * or by {@link #isBuiltin(SID)}.
    */
   private final boolean isSupportedWindowsSid(SID sid) {
     return SUPPORTED_WINDOWS_SIDS.contains(sid.toString());
