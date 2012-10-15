@@ -61,10 +61,19 @@ public class SmbInputStream extends BufferedInputStream {
 
   @Override
   public void close() throws IOException {
-    super.close();
-    if (lastAccessTimeResetFlag) {
-      setLastAccessTime();
-      removeFromMap(delegate.getPath());
+    try {
+      super.close();
+    } catch (RuntimeException e) {
+      // A bug in JCIFS SmbFile.close() can throw NullPointerException.
+      throw new IOException("Failed to close SmbInputStream", e);
+    } finally {
+      if (lastAccessTimeResetFlag) {
+        try {
+          setLastAccessTime();
+        } finally {
+          removeFromMap(delegate.getPath());
+        }
+      }
     }
   }
 
