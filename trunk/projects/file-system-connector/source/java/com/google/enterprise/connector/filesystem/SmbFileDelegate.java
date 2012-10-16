@@ -14,9 +14,13 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.enterprise.connector.util.IOExceptionHelper;
+
 import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SmbFile;
 
+import java.io.FilterInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Date;
@@ -58,5 +62,35 @@ public class SmbFileDelegate extends SmbFile
     public String toString() {
       return (new Date(fileTime)).toString();
     }
+  }
+
+  /*
+   * There is a bug in jCIFS SmbFileInputStream.close() that can throw
+   * NullPointerException.  From a customer log:
+   * Exception in thread "..." java.lang.NullPointerException
+   * at jcifs.smb.SmbFile.resolveDfs(SmbFile.java:668)
+   * at jcifs.smb.SmbFile.send(SmbFile.java:770)
+   * at jcifs.smb.SmbFile.close(SmbFile.java:1018)
+   * at jcifs.smb.SmbFile.close(SmbFile.java:1024)
+   * at jcifs.smb.SmbFile.close(SmbFile.java:1028)
+   * at jcifs.smb.SmbFileInputStream.close(SmbFileInputStream.java:104)
+   *
+   * Since we could not determine how to correctly fix SmbFile.resolveDfs(),
+   * we will wrap the SmbFileInputStream and handle RuntimeExceptions in
+   * close(), rethrowing as IOException.
+   */
+  @Override
+  public InputStream getInputStream() throws IOException {
+    return new FilterInputStream(super.getInputStream()) { 
+        @Override
+        public void close() throws IOException {
+          try {
+            super.close();
+          } catch (RuntimeException e) {
+            throw IOExceptionHelper.newIOException(
+                "Failed to close input stream.", e);
+          }
+        }
+      };
   }
 }
