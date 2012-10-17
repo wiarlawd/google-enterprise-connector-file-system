@@ -47,24 +47,22 @@ public class FileDocument implements Document {
       Logger.getLogger(FileDocument.class.getName());
 
   public static final String SHARE_ACL_PREFIX = "ShareACL://";
+  private final ReadonlyFile<?> root;
   private final ReadonlyFile<?> file;
   private final DocumentContext context;
   private final AclProperties aclProperties;
   private final Map<String, List<Value>> properties;
-  private final boolean isRoot;
 
-  FileDocument(ReadonlyFile<?> file, DocumentContext context)
-      throws RepositoryException {
-    this(file, context, false);
-  }
-
-  FileDocument(ReadonlyFile<?> file, DocumentContext context, boolean isRoot)
-      throws RepositoryException {
+  FileDocument(ReadonlyFile<?> file, DocumentContext context,
+               ReadonlyFile<?> root) throws RepositoryException {
+    Preconditions.checkNotNull(file, "file may not be null");
+    Preconditions.checkNotNull(root, "root may not be null");
+    Preconditions.checkNotNull(context, "context may not be null");
     this.file = file;
+    this.root = root;
     this.context = context;
     this.aclProperties = context.getPropertyManager();
     this.properties = Maps.newHashMap();
-    this.isRoot = isRoot;
     fetchProperties();
   }
 
@@ -160,7 +158,7 @@ public class FileDocument implements Document {
       if (aclProperties.isPushAcls()) {
         LOGGER.finest("pushAcls flag is true so adding ACL to the document");
         try {
-          addAclProperties(file, file.getAcl());
+          addAclProperties(file);
         } catch (IOException ioe) {
           throw new RepositoryDocumentException("Failed to read ACL for "
               + file.getPath(), ioe);
@@ -186,8 +184,9 @@ public class FileDocument implements Document {
   /*
    * Adds ACL properties to the property map.
    */
-  private void addAclProperties(ReadonlyFile<?> file, Acl acl)
+  private void addAclProperties(ReadonlyFile<?> file)
       throws IOException, RepositoryException {
+    Acl acl = file.getAcl();
     if (acl.isPublic()) {
       if (acl.isDeterminate()) {
         LOGGER.finest("ACL isPublic flag is true so setting "
@@ -195,17 +194,23 @@ public class FileDocument implements Document {
         addProperty(SpiConstants.PROPNAME_ISPUBLIC, Boolean.TRUE.toString());
       }
     } else {
+      addAclProperties(acl);
       String inheritFrom;
-      if (isRoot) {
-        inheritFrom = getRootShareAclId(file);
-        addAclProperties(file.getInheritedAcl());
+      Acl inheritedAcl = file.getInheritedAcl();
+      // If the file is the root, we want to flatten ACLs above the root.
+      // Similarly, if the file has no inherited ACL, it will inherit directly
+      // from the share.
+      if (root.getPath().equals(file.getPath())) {
+        inheritFrom = getRootShareAclId(root);
+        addAclProperties(inheritedAcl);
+      } else if (inheritedAcl == null) {
+        inheritFrom = getRootShareAclId(root);
       } else {
         inheritFrom = file.getParent();
       }
       if (inheritFrom != null && aclProperties.supportsInheritedAcls()) {
         addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID, inheritFrom);
       }
-      addAclProperties(acl);
     }
   }
 
