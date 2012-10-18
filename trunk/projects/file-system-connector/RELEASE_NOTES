@@ -20,6 +20,8 @@ new functionality. Users of version 3.0.0 are strongly encouraged to upgrade.
 
 Issues fixed from last release:
 -------------------------------
+Issue 7166051: Deny HTTP HEAD requests from legacy authorization, which would
+               always permit access to secure documents.
 Issue 7291282: Connector did not feed the Windows "NT AUTHORITY" groups
                "Authenticated Users" and "Interactive".
 Issue 7291526: Connector feeds "inherit-from parent" ACLs, even if file does
