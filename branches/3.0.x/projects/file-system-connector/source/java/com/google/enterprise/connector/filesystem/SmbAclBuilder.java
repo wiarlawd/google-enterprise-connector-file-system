@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -88,12 +89,26 @@ class SmbAclBuilder implements AclBuilder {
   private final String localNamespace;
 
   /**
+   * The security ACEs for this file.
+   */
+  private final ACE[] securityAces;
+
+  /**
+   * True if this file has any inherited ACEs.
+   */
+  private final boolean hasInheritedAces;
+
+  /**
    * Creates an {@link SmbAclBuilder}.
    *
    * @param file the {@link SmbFile} whose {@link Acl} we build.
    * @param propertyFetcher Object containing the required properties.
    */
-  SmbAclBuilder(SmbFile file, AclProperties propertyFetcher) {
+  SmbAclBuilder(SmbFile file, AclProperties propertyFetcher)
+      throws IOException {
+    Preconditions.checkNotNull(file, "file may not be null");
+    Preconditions.checkNotNull(propertyFetcher,
+                               "propertyFetcher may not be null");
     this.file = file;
     this.globalNamespace = propertyFetcher.getGlobalNamespace();
     this.localNamespace = propertyFetcher.getLocalNamespace();
@@ -123,11 +138,24 @@ class SmbAclBuilder implements AclBuilder {
     } else {
       this.groupAclFormat = tempFormat;
     }
+
+    // Get the security ACEs on the file, if not already available.
+    // Also determines if any of those ACEs are inherited.
+    securityAces = file.getSecurity();
+    boolean hasInheritedAces = false;
+    if (securityAces != null) {
+      for (ACE ace : securityAces) {
+        if (isInheritedAce.apply(ace)) {
+          hasInheritedAces = true;
+          break;
+        }
+      }
+    }
+    this.hasInheritedAces = hasInheritedAces;
   }
 
   @Override
   public Acl getAcl() throws IOException {
-    ACE[] securityAces = file.getSecurity();
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.log(Level.FINEST, "ACEs for {0}: {1}",
                  new Object[] { file, Arrays.toString(securityAces)});
@@ -138,22 +166,27 @@ class SmbAclBuilder implements AclBuilder {
     checkAndAddAces(securityAces, fileAllowAces, fileDenyAces,
                     isDirectAce);
 
-    try {
-      String parent = file.getParent();
-      if (parent != null) {
-        NtlmPasswordAuthentication auth = 
-            (NtlmPasswordAuthentication) file.getPrincipal();
-        SmbFile parentFile = new SmbFile(parent, auth);
-        ACE[] parentsecurityAces = parentFile.getSecurity();
-        checkAndAddAces(parentsecurityAces, fileAllowAces, fileDenyAces,
-                        isInheritOnlyAce);
+    // If the file inherits any ACEs from its parent, explicitly add
+    // those that were INHERIT_ONLY (on the parent) to our ACEs.
+    if (hasInheritedAces) {
+      try {
+        String parent = file.getParent();
+        if (parent != null) {
+          NtlmPasswordAuthentication auth = 
+              (NtlmPasswordAuthentication) file.getPrincipal();
+          SmbFile parentFile = new SmbFile(parent, auth);
+          ACE[] parentsecurityAces = parentFile.getSecurity();
+          checkAndAddAces(parentsecurityAces, fileAllowAces, fileDenyAces,
+                          isInheritOnlyAce);
+        }
+      } catch (ClassCastException e) {
+        LOGGER.log(Level.FINEST,"ClassCastException while getting parent ACLs: "
+                   + e.getMessage());
+      } catch (SmbException e) {
+        LOGGER.warning("Failed to get parent ACL: " + e.getMessage());
+        LOGGER.log(Level.FINEST, "Got SmbException while getting parent ACLs",
+                   e);
       }
-    } catch (ClassCastException e) {
-      LOGGER.log(Level.FINEST,"ClassCastException while getting parent ACLs: " 
-          + e.getMessage());
-    } catch (SmbException e) {
-      LOGGER.warning("Failed to get parent ACL: " + e.getMessage());
-      LOGGER.log(Level.FINEST, "Got SmbException while getting parent ACLs", e);
     }
 
     Acl acl = getAclFromAceList(fileAllowAces, fileDenyAces);
@@ -163,7 +196,10 @@ class SmbAclBuilder implements AclBuilder {
 
   @Override
   public Acl getInheritedAcl() throws IOException {
-    ACE[] securityAces = file.getSecurity();
+    if (!hasInheritedAces) {
+      return null;
+    }
+
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.log(Level.FINEST, "ACEs for {0}: {1}",
                  new Object[] { file, Arrays.toString(securityAces)});
@@ -195,7 +231,8 @@ class SmbAclBuilder implements AclBuilder {
                     isDirectAce);
 
     Acl acl = getAclFromAceList(fileAllowAces, fileDenyAces);
-    LOGGER.log(Level.FINEST, "Share ACL for {0}: {1}", new Object[] { file, acl });
+    LOGGER.log(Level.FINEST, "Share ACL for {0}: {1}",
+               new Object[] { file, acl });
     return acl;
   }
 

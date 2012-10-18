@@ -23,6 +23,7 @@ import com.google.enterprise.connector.spi.SpiConstants.AclScope;
 import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
 
 import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
@@ -55,8 +56,6 @@ public class SmbAclBuilderTest extends TestCase {
     SmbFile smbFile = createMock(SmbFile.class);
     ACE fileAce = createACE("user1", AclScope.USER);
     ACE [] fileAces = {fileAce};
-    expect(smbFile.getParent()).andReturn("smb://root");
-    expect(smbFile.getPrincipal()).andReturn(null);
     expect(smbFile.getSecurity()).andReturn(fileAces);
 
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
@@ -73,13 +72,13 @@ public class SmbAclBuilderTest extends TestCase {
     assertTrue(acl.getGroups().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
     assertTrue(acl.getDenyGroups().isEmpty());
+    assertNull(builder.getInheritedAcl());
     verify(smbFile);
     verify(fileAce);
   }
 
   public void testACLForShareLevelAclOnly () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
-
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     ACE shareAce = createACE("user2", AclScope.USER);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
@@ -102,8 +101,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   public void testACLForShareLevelGroupAclOnly () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
-
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     ACE shareAce = createACE("accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
@@ -125,11 +123,9 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   public void testACLForGetSecurityNotAllowedOnFile () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
-    expect(smbFile.getParent()).andReturn(null);
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     //file.getSecurity will return null so ACL with null user and group ACL
     //will be returned
-    expect(smbFile.getSecurity()).andReturn(null);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
     replay(smbFile);
@@ -146,7 +142,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   public void testACLForGetShareSecurityNotAllowedOnFile () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     expect(smbFile.getShareSecurity(true)).andReturn(null);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
@@ -163,9 +159,8 @@ public class SmbAclBuilderTest extends TestCase {
     verify(smbFile);
   }
 
-
   public void testACLForDomainNameStrippedOff () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     ACE shareAce = createACE("domain\\accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
@@ -185,7 +180,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   public void testACLForPresenceOfDenyShareLevelACE () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     ACE shareAce = createACE("John Doe", AclScope.USER, AclAccess.DENY);
     ACE [] shareAces = {shareAce};
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
@@ -211,7 +206,6 @@ public class SmbAclBuilderTest extends TestCase {
     SmbFile smbFile = createMock(SmbFile.class);
     ACE fileAce = createACE("accountants", AclScope.GROUP, AclAccess.DENY);
     ACE [] fileAces = {fileAce};
-    expect(smbFile.getParent()).andReturn(null);
     expect(smbFile.getSecurity()).andReturn(fileAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
@@ -251,7 +245,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   public void testACLForSAMLTypeACL () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     String samlAceFormat = AclFormat.USER_AT_DOMAIN.getFormat();
     ACE shareAce = createACE("google\\accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
@@ -284,7 +278,7 @@ public class SmbAclBuilderTest extends TestCase {
   }
 
   public void testACLForHTTPBasicTypeACL () throws IOException {
-    SmbFile smbFile = createMock(SmbFile.class);
+    SmbFile smbFile = createNiceMock(SmbFile.class);
     String httpAceFormat = AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
     ACE shareAce = createACE("google\\accountants", AclScope.GROUP);
     ACE [] shareAces = {shareAce};
@@ -325,7 +319,6 @@ public class SmbAclBuilderTest extends TestCase {
     ACE shareAce = fileAce;
     ACE shareAce1 = createACE("google\\employees", AclScope.GROUP);
     ACE [] shareAces = {shareAce, shareAce1};
-    expect(smbFile.getParent()).andReturn(null);
     expect(smbFile.getShareSecurity(true)).andReturn(shareAces);
     expect(smbFile.getURL()).andReturn(new URL("file","host","file"));
     expectLastCall().anyTimes();
