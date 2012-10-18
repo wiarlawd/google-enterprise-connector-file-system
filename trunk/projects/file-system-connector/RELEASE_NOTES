@@ -9,8 +9,29 @@ documentation.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
-Release 3.0.0, 20 August 2012
-=============================
+
+Release 3.0.2, 17 October 2012
+==============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality. Users of version 3.0.0 are strongly encouraged to upgrade.
+
+Issues fixed from last release:
+-------------------------------
+Issue 7291282: Connector did not feed the Windows "NT AUTHORITY" groups
+               "Authenticated Users" and "Interactive".
+Issue 7291526: Connector feeds "inherit-from parent" ACLs, even if file does
+               not inherit ACLs from its parent.
+Issue 7307947: Connector may skip some explicit ACEs when inherited ACEs
+               are present.
+Issue 7309510: Connector root directory ACL includes inherit-only ACEs.
+Issue 7343330: NullPointerException thrown when closing SmbFileInputStream.
+
+
+Release 3.0.0, 03 October 2012
+==============================
 
 Introduction
 ------------
@@ -138,25 +159,29 @@ At this time, the connector ignores the Traversal Rate configuration.
 
 Issues fixed from last release:
 -------------------------------
-Issue 5269133: File system connector is not able to feed pptx file format.
 Issues 5409517,5453293: File system connector should feed in Deny ACL.
-Issue 5833106: File system connector running slowly.
+Issue 5833106: File system connector running slowly against DFS.
 Issue 6299009: File system connector has multiple issues in crawling when the
-               file name has unicode characters.
+               file name has Unicode characters.
 Issue 6311078: Onboard file system connector accepts / as Start path and fails
                to crawl it.
 Issue 6386228: File system connector can lockout Windows users in some
                authorization scenarios.
 Issue 6443288: Fix principal name formats in file system connector. See
                "Default User and Group ACL Formats Have Changed" above.
+Issue 6494509: File system connector ACL case-sensitivity should be
+               configurable. ACLs are now case-insensitive by default, and
+               can be configured to be case-sensitive by adding a document
+               filter bean definition to the file system connector Advanced
+               Configuration XML on the connector configuration form:
+               <bean class="com.google.enterprise.connector.util.filter.AclPropertyFilter">
+                 <property name="caseSensitivityType" value="everything-case-sensitive"/>
+               </bean>
+Issue 6513826: Add less verbose logging level for MBean messages.
+               Raised the level of the javax.management package to SEVERE.
 Issue 6514063: Support for Built-in Groups on Windows shares.
 Issue 6530759: Make "domain\username" and "domain\groupname" the default user
                and group name format for file system connector ACL feed option.
-Issue 6679622: File system connector not detecting changes to the file share.
-Issue 6686185: File system connector throws NullPointerException when the
-               crawler user has no permission on the file share.
-Issue 6712875: File system connector sends ACL records for the folders even
-               if not configured to feed ACLs.
 Issues 6746600,6867242: Toggling "Disable traversal" check box multiplies the
                file system traversal threads and the connector goes into an
                inconsistent state.
@@ -166,14 +191,11 @@ Issue 6929748: File system connector sending duplicates after reset or changes
                to configuration or schedule.
 Issue 6977695: File system connector traversal restarts from scratch after
                timeout exception.
-Issue 6494509: File system connector ACL case-sensitivity should be
-               configurable. ACLs are now case-insensitive by default, and
-               can be configured to be case-sensitive by adding a document
-               filter bean definition to the file system connector Advanced
-               Configuration XML on the connector configuration form:
-               <bean class="com.google.enterprise.connector.util.filter.AclPropertyFilter">
-                 <property name="caseSensitivityType" value="everything-case-sensitive"/>
-               </bean>
+Issue 7089492: Full traversal interval has no value when upgrading
+               connector from version 2.x to version 3.0.
+Issue 7069623: Connector feeds well-known security groups in local namespace.
+               This affected the Windows groups "Administrators", "Users",
+               "Guests", and "Everyone".
 
 
 Release 2.8.6, May 4, 2012
@@ -246,6 +268,7 @@ Issue 5028655, 6019938: Fix logic bug where recovery-files' age comparison
 
 Known limitations:
 -----------------
+Issue 5269133: File system connector is not able to feed pptx file format.
 Issue 5237436: File system connector doesn't allow including patterns for selective folders under a file share.
 Issue 5111509: File system connector goes into infinite loop when connector is reset. This is reproducible only for
                very small file shares.
