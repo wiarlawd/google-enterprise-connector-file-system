@@ -373,7 +373,8 @@ class SmbAclBuilder implements AclBuilder {
    * permission.
    */
   private boolean isReadAce(int accessMask) {
-    return (accessMask & READ_ACCESS_MASK) == READ_ACCESS_MASK;
+    return (((accessMask & READ_ACCESS_MASK) == READ_ACCESS_MASK) ||
+            ((accessMask & (ACE.GENERIC_ALL | ACE.GENERIC_READ)) != 0));
   }
 
   /**
