@@ -112,12 +112,6 @@ class SmbAclBuilder implements AclBuilder {
     this.file = file;
     this.globalNamespace = propertyFetcher.getGlobalNamespace();
     this.localNamespace = propertyFetcher.getLocalNamespace();
-    AceSecurityLevel securityLevel = AceSecurityLevel.getSecurityLevel(
-        propertyFetcher.getAceSecurityLevel());
-    if (securityLevel == null) {
-      LOGGER.warning("Incorrect value specified for aceSecurityLevel parameter; "
-          + "Setting default value " + AceSecurityLevel.FILEANDSHARE);
-    }
     AclFormat tempFormat = AclFormat.getAclFormat(
         propertyFetcher.getUserAclFormat());
     if (tempFormat == null) {
