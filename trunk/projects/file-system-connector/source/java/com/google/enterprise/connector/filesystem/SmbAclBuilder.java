@@ -26,7 +26,6 @@ import jcifs.smb.ACE;
 import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SID;
 import jcifs.smb.SmbException;
-import jcifs.smb.SmbFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,7 +65,7 @@ class SmbAclBuilder implements AclBuilder {
   static Predicate<ACE> isDirectAce =
       Predicates.not(Predicates.or(isInheritOnlyAce, isInheritedAce));
 
-  private final SmbFile file;
+  private final SmbFileDelegate file;
 
   /**
    * Represents the format in which the ACEs are to be returned for users.
@@ -101,10 +100,10 @@ class SmbAclBuilder implements AclBuilder {
   /**
    * Creates an {@link SmbAclBuilder}.
    *
-   * @param file the {@link SmbFile} whose {@link Acl} we build.
+   * @param file the {@link SmbFileDelegate} whose {@link Acl} we build.
    * @param propertyFetcher Object containing the required properties.
    */
-  SmbAclBuilder(SmbFile file, AclProperties propertyFetcher)
+  SmbAclBuilder(SmbFileDelegate file, AclProperties propertyFetcher)
       throws IOException {
     Preconditions.checkNotNull(file, "file may not be null");
     Preconditions.checkNotNull(propertyFetcher,
@@ -164,12 +163,9 @@ class SmbAclBuilder implements AclBuilder {
     // those that were INHERIT_ONLY (on the parent) to our ACEs.
     if (hasInheritedAces) {
       try {
-        String parent = file.getParent();
+        SmbFileDelegate parent = file.getParentFile();
         if (parent != null) {
-          NtlmPasswordAuthentication auth = 
-              (NtlmPasswordAuthentication) file.getPrincipal();
-          SmbFile parentFile = new SmbFile(parent, auth);
-          ACE[] parentsecurityAces = parentFile.getSecurity();
+          ACE[] parentsecurityAces = parent.getSecurity();
           checkAndAddAces(parentsecurityAces, fileAllowAces, fileDenyAces,
                           isInheritOnlyAce);
         }

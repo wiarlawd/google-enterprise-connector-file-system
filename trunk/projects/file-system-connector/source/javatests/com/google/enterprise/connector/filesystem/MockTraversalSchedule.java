@@ -53,7 +53,7 @@ public class MockTraversalSchedule implements TraversalSchedule {
   }
 
   /**
-   * Returns {@code true} if the current time is within a scheduled travesal
+   * Returns {@code true} if the current time is within a scheduled traversal
    * interval.
    */
   /* @Override */
