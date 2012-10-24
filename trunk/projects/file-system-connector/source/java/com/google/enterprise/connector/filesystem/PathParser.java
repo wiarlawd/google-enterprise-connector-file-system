@@ -37,7 +37,7 @@ public class PathParser {
    */
   public ReadonlyFile<?> getFile(String path, Credentials credentials)
       throws UnknownFileSystemException, RepositoryException {
-    for (FileSystemType fileSystemType : fileSystemTypeRegisty) {
+    for (FileSystemType<?> fileSystemType : fileSystemTypeRegisty) {
       if (fileSystemType.isPath(path)) {
         return fileSystemType.getReadableFile(path, credentials);
       }
@@ -53,7 +53,7 @@ public class PathParser {
    * @return true / false depending on whether the credentials are required or not.
    */
   public boolean isUserNamePasswordNeeded(String path) {
-    for (FileSystemType fileSystemType : fileSystemTypeRegisty) {
+    for (FileSystemType<?> fileSystemType : fileSystemTypeRegisty) {
       if (fileSystemType.isPath(path)) {
         if (fileSystemType.isUserPasswordRequired()) {
           return true;

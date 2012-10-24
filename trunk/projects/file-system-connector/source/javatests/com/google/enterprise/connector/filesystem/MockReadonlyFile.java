@@ -47,7 +47,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private String fileContents;
   private boolean exists = true;
   private boolean isRegularFile = true;
-  private FileSystemType fileSystemType = null;
+  private FileSystemType<?> fileSystemType = null;
 
   private Where where = Where.NONE; // Where to throw an Exception.
   private Exception exception;      // What exception to throw.
@@ -378,12 +378,12 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   /* @Override */
-  public FileSystemType getFileSystemType() {
+  public FileSystemType<?> getFileSystemType() {
     return (fileSystemType != null) ? fileSystemType
                                     : parent.getFileSystemType();
   }
 
-  void setFileSystemType(FileSystemType type) {
+  void setFileSystemType(FileSystemType<?> type) {
     fileSystemType = type;
   }
 

@@ -14,49 +14,51 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import java.util.Collections;
-import java.util.HashMap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
+
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Central repository for file-system types.
- *
- * <p>To plug in a new type of file system, you need to implement the FileSystemType
- * interface and register a instance of your class here.
- *
+ * <p/>
+ * To plug in a new type of file system, you need to implement the
+ * {@link FileSystemType} interface and register an instance of your
+ * class here.
  */
-public class FileSystemTypeRegistry implements  Iterable<FileSystemType> {
+public class FileSystemTypeRegistry implements Iterable<FileSystemType<?>> {
 
-  private final Map<String, FileSystemType> factories;
+  private final ImmutableMap<String, FileSystemType<?>> factories;
 
-  public FileSystemTypeRegistry(List<? extends FileSystemType> fileSystemTypes) {
-    Map<String, FileSystemType> tempFactories = new HashMap<String, FileSystemType>();
-    for (FileSystemType fileSystemType : fileSystemTypes) {
-      FileSystemType oldFileSystemType =
-        tempFactories.put(fileSystemType.getName(), fileSystemType);
-      if (oldFileSystemType != null) {
-        throw new IllegalArgumentException(
-            "FileSystemTypes must not contain entries with the same name fileSystemTypes = "
-            + fileSystemTypes);
-      }
+  public FileSystemTypeRegistry(
+      List<? extends FileSystemType<?>> fileSystemTypes) {
+    ImmutableMap.Builder<String, FileSystemType<?>> builder = 
+        ImmutableMap.builder();
+    for (FileSystemType<?> fileSystemType : fileSystemTypes) {
+      builder.put(fileSystemType.getName(), fileSystemType);
     }
-    factories = Collections.unmodifiableMap(tempFactories);
+    try {
+      factories = builder.build();
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("FileSystemTypes must not contain "
+          + "entries with the same name, fileSystemTypes = " + fileSystemTypes,
+          e);
+    }
   }
 
   /**
-   * Returns the named {@link FileSystemType} or null if none with the provided name
-   * is registered.
+   * Returns the named {@link FileSystemType} or null if none with the provided
+   * name is registered.
    */
-  public FileSystemType get(String name) {
+  public FileSystemType<?> get(String name) {
     return factories.get(name);
   }
 
   /**
    * Returns an {@link Iterator} for known {@link FileSystemType} objects.
    */
-  public Iterator<FileSystemType> iterator() {
+  public Iterator<FileSystemType<?>> iterator() {
     return factories.values().iterator();
   }
 }

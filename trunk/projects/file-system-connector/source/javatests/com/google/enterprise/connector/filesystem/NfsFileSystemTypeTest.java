@@ -19,7 +19,7 @@ package com.google.enterprise.connector.filesystem;
 public class NfsFileSystemTypeTest extends JavaFileSystemTypeTest {
 
   @Override
-  protected FileSystemType getFileSystemType() {
+  protected NfsFileSystemType getFileSystemType() {
     return new NfsFileSystemType();
   }
 

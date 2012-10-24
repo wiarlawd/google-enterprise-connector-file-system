@@ -44,7 +44,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   private final FileDelegate delegate;
 
   /** The FileSystemType for this file. */
-  private final FileSystemType fileSystemType;
+  private final FileSystemType<?> fileSystemType;
 
   /**
    * Create a ReadonlyFile that delegates to a {@link FileDelegate}.
@@ -52,7 +52,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
    * @param type a FileSystemType instance
    * @param delegate a FileDelegate implementation
    */
-  public AbstractReadonlyFile(FileSystemType type, FileDelegate delegate) {
+  public AbstractReadonlyFile(FileSystemType<?> type, FileDelegate delegate) {
     this.fileSystemType = type;
     this.delegate = delegate;
   }
@@ -88,7 +88,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   }
 
   @Override
-  public FileSystemType getFileSystemType() {
+  public FileSystemType<?> getFileSystemType() {
     return fileSystemType;
   }
 
@@ -268,7 +268,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     if (!(obj instanceof AbstractReadonlyFile)) {
       return false;
     }
-    AbstractReadonlyFile other = (AbstractReadonlyFile) obj;
+    AbstractReadonlyFile<?> other = (AbstractReadonlyFile<?>) obj;
     if (delegate == null) {
       if (other.delegate != null) {
         return false;

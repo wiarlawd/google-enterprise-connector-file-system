@@ -24,29 +24,29 @@ public class MockDirectoryBuilderTest extends TestCase {
   private final MockDirectoryBuilder builder = new MockDirectoryBuilder();
 
   public void testConfigureFileNone() throws Exception {
-    MockReadonlyFile root = builder.addDir(builder.CONFIGURE_FILE_NONE,
-                                           null, "/foo/bar", "f1", "f2");
+    MockReadonlyFile root = builder.addDir(
+        MockDirectoryBuilder.CONFIGURE_FILE_NONE, null, "/foo/bar", "f1", "f2");
     assertTrue(builder.getExpected().isEmpty());
     assertNotExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
   }
 
   public void testConfigureFileAll() throws Exception {
-    MockReadonlyFile root = builder.addDir(builder.CONFIGURE_FILE_ALL,
-                                           null, "/foo/bar", "f1", "f2");
+    MockReadonlyFile root = builder.addDir(
+        MockDirectoryBuilder.CONFIGURE_FILE_ALL, null, "/foo/bar", "f1", "f2");
     assertEquals(3, builder.getExpected().size());
     assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/f2");
     assertNotExpected("/foo/bar/baz");
   }
 
   public void testEmptyRoot() throws Exception {
-    MockReadonlyFile root =
-        builder.addDir(builder.CONFIGURE_FILE_NONE, null, "/foo/bar");
+    MockReadonlyFile root = builder.addDir(
+        MockDirectoryBuilder.CONFIGURE_FILE_NONE, null, "/foo/bar");
     assertNotExpected("/foo/bar");
   }
 
   public void testRootWith1FileAnd1EmptyDir() throws Exception {
     MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
-    builder.addDir(builder.CONFIGURE_FILE_NONE, root, "d1");
+    builder.addDir(MockDirectoryBuilder.CONFIGURE_FILE_NONE, root, "d1");
     assertExpected("/foo/bar", "/foo/bar/f1");
     assertNotExpected("/foo/bar/d1");
   }
@@ -55,8 +55,8 @@ public class MockDirectoryBuilderTest extends TestCase {
     MockReadonlyFile root = builder.addDir(null, "/foo/bar", "f1");
     builder.addDir(root, "d1", "d1f1");
     MockReadonlyFile d2 = builder.addDir(root, "d2", "d2f1", "d2a2");
-    builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d1");
-    builder.addDir(builder.CONFIGURE_FILE_NONE, d2, "d2d2");
+    builder.addDir(MockDirectoryBuilder.CONFIGURE_FILE_NONE, d2, "d2d1");
+    builder.addDir(MockDirectoryBuilder.CONFIGURE_FILE_NONE, d2, "d2d2");
     builder.addDir(d2, "d3", "d3f1", "d3a2", "d3f3");
     assertExpected("/foo/bar", "/foo/bar/f1", "/foo/bar/d1", "/foo/bar/d1/d1f1",
        "/foo/bar/d2", "/foo/bar/d2/d2f1", "/foo/bar/d2/d2a2", "/foo/bar/d2/d3",

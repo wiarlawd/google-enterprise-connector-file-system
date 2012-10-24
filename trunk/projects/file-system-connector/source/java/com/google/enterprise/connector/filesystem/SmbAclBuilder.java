@@ -63,7 +63,7 @@ class SmbAclBuilder implements AclBuilder {
    */
   @VisibleForTesting
   static Predicate<ACE> isDirectAce =
-      Predicates.not(Predicates.or(isInheritOnlyAce, isInheritedAce));
+      Predicates.not(Predicates.<ACE>or(isInheritOnlyAce, isInheritedAce));
 
   private final SmbFileDelegate file;
 

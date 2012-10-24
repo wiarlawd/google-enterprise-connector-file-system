@@ -27,9 +27,9 @@ import java.io.IOException;
  * <p/>
  * <img src="doc-files/ReadonlyFileTestsUML.png" alt="ReadonlyFile Test Class Hierarchy"/>
  */
-public abstract class ConcreteReadonlyFileTestAbstract
-    <T extends FileSystemType, R extends ReadonlyFile, F extends FileDelegate>
-    extends ReadonlyFileTestAbstract<T, R, F> {
+public abstract class ConcreteReadonlyFileTestAbstract 
+    <T extends FileSystemType<?>, R extends ReadonlyFile<?>,
+     F extends FileDelegate> extends ReadonlyFileTestAbstract<T, R, F> {
 
   @Override
   public void tearDown() throws Exception {

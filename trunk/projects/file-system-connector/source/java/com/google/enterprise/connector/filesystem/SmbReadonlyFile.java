@@ -76,7 +76,7 @@ public class SmbReadonlyFile
    *        for SMB crawling.
    * @throws RepositoryDocumentException if the path is malformed
    */
-  public SmbReadonlyFile(FileSystemType type, String path,
+  public SmbReadonlyFile(SmbFileSystemType type, String path,
       Credentials credentials, SmbFileProperties propertyFetcher)
       throws RepositoryException {
     this(type, newDelegate(path, credentials), credentials, propertyFetcher);
@@ -93,7 +93,7 @@ public class SmbReadonlyFile
    * @throws RepositoryDocumentException
    */
   @VisibleForTesting
-  SmbReadonlyFile(FileSystemType type, SmbFileDelegate delegate,
+  SmbReadonlyFile(SmbFileSystemType type, SmbFileDelegate delegate,
       Credentials credentials, SmbFileProperties propertyFetcher) {
     super(type, delegate, propertyFetcher.isLastAccessResetFlagForSmb());
     this.delegate = delegate;
@@ -124,8 +124,8 @@ public class SmbReadonlyFile
   @Override
   protected SmbReadonlyFile newChild(String name) throws RepositoryException {
     String path = delegate.getPath() + name;
-    return new SmbReadonlyFile(getFileSystemType(), path, credentials,
-                               smbPropertyFetcher);
+    return new SmbReadonlyFile((SmbFileSystemType) getFileSystemType(),
+                                path, credentials, smbPropertyFetcher);
   }
 
   /** If repository cannot be contacted throws RepositoryException. */

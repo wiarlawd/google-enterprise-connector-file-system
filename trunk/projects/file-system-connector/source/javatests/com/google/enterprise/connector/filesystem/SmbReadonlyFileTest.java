@@ -252,7 +252,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   }
 
   private void checkGeneralError(TestSmbReadonlyFile file, int ntStatus,
-      Class expectedException) throws Exception {
+      Class<? extends Exception> expectedException) throws Exception {
     SmbException smbException = createNiceMock(SmbException.class);
     expect(smbException.getNtStatus()).andStubReturn(ntStatus);
     replay(smbException);
@@ -340,7 +340,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return RepositoryException.class;
         }
       });
@@ -354,7 +354,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return ioException.getClass();
         }
       });
@@ -379,7 +379,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getInheritedAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return RepositoryException.class;
         }
       });
@@ -393,7 +393,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getInheritedAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return ioException.getClass();
         }
       });
@@ -407,7 +407,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getShareAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return smbException.getClass();
         }
       });
@@ -421,7 +421,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getShareAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return RepositoryException.class;
         }
       });
@@ -435,7 +435,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getShareAcl();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception>getExpectedException() {
           return ioException.getClass();
         }
       });
@@ -482,7 +482,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
      * Class of Exception expected to be thrown from the test.
      * If null, no exception is expected.
      */
-    public Class getExpectedException() {
+    public Class<? extends Exception>getExpectedException() {
       return null;
     }
   }
@@ -500,7 +500,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   }
 
   protected class TestSmbReadonlyFile extends SmbReadonlyFile {
-    TestSmbReadonlyFile(FileSystemType type, SmbFileDelegate delegate,
+    TestSmbReadonlyFile(TestSmbFileSystemType type, SmbFileDelegate delegate,
         Credentials credentials, SmbFileProperties propertyFetcher,
         AclBuilder aclBuilder) {
       super(type, delegate, credentials, propertyFetcher);
@@ -510,7 +510,7 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
     @Override
     public TestSmbReadonlyFile newChild(String name)
         throws RepositoryException {
-      return new TestSmbReadonlyFile(getFileSystemType(),
+      return new TestSmbReadonlyFile((TestSmbFileSystemType) getFileSystemType(),
           SmbReadonlyFileTest.this.getDelegate(absolutePath(getPath(), name)),
           credentials, smbPropertyFetcher, aclBuilder);
     }

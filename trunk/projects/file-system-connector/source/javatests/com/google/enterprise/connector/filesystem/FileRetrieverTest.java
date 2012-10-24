@@ -70,7 +70,7 @@ public class FileRetrieverTest extends TestCase {
     testFile2 = testDir.addFile("test.txt", TEST_DATA);
     badFile1 = root.addFile("test.exe", TEST_DATA);
     badFile2 = root.addSubdir(".Trash").addFile("test.txt", TEST_DATA);
-    rootie = MockReadonlyFile.createRoot("/rootie");
+    rootie = MockReadonlyFile.createRoot("/footie");
     badFile3 = rootie.addFile("tootie.txt", TEST_DATA);
 
     fileSystemTypeRegistry = new FileSystemTypeRegistry(Arrays.asList(

@@ -38,7 +38,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
   private SmbFileDelegate delegate;
 
   @Override
-  protected FileSystemType getFileSystemType() {
+  protected TestSmbFileSystemType getFileSystemType() {
     delegate = createNiceMock(SmbFileDelegate.class);
     return new TestSmbFileSystemType(delegate);
   }
@@ -78,7 +78,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.isDirectory()).andReturn(true);
     expect(delegate.exists()).andReturn(false);
     expect(delegate.canRead()).andReturn(false);
-    ReadonlyFile f = fst.getFile(dir.getAbsolutePath(), null);
+    ReadonlyFile<?> f = fst.getFile(dir.getAbsolutePath(), null);
     assertFalse(f.isDirectory());
     assertFalse(f.canRead());
   }
@@ -105,7 +105,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.canRead()).andReturn(true).anyTimes();
     expect(delegate.getType()).andReturn(SmbFile.TYPE_PRINTER).anyTimes();
     try {
-      ReadonlyFile f = fst.getReadableFile("smb://root/prn", null);
+      ReadonlyFile<?> f = fst.getReadableFile("smb://root/prn", null);
       fail("Expected WrongSmbTypeException, but got none.");
     } catch (WrongSmbTypeException expected) {
       // Expected.
@@ -118,7 +118,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.canRead()).andReturn(true).anyTimes();
     expect(delegate.getType()).andThrow(new SmbException(1, false));
     try {
-      ReadonlyFile f = fst.getReadableFile("smb://root/", null);
+      ReadonlyFile<?> f = fst.getReadableFile("smb://root/", null);
       fail("Expected RepositoryDocumentException, but got none.");
     } catch (RepositoryDocumentException expected) {
       // Expected.
@@ -131,7 +131,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.canRead()).andReturn(true).anyTimes();
     expect(delegate.getType()).andReturn(SmbFile.TYPE_SHARE).anyTimes();
     try {
-      ReadonlyFile f = fst.getReadableFile("smb://root/non-existent", null);
+      ReadonlyFile<?> f = fst.getReadableFile("smb://root/non-existent", null);
       fail("Expected DocumentNotFoundException, but got none.");
     } catch (DocumentNotFoundException expected) {
       // Expected.
@@ -144,7 +144,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
     expect(delegate.canRead()).andReturn(false).anyTimes();
     expect(delegate.getType()).andReturn(SmbFile.TYPE_SHARE).anyTimes();
     try {
-      ReadonlyFile f = fst.getReadableFile("smb://root/", null);
+      ReadonlyFile<?> f = fst.getReadableFile("smb://root/", null);
       fail("Expected DocumentAccessException, but got none.");
     } catch (DocumentAccessException expected) {
       // Expected.

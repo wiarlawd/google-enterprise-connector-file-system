@@ -121,7 +121,7 @@ class FileRetriever implements Retriever, TraversalContextAware {
     // Next, does it (and all its ancesters), pass the PatternMatcher?
     FilePatternMatcher matcher = context.getFilePatternMatcher();
     Credentials credentials = context.getCredentials();
-    FileSystemType fileSystemType = file.getFileSystemType();
+    FileSystemType<?> fileSystemType = file.getFileSystemType();
     while (pathName.length() >= startPath.length()) {
       if (!matcher.acceptName(pathName)) {
         return false;

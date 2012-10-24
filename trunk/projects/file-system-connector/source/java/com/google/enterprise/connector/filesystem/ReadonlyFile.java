@@ -35,7 +35,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   /**
    * @return the kind of file system this file belongs to. E.g., SMB, JAVA, etc.
    */
-  public FileSystemType getFileSystemType();
+  public FileSystemType<?> getFileSystemType();
 
   /**
    * <p>Lexicographic ordering of the paths within a directory tree must be

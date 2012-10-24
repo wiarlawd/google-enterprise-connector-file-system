@@ -95,7 +95,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           file.exists();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return RepositoryDocumentException.class;
         }
       });
@@ -109,7 +109,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           assertFalse(file.canRead());
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return null;
         }
       });
@@ -123,7 +123,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           assertFalse(file.isDirectory());
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return null;
         }
       });
@@ -137,7 +137,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           assertFalse(file.isRegularFile());
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return null;
         }
       });
@@ -151,7 +151,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           file.getLastModified();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
       });
@@ -166,7 +166,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           file.getInputStream();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
       });
@@ -181,7 +181,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           file.getInputStream();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
       });
@@ -196,7 +196,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         public void test(MockReadonlyFile file) throws Exception {
           file.listFiles();
         }
-        public Class getExpectedException() {
+        public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
       });
@@ -236,17 +236,17 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
      * Class of Exception expected to be thrown from the test.
      * If null, no exception is expected.
      */
-    public Class getExpectedException() {
+    public Class<? extends Exception> getExpectedException() {
       return null;
     }
   }
 
   protected class MockReadonlyFile extends
       AbstractReadonlyFile<MockReadonlyFile> {
-    private final FileSystemType type;
+    private final FileSystemType<?> type;
     private final FileDelegate delegate;
 
-    public MockReadonlyFile(FileSystemType type, FileDelegate delegate) {
+    public MockReadonlyFile(FileSystemType<?> type, FileDelegate delegate) {
       super(type, delegate);
       this.type = type;
       this.delegate = delegate;

@@ -54,7 +54,7 @@ public abstract class
   /** If true, preserve the last access time for the file. */
   private final boolean accessTimeResetFlag;
 
-  public AccessTimePreservingReadonlyFile(FileSystemType type,
+  public AccessTimePreservingReadonlyFile(FileSystemType<?> type,
       LastAccessFileDelegate delegate, boolean accessTimeResetFlag) {
     super(type, delegate);
     this.delegate = delegate;
@@ -139,8 +139,8 @@ public abstract class
    * @param file an AccessTimePreservingReadonlyFile instance
    * @return the same AccessTimePreservingReadonlyFile instance
    */
-  private static AccessTimePreservingReadonlyFile addToMap(
-      AccessTimePreservingReadonlyFile file) {
+  private static AccessTimePreservingReadonlyFile<?> addToMap(
+      AccessTimePreservingReadonlyFile<?> file) {
     String path = file.getPath();
     synchronized (map) {
       List<FileTime> list = map.get(path);
@@ -160,7 +160,8 @@ public abstract class
    * This method removes an input stream when a file is processed completely.
    * @param path
    */
-  private static FileTime removeFromMap(AccessTimePreservingReadonlyFile file) {
+  private static FileTime removeFromMap(
+      AccessTimePreservingReadonlyFile<?> file) {
     String path = file.getPath();
     FileTime accessTime = null;
     synchronized (map) {
@@ -186,9 +187,9 @@ public abstract class
    */
   private static class AccessTimePreservingInputStream
       extends FilterInputStream {
-    private AccessTimePreservingReadonlyFile file;
+    private AccessTimePreservingReadonlyFile<?> file;
 
-    AccessTimePreservingInputStream(AccessTimePreservingReadonlyFile file)
+    AccessTimePreservingInputStream(AccessTimePreservingReadonlyFile<?> file)
         throws IOException {
       super(addToMap(file).getUnwrappedInputStream());
       this.file = file;
