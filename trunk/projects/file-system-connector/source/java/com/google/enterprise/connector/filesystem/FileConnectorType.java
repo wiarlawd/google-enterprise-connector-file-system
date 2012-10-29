@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.spi.ConfigureResponse;
 import com.google.enterprise.connector.spi.ConnectorFactory;
 import com.google.enterprise.connector.spi.ConnectorType;
+import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.RepositoryLoginException;
@@ -592,6 +593,8 @@ public class FileConnectorType implements ConnectorType {
           LOG.info("successfully read " + path);
         } catch (FilesystemRepositoryDocumentException e) {
           addErrorToBuffer(buf, e.getMessage(), path, e, e.getErrorMessage());
+        } catch (DocumentAccessException e) {
+          addErrorToBuffer(buf, "failed to access start path: ", path, e, FileSystemConnectorErrorMessages.ACCESS_DENIED);
         } catch (RepositoryDocumentException e) {
           addErrorToBuffer(buf, "failed to list start path: ", path, e, FileSystemConnectorErrorMessages.READ_START_PATH_FAILED);
         } catch (RepositoryLoginException e) {
