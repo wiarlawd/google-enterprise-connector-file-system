@@ -670,11 +670,14 @@ public class SmbFile extends URLConnection implements SmbConstants {
 
         connect0();
 
-        DfsReferral dr = dfs.resolve(
+        DfsReferral dr;
+synchronized(tree.session.transport()) {
+        dr = dfs.resolve(
                     tree.session.transport.tconHostName,
                     tree.share,
                     unc,
                     auth);
+}
         if (dr != null) {
             String service = null;
 
@@ -901,6 +904,7 @@ int addressIndex;
         }
 
         String hostName = getServerWithDfs();
+synchronized(trans) {
         tree.inDomainDfs = dfs.resolve(hostName, tree.share, null, auth) != null;
         if (tree.inDomainDfs) {
             tree.connectionState = 2;
@@ -935,6 +939,7 @@ int addressIndex;
                 throw sae;
             }
         }
+}
     }
 /**
  * It is not necessary to call this method directly. This is the
