@@ -44,12 +44,16 @@ public class Dfs {
     static final long TTL = Config.getLong("jcifs.smb.client.dfs.ttl", 300);
     static final boolean DISABLED = Config.getBoolean("jcifs.smb.client.dfs.disabled", false);
 
-    protected static CacheEntry FALSE_ENTRY = new Dfs.CacheEntry(0L);
+    static final CacheEntry FALSE_ENTRY = new Dfs.CacheEntry(0L);
 
-    protected CacheEntry _domains = null; /* aka trusted domains cache */
-    protected CacheEntry referrals = null;
+    private CacheEntry _domains = null; /* aka trusted domains cache */
+    private Object domainsLock = new Object();
 
-    public HashMap getTrustedDomains(NtlmPasswordAuthentication auth) throws SmbAuthException {
+    private CacheEntry referrals = null;
+    private Object referralsLock = new Object();
+
+    /* Must be protected by domainsLock */
+    private HashMap getTrustedDomains(NtlmPasswordAuthentication auth) throws SmbAuthException {
         if (DISABLED || auth.domain == "?")
             return null;
 
@@ -87,11 +91,13 @@ public class Dfs {
     public boolean isTrustedDomain(String domain,
                     NtlmPasswordAuthentication auth) throws SmbAuthException
     {
+      synchronized (domainsLock) {
         HashMap domains = getTrustedDomains(auth);
         if (domains == null)
             return false;
         domain = domain.toLowerCase();
         return domains.get(domain) != null;
+      }
     }
     public SmbTransport getDc(String domain,
                     NtlmPasswordAuthentication auth) throws SmbAuthException {
@@ -152,20 +158,20 @@ public class Dfs {
         }
         return null;
     }
-    public synchronized DfsReferral resolve(String domain,
+    public DfsReferral resolve(String domain,
                 String root,
                 String path,
                 NtlmPasswordAuthentication auth) throws SmbAuthException {
-        DfsReferral dr = null;
-        long now = System.currentTimeMillis();
-
         if (DISABLED || root.equals("IPC$")) {
             return null;
         }
-        /* domains that can contain DFS points to maps of roots for each
-         */
-        HashMap domains = getTrustedDomains(auth);
-        if (domains != null) {
+        DfsReferral dr = null;
+        long now = System.currentTimeMillis();
+        synchronized (domainsLock) {
+          /* domains that can contain DFS points to maps of roots for each
+           */
+          HashMap domains = getTrustedDomains(auth);
+          if (domains != null) {
             domain = domain.toLowerCase();
             /* domain-based DFS root shares to links for each
              */
@@ -246,25 +252,27 @@ public class Dfs {
                     }
                 }
             }
+          }
         }
 
         if (dr == null && path != null) {
             /* We did not match a domain based root. Now try to match the
              * longest path in the list of stand-alone referrals.
              */
-            if (referrals != null && now > referrals.expiration) {
-                referrals = null;
-            }
-            if (referrals == null) {
-                referrals = new CacheEntry(0);
-            }
             String key = "\\" + domain + "\\" + root;
             if (path.equals("\\") == false)
                 key += path;
             key = key.toLowerCase();
-
-            Iterator iter = referrals.map.keySet().iterator();
-            while (iter.hasNext()) {
+            
+            synchronized (referralsLock) {
+              if (referrals != null && now > referrals.expiration) {
+                referrals = null;
+              }
+              if (referrals == null) {
+                referrals = new CacheEntry(0);
+              }
+              Iterator iter = referrals.map.keySet().iterator();
+              while (iter.hasNext()) {
                 String _key = (String)iter.next();
                 int _klen = _key.length();
                 boolean match = false;
@@ -277,12 +285,13 @@ public class Dfs {
 
                 if (match)
                     dr = (DfsReferral)referrals.map.get(_key);
+              }
             }
         }
 
         return dr;
     }
-    synchronized void insert(String path, DfsReferral dr) {
+    void insert(String path, DfsReferral dr) {
         int s1, s2;
         String server, share, key;
 
@@ -316,12 +325,14 @@ public class Dfs {
          */
         dr.pathConsumed -= 1 + server.length() + 1 + share.length();
 
-        if (referrals != null && (System.currentTimeMillis() + 10000) > referrals.expiration) {
+        synchronized (referralsLock) {
+          if (referrals != null && (System.currentTimeMillis() + 10000) > referrals.expiration) {
             referrals = null;
-        }
-        if (referrals == null) {
+          }
+          if (referrals == null) {
             referrals = new CacheEntry(0);
+          }
+          referrals.map.put(key, dr);
         }
-        referrals.map.put(key, dr);
     }
 }
