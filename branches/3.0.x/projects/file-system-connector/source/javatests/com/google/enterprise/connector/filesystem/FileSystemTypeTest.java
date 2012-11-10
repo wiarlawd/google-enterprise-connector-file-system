@@ -27,7 +27,7 @@ public class FileSystemTypeTest extends TestCase {
 
   protected MockReadonlyFile dir;
   protected MockReadonlyFile file;
-  private FileSystemType fst;
+  private FileSystemType<?> fst;
 
  @Override
   public void setUp() {
@@ -57,14 +57,14 @@ public class FileSystemTypeTest extends TestCase {
   }
 
   public void testGetReadableFile() throws Exception {
-    ReadonlyFile f = fst.getReadableFile(file.getPath(), null);
+    ReadonlyFile<?> f = fst.getReadableFile(file.getPath(), null);
     assertEquals(file.getPath(), f.getPath());
     assertTrue(f.isRegularFile());
     assertTrue(f.canRead());
   }
 
   public void testGetReadableFileForDir() throws Exception {
-    ReadonlyFile f = fst.getReadableFile(dir.getPath(), null);
+    ReadonlyFile<?> f = fst.getReadableFile(dir.getPath(), null);
     assertEquals(dir.getPath(), f.getPath());
     assertTrue(f.isDirectory());
     assertTrue(f.canRead());
@@ -73,7 +73,7 @@ public class FileSystemTypeTest extends TestCase {
   public void testGetReadableFileForNonExistentFile() throws Exception {
     file.setExists(false);
     try {
-      ReadonlyFile f = fst.getReadableFile(file.getPath(), null);
+      ReadonlyFile<?> f = fst.getReadableFile(file.getPath(), null);
       fail("Expected DocumentNotFoundException, but got none.");
     } catch  (DocumentNotFoundException expected) {
       assertTrue(expected.getMessage().contains("Path does not exist: "));
@@ -83,7 +83,7 @@ public class FileSystemTypeTest extends TestCase {
   public void testGetReadableFileForUnreadableFile() throws Exception {
     file.setCanRead(false);
     try {
-      ReadonlyFile f = fst.getReadableFile(file.getPath(), null);
+      ReadonlyFile<?> f = fst.getReadableFile(file.getPath(), null);
       fail("Expected DocumentAccessException, but got none.");
     } catch  (DocumentAccessException expected) {
       assertTrue(expected.getMessage().contains("User does not have access to"));

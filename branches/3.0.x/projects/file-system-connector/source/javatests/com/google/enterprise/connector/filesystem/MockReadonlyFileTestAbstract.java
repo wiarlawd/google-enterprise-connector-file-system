@@ -38,8 +38,8 @@ import java.util.List;
  * <p/>
  * <img src="doc-files/ReadonlyFileTestsUML.png" alt="ReadonlyFile Test Class Hierarchy"/>
  */
-public abstract class MockReadonlyFileTestAbstract
-    <T extends FileSystemType, R extends ReadonlyFile, F extends FileDelegate>
+public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
+    R extends ReadonlyFile<?>, F extends FileDelegate>
     extends ReadonlyFileTestAbstract<T, R, F> {
 
   public static final String SEPARATOR = "/";

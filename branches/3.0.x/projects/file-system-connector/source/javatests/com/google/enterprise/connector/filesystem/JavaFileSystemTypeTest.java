@@ -30,7 +30,7 @@ import java.io.IOException;
 public class JavaFileSystemTypeTest extends TestCase {
   protected File dir;
   protected File file;
-  protected FileSystemType fst;
+  protected FileSystemType<?> fst;
 
   @Override
   public void setUp() {
@@ -50,7 +50,7 @@ public class JavaFileSystemTypeTest extends TestCase {
     dir.delete();
   }
 
-  protected FileSystemType getFileSystemType() {
+  protected FileSystemType<?> getFileSystemType() {
     return new JavaFileSystemType();
   }
 
@@ -70,21 +70,21 @@ public class JavaFileSystemTypeTest extends TestCase {
   }
 
   public void testGetFile() throws Exception {
-    ReadonlyFile f = fst.getFile(file.getAbsolutePath(), null);
+    ReadonlyFile<?> f = fst.getFile(file.getAbsolutePath(), null);
     assertTrue(f.isRegularFile());
     assertTrue(f.canRead());
     assertEquals(file.getAbsolutePath(), f.getPath());
   }
 
   public void testGetFileForDir() throws Exception {
-    ReadonlyFile f = fst.getFile(dir.getAbsolutePath(), null);
+    ReadonlyFile<?> f = fst.getFile(dir.getAbsolutePath(), null);
     assertTrue(f.isDirectory());
     assertTrue(f.canRead());
   }
 
   public void testGetReadableFileBadPath() throws Exception {
     try {
-      ReadonlyFile f = fst.getReadableFile("gopher://test", null);
+      ReadonlyFile<?> f = fst.getReadableFile("gopher://test", null);
       fail("Expected IllegalArgumentException, but got none.");
     } catch (IllegalArgumentException expected) {
       assertTrue(expected.getMessage().contains("Invalid path"));

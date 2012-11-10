@@ -30,8 +30,8 @@ import java.util.List;
  * run it as a test suite upon itself and also to differentiate
  * it from AbstractReadonlyFileTest, which tests AbstractReadonlyFile.
  */
-public abstract class ReadonlyFileTestAbstract<T extends FileSystemType,
-    R extends ReadonlyFile, F extends FileDelegate> extends TestCase {
+public abstract class ReadonlyFileTestAbstract<T extends FileSystemType<?>,
+    R extends ReadonlyFile<?>, F extends FileDelegate> extends TestCase {
   protected static final int BUF_SIZE = 1024;
   protected static final String FILE_ONE_CONTENTS = "contents of file 1";
   protected static final String FILE_TWO_CONTENTS = "contents of file 2";
@@ -239,7 +239,7 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType,
 
   public void testListFiles() throws Exception {
     @SuppressWarnings("unchecked")
-    List<R> x = readonlyRoot.listFiles();
+    List<R> x = (List<R>)readonlyRoot.listFiles();
     assertNotNull(x);
     assertEquals(5, x.size());
     assertEquals(getAbsolutePath(dirA), x.get(0).getPath());
@@ -251,7 +251,7 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType,
 
   public void testListFilesEmptyDir() throws Exception {
     @SuppressWarnings("unchecked")
-    List<R> x = readonlyDirB.listFiles();
+    List<R> x = (List<R>) readonlyDirB.listFiles();
     assertNotNull(x);
     assertEquals(0, x.size());
   }
@@ -259,7 +259,7 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType,
   public void testListFilesNonDir() throws Exception {
     try {
       @SuppressWarnings("unchecked")
-      List<R> x = readonlyFile1.listFiles();
+      List<R> x = (List<R>) readonlyFile1.listFiles();
       fail("Expected DirectoryListingException but got none.");
     } catch (DirectoryListingException expected) {
       // Expected.

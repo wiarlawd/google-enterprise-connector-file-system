@@ -36,12 +36,12 @@ public class WindowsReadonlyFile
   /** If true, preserve the last access time for the file. */
   private final boolean accessTimeResetFlag;
 
-  public WindowsReadonlyFile(FileSystemType type, String absolutePath,
+  public WindowsReadonlyFile(WindowsFileSystemType type, String absolutePath,
       boolean accessTimeResetFlag) {
     this(type, new WindowsFileDelegate(absolutePath), accessTimeResetFlag);
   }
 
-  private WindowsReadonlyFile(FileSystemType type,
+  private WindowsReadonlyFile(WindowsFileSystemType type,
       WindowsFileDelegate delegate, boolean accessTimeResetFlag) {
     super(type, delegate, accessTimeResetFlag);
     this.delegate = delegate;
@@ -50,7 +50,7 @@ public class WindowsReadonlyFile
 
   @Override
   protected WindowsReadonlyFile newChild(String name) {
-    return new WindowsReadonlyFile(getFileSystemType(),
+    return new WindowsReadonlyFile((WindowsFileSystemType) getFileSystemType(),
         new WindowsFileDelegate(delegate, name), accessTimeResetFlag);
   }
 

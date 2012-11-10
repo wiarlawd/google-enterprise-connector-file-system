@@ -19,7 +19,7 @@ package com.google.enterprise.connector.filesystem;
 public class WindowsFileSystemTypeTest extends JavaFileSystemTypeTest {
 
   @Override
-  protected FileSystemType getFileSystemType() {
+  protected WindowsFileSystemType getFileSystemType() {
     return new WindowsFileSystemType(false);
   }
 

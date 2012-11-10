@@ -93,4 +93,20 @@ public class SmbFileDelegate extends SmbFile
         }
       };
   }
+
+  /**
+   * Returns a SmbFileDelegate representing this file's parent directory,
+   * or null if this file does not name a parent.
+   *
+   * This convenience method is provided for improved testability.
+   */
+  public SmbFileDelegate getParentFile() throws IOException {
+    String parent = getParent();
+    if (parent == null) {
+      return null;
+    } else {
+      return new SmbFileDelegate(parent,
+                                 (NtlmPasswordAuthentication) getPrincipal());
+    }    
+  }
 }

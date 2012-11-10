@@ -26,18 +26,18 @@ public class JavaReadonlyFile extends AbstractReadonlyFile<JavaReadonlyFile> {
 
   private final JavaFileDelegate delegate;
 
-  public JavaReadonlyFile(FileSystemType type, String absolutePath) {
+  public JavaReadonlyFile(JavaFileSystemType type, String absolutePath) {
     this(type, new JavaFileDelegate(absolutePath));
   }
 
-  private JavaReadonlyFile(FileSystemType type, JavaFileDelegate delegate) {
+  private JavaReadonlyFile(JavaFileSystemType type, JavaFileDelegate delegate) {
     super(type, delegate);
     this.delegate = delegate;
   }
 
   @Override
   protected JavaReadonlyFile newChild(String name) {
-    return new JavaReadonlyFile(getFileSystemType(),
+    return new JavaReadonlyFile((JavaFileSystemType) getFileSystemType(),
                                 new JavaFileDelegate(delegate, name));
   }
 

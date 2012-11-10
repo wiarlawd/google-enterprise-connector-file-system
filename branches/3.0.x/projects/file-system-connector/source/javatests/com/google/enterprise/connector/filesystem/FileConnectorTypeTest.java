@@ -21,6 +21,8 @@ import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.enterprise.connector.spi.ConfigureResponse;
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
@@ -31,7 +33,6 @@ import org.json.XML;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -53,7 +54,7 @@ public class FileConnectorTypeTest extends TestCase {
   private static final ResourceBundle US_BUNDLE =
       ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME, Locale.US);
 
-  private HashMap<String, String> config;
+  private Map<String, String> config;
   private FileConnectorType type;
 
   /**
@@ -89,8 +90,8 @@ public class FileConnectorTypeTest extends TestCase {
 
   @Override
   public void setUp() throws IOException {
-    FileSystemTypeRegistry fileSystemTypeRegistry =
-        new FileSystemTypeRegistry(Arrays.asList(new JavaFileSystemType()));
+    FileSystemTypeRegistry fileSystemTypeRegistry = new FileSystemTypeRegistry(
+        ImmutableList.of(new JavaFileSystemType()));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
 
     type = new FileConnectorType(pathParser);
@@ -98,7 +99,7 @@ public class FileConnectorTypeTest extends TestCase {
     TestDirectoryManager testDirectoryManager = new TestDirectoryManager(this);
 
     // Create a complete configuration. For now, most of the values are nonsense.
-    config = new HashMap<String, String>();
+    config = Maps.newHashMap();
     for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       config.put(field.getName(), field.getLabel(US_BUNDLE));
     }
@@ -123,7 +124,7 @@ public class FileConnectorTypeTest extends TestCase {
    * @param s
    */
   private void assertBalancedTags(String s) {
-    LinkedList<String> stack = new LinkedList<String>();
+    LinkedList<String> stack = Lists.newLinkedList();
     Matcher m = TAG.matcher(s);
     int start = 0;
     while (m.find(start)) {
@@ -180,7 +181,7 @@ public class FileConnectorTypeTest extends TestCase {
   public void testValidateIncompleteConfig() {
     // Remove each config key and make sure it fails gracefully.
     for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
-      Map<String, String> temporarilyRemoved = new HashMap<String, String>();
+      Map<String, String> temporarilyRemoved = Maps.newHashMap();
       Iterator<Map.Entry<String, String>> it = config.entrySet().iterator();
       while (it.hasNext()) {
         Map.Entry<String, String> entry = it.next();
@@ -270,7 +271,7 @@ public class FileConnectorTypeTest extends TestCase {
   }
 
   public void testFilterUserListWithComment() {
-    final List<String> input = Arrays.asList("Hi", "# comment ", "Bye");
+    final List<String> input = ImmutableList.of("Hi", "# comment ", "Bye");
     final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
     assertEquals(2, filtered.size());
     assertEquals(input.get(0), filtered.get(0));
@@ -286,7 +287,7 @@ public class FileConnectorTypeTest extends TestCase {
   }
 
   public void testFilterUserListWithEmpty() {
-    final List<String> input = Arrays.asList("Hi", "", "Bye");
+    final List<String> input = ImmutableList.of("Hi", "", "Bye");
     final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
     assertEquals(2, filtered.size());
     assertEquals(input.get(0), filtered.get(0));
@@ -294,7 +295,7 @@ public class FileConnectorTypeTest extends TestCase {
   }
 
   public void testFilterUserListWithTrim() {
-    final List<String> input = Arrays.asList(" Hi", " ", "Bye ");
+    final List<String> input = ImmutableList.of(" Hi", " ", "Bye ");
     final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
     assertEquals(2, filtered.size());
     assertEquals(input.get(0).trim(), filtered.get(0));
@@ -302,16 +303,16 @@ public class FileConnectorTypeTest extends TestCase {
   }
 
   public void testFilterUserListWithAllGood() {
-    final List<String> input = Arrays.asList("Hi", "mOm");
+    final List<String> input = ImmutableList.of("Hi", "mOm");
     assertEquals(input, FileConnectorType.filterUserEnteredList(input));
   }
 
   public void testFilterUserListWithDuplicates() {
     final String hi = "Hi";
     final String mom = "mom";
-    final List<String> input = Arrays.asList(hi, hi, mom, mom, hi);
+    final List<String> input = ImmutableList.of(hi, hi, mom, mom, hi);
     final List<String >filtered = FileConnectorType.filterUserEnteredList(input);
-    assertEquals(Arrays.asList(hi, mom), filtered);
+    assertEquals(ImmutableList.of(hi, mom), filtered);
   }
 
   public void testUncDetectedAndSuggestionProvided() {
@@ -353,14 +354,14 @@ public class FileConnectorTypeTest extends TestCase {
     }
 
   public void testNoCredentialswhereRequired() {
-    FileSystemType mockFileType = createMock(FileSystemType.class);
+    FileSystemType<?> mockFileType = createMock(FileSystemType.class);
     expect(mockFileType.getName()).andReturn("mock");
     expect(mockFileType.isPath(anyObject(String.class))).andReturn(true);
     expect(mockFileType.isUserPasswordRequired()).andReturn(true);
     replay(mockFileType);
 
     FileSystemTypeRegistry fileSystemTypeRegistry =
-        new FileSystemTypeRegistry(Arrays.asList(mockFileType));
+        new FileSystemTypeRegistry(ImmutableList.of(mockFileType));
     PathParser pathParser = new PathParser(fileSystemTypeRegistry);
 
     type = new FileConnectorType(pathParser);

@@ -26,18 +26,18 @@ public class NfsReadonlyFile extends AbstractReadonlyFile<NfsReadonlyFile> {
   /**
    * @param path see {@code com.sun.xfile.XFile} for path syntax.
    */
-  public NfsReadonlyFile(FileSystemType type, String path) {
+  public NfsReadonlyFile(NfsFileSystemType type, String path) {
     this(type, new NfsFileDelegate(path));
   }
 
-  private NfsReadonlyFile(FileSystemType type, NfsFileDelegate delegate) {
+  private NfsReadonlyFile(NfsFileSystemType type, NfsFileDelegate delegate) {
     super(type, delegate);
     this.delegate = delegate;
   }
 
   @Override
   protected NfsReadonlyFile newChild(String name) {
-    return new NfsReadonlyFile(getFileSystemType(),
+    return new NfsReadonlyFile((NfsFileSystemType) getFileSystemType(),
                                new NfsFileDelegate(delegate, name));
   }
 

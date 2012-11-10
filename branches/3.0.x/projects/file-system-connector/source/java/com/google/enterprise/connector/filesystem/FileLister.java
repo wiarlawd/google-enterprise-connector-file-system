@@ -180,7 +180,7 @@ class FileLister implements Lister, TraversalContextAware,
         sleep(Sleep.SCHEDULE_DELAY);
         try {
           boolean gotError = false;
-          for (Future future : service.invokeAll(traversers)) {
+          for (Future<Void> future : service.invokeAll(traversers)) {
             try {
               future.get();
             } catch (ExecutionException e) {

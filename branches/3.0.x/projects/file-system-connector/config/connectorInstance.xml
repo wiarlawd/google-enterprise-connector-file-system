@@ -18,6 +18,10 @@
     FILEORSHARE
     Default value is 'FILEANDSHARE'  since it is the most restrictive of all
     4 scenarios.
+
+    Note: For GSA 7.0 and above, this configuration is ignored and FILEANDSHARE
+    is always used, unless inherited ACLs are disabled in the Connector Manager
+    advanced configuration.
     -->
     <!--
       <property name="aceSecurityLevel" value="FILEANDSHARE"/>
