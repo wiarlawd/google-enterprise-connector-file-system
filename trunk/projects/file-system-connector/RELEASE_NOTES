@@ -10,6 +10,34 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
+Release 3.0.4, 09 November 2012
+===============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality. Users of version 3.0.0 or 3.0.2 are strongly encouraged
+to upgrade.
+
+Issues fixed from last release:
+-------------------------------
+Issue 6686185: Better error message when the traversal user has no access
+               rights on the file share.
+
+Issue 7383538: SmbAclBuilder.isReadAce() should include Generic access rights.
+               The connector now recognizes ACE.GENERIC_ALL and ACE.GENERIC_READ
+               as valid read access rights.
+
+Issue 7430175: Lister and retriever threads cause a deadlock. Fixed a deadlock
+               problem in JCIFS when used with DFS.
+               
+Manual upgrade instructions
+---------------------------
+Note that this release includes a new jcifs.jar, which in addition to the new
+connector-filesystem.jar, should be copied to the Tomcat deployment directory:
+webapps/connector-manager/WEB-INF/lib.
+
+
 Release 3.0.2, 17 October 2012
 ==============================
 
