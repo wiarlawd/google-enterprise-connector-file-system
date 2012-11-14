@@ -75,8 +75,7 @@ public class SmbFileSystemTypeTest extends JavaFileSystemTypeTest {
   }
 
   public void testGetFileForDirNotExist() throws Exception {
-    expect(delegate.isDirectory()).andReturn(true);
-    expect(delegate.exists()).andReturn(false);
+    expect(delegate.isDirectory()).andReturn(false);
     expect(delegate.canRead()).andReturn(false);
     ReadonlyFile<?> f = fst.getFile(dir.getAbsolutePath(), null);
     assertFalse(f.isDirectory());

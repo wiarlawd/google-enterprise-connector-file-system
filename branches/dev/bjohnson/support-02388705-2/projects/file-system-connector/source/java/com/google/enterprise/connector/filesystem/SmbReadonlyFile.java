@@ -104,13 +104,13 @@ public class SmbReadonlyFile
   private static SmbFileDelegate newDelegate(String path,
       Credentials credentials) throws RepositoryException {
     try {
-      SmbFileDelegate delegate =
-          new SmbFileDelegate(path, credentials.getNtlmAuthorization());
+      SmbFileDelegate delegate = SmbFileDelegate.newDelegate(
+          path, credentials.getNtlmAuthorization());
       // Directories must end in "/", or listFiles() fails.
       if ((path.lastIndexOf('/') != (path.length() - 1))
           && delegate.isDirectory()) {
-        delegate =
-            new SmbFileDelegate(path + "/", credentials.getNtlmAuthorization());
+        delegate = SmbFileDelegate.newDelegate(
+            path + "/", credentials.getNtlmAuthorization());
       }
       return delegate;
     } catch (SmbException e) {
@@ -264,13 +264,6 @@ public class SmbReadonlyFile
               e);
       throw e;
     }
-  }
-
-  @Override
-  public boolean isDirectory() throws RepositoryException {
-    // There appears to be a bug in (at least) v1.2.13 that causes
-    // non-existent paths to return true.
-    return exists() ? super.isDirectory() : false;
   }
 
   /**
