@@ -54,7 +54,7 @@ public class SmbFileDelegate extends SmbFile
 
   /**
    * Note that this constructor is not thread-safe.
-   * Use the newDelegate() factory method instead.
+   * Use the newDelegate() factory method or own LOCK when calling.
    */
   private SmbFileDelegate(String path, NtlmPasswordAuthentication auth)
       throws MalformedURLException {
@@ -157,7 +157,7 @@ public class SmbFileDelegate extends SmbFile
     // There appears to be a bug in (at least) JCIFS v1.2.13 that causes
     // non-existent paths to return true.
     synchronized(LOCK) {
-      return super.exists() ? super.isDirectory() : false;
+      return super.exists() && super.isDirectory();
     }
   }
 
