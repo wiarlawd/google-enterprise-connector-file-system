@@ -253,6 +253,8 @@ class SmbAclBuilder implements AclBuilder {
    */
   private void addAceToSet(Set<Principal> users, Set<Principal> groups,
       ACE finalAce) {
+    // TODO: move to base class as this method is same as in
+    // LegacySmbAclBuilder.
     SID sid = finalAce.getSID();
     int sidType = sid.getType();
     String aclEntry = sid.toDisplayString();

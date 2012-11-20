@@ -10,7 +10,7 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
-Release 3.0.4, 09 November 2012
+Release 3.0.4, 19 November 2012
 ===============================
 
 Introduction
@@ -27,6 +27,9 @@ Issue 6686185: Better error message when the traversal user has no access
 Issue 7383538: SmbAclBuilder.isReadAce() should include Generic access rights.
                The connector now recognizes ACE.GENERIC_ALL and ACE.GENERIC_READ
                as valid read access rights.
+
+Issue 7386939: Feed namespaces and case-insensitive ACLs to GSA 7.x, even if
+               inherited ACLs are not being used.
 
 Issue 7430175: Lister and retriever threads cause a deadlock. Fixed a deadlock
                problem in JCIFS when used with DFS.

@@ -14,6 +14,11 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
+import com.google.enterprise.connector.spi.Principal;
+import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
+
 import jcifs.smb.ACE;
 import jcifs.smb.SID;
 import jcifs.smb.SmbAuthException;
@@ -54,6 +59,12 @@ class LegacySmbAclBuilder implements AclBuilder {
    */
   private final AceSecurityLevel securityLevel;
 
+  /** The global namespace for users and groups.*/
+  private final String globalNamespace;
+
+  /** The local namespace for users and groups.*/
+  private final String localNamespace;
+
   /**
    * Creates a {@link LegacySmbAclBuilder}.
    *
@@ -62,6 +73,8 @@ class LegacySmbAclBuilder implements AclBuilder {
    */
   LegacySmbAclBuilder(SmbFile file, AclProperties propertyFetcher) {
     this.file = file;
+    this.globalNamespace = propertyFetcher.getGlobalNamespace();
+    this.localNamespace = propertyFetcher.getLocalNamespace();
     AceSecurityLevel securityLevel = getSecurityLevel(
         propertyFetcher.getAceSecurityLevel());
     if (securityLevel == null) {
@@ -123,13 +136,22 @@ class LegacySmbAclBuilder implements AclBuilder {
       return Acl.USE_HEAD_REQUEST;
     }
     finalAces = getFinalAces(fileAces, shareAces);
-    Set<String> users = new TreeSet<String>();
-    Set<String> groups = new TreeSet<String>();
-    for (ACE finalAce : finalAces) {
-      addAceToSet(users, groups, finalAce);
+
+    return getAclFromAceList(finalAces, null);
+  }
+
+  /*
+   * Returns ACL from the list of ACEs
+   */
+  @VisibleForTesting
+  Acl getAclFromAceList(List<ACE> allowAceList, List<ACE> denyAceList) {
+    Set<Principal> users = new TreeSet<Principal>();
+    Set<Principal> groups = new TreeSet<Principal>();
+    for (ACE ace : allowAceList) {
+      addAceToSet(users, groups, ace);
     }
-    return Acl.newAcl(new ArrayList<String>(users),
-        new ArrayList<String>(groups), null, null);
+
+    return Acl.newAcl(users, groups, null, null);
   }
 
   /**
@@ -139,26 +161,45 @@ class LegacySmbAclBuilder implements AclBuilder {
    * @param groups Container for Group ACEs
    * @param finalAce ACE that needs to be added to the ACL
    */
-  private void addAceToSet(Set<String> users, Set<String> groups,
+  private void addAceToSet(Set<Principal> users, Set<Principal> groups,
       ACE finalAce) {
+    // TODO: move to base class as this method is same as in SmbAclBuilder.
     SID sid = finalAce.getSID();
+    int sidType = sid.getType();
     String aclEntry = sid.toDisplayString();
-    int sidType = finalAce.getSID().getType();
     int ix = aclEntry.indexOf('\\');
-    String userOrGroup, domain;
     if (ix > 0) {
-      domain = aclEntry.substring(0, ix);
-      userOrGroup = aclEntry.substring(ix + 1);
+      String domain = aclEntry.substring(0, ix);
+      String userOrGroup = aclEntry.substring(ix + 1);
       if (sidType == SID.SID_TYPE_USER) {
         aclEntry = AclFormat.formatString(userAclFormat, userOrGroup, domain);
       } else {
         aclEntry = AclFormat.formatString(groupAclFormat, userOrGroup, domain);
       }
     }
-    if (sidType == SID.SID_TYPE_USER) {
-      users.add(aclEntry);
-    } else {
-      groups.add(aclEntry);
+    switch (sidType) {
+      case SID.SID_TYPE_USER:
+        // TODO: I don't think SID supports local users, so assume global.
+        users.add(new Principal(userAclFormat.getPrincipalType(),
+                globalNamespace, aclEntry,
+                CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
+        break;
+      case SID.SID_TYPE_DOM_GRP:
+      case SID.SID_TYPE_DOMAIN:
+        groups.add(new Principal(groupAclFormat.getPrincipalType(),
+                globalNamespace, aclEntry,
+                CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
+        break;
+      case SID.SID_TYPE_ALIAS:
+      case SID.SID_TYPE_WKN_GRP:
+        if (ix < 0 && !Strings.isNullOrEmpty(sid.getDomainName())) {
+          aclEntry = AclFormat.formatString(groupAclFormat, aclEntry,
+                                            sid.getDomainName());
+        }
+        groups.add(new Principal(groupAclFormat.getPrincipalType(),
+                globalNamespace, aclEntry,
+                CaseSensitivityType.EVERYTHING_CASE_INSENSITIVE));
+        break;
     }
   }
 
@@ -183,8 +224,8 @@ class LegacySmbAclBuilder implements AclBuilder {
         operation = "getSecurity()";
       }
       if (securityAces == null) {
-        LOGGER.warning("Cannot process ACL because "+ operation + " not allowed"
-            + "on " + file.getURL());
+        LOGGER.warning("Cannot process ACL because "+ operation 
+            + " not allowed on " + file.getURL());
         return false;
       }
       for (ACE securityAce: securityAces) {
@@ -413,22 +454,22 @@ class LegacySmbAclBuilder implements AclBuilder {
   /**
    * {@link String} representations of {@link SID} objects that qualify for
    * inclusion in an ACL regardless of the value returned by
-   * {@link SID#getType}
-   * or by {@link #isBuiltin(SID)}.
+   * {@link #isSupportedSidType(int type)} or by {@link #isBuiltin(SID)}.
    */
   private static final Set<String> SUPPORTED_WINDOWS_SIDS =
       new HashSet<String>(Arrays.asList(
           "S-1-5-32-544",  // Administrators
-          EVERYONE_SID,       // Everyone
+          EVERYONE_SID,    // Everyone
           "S-1-5-32-545",  // Users
-          "S-1-5-32-546"   // Guests
+          "S-1-5-32-546",  // Guests
+          "S-1-5-4",       // NT AUTHORITY\INTERACTIVE   
+          "S-1-5-11"       // NT AUTHORITY\Authenticated Users
       ));
 
   /**
-   * Returns true if the provided {@link SID} can qualify for inclusion in an
-   * ACL
-   * regardless of the value returned by {@link SID#getType} or by
-   * {@link #isBuiltin(SID)}.
+   * Returns true if the supplied {@link SID} qualifies for inclusion in an ACL,
+   * regardless of the value returned by {@link #isSupportedSidType(int type)}
+   * or by {@link #isBuiltin(SID)}.
    */
   private final boolean isSupportedWindowsSid(SID sid) {
     return SUPPORTED_WINDOWS_SIDS.contains(sid.toString());
