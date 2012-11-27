@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Random;
 import java.security.Principal;
 import jcifs.Config;
 import jcifs.util.LogStream;
@@ -359,6 +360,7 @@ public class SmbFile extends URLConnection implements SmbConstants {
     static LogStream log = LogStream.getInstance();
     static long attrExpirationPeriod;
     static boolean ignoreCopyToException;
+    static Random random = new Random();
 
     static {
 
@@ -665,9 +667,34 @@ public class SmbFile extends URLConnection implements SmbConstants {
         return blank_resp;
     }
     void resolveDfs(ServerMessageBlock request) throws SmbException {
-        if (request instanceof SmbComClose)
-            return;
-
+      if (request instanceof SmbComClose)
+          return;
+      // GoogleModified: We have a customer that encounters sporadic NPE and
+      // NT_STATUS_NOT_FOUND errors, apparently due to bad connections.
+      for (int retries = 1; retries < 4; retries++) {
+        try {
+          resolveDfs0(request);
+          return;
+        } catch (NullPointerException npe) {
+          // Bug where transport or tconHostName is null indicates
+          // failed to clean up properly from dropped connection.
+        } catch (SmbException smbe) {
+          // The connection may have been dropped?
+          if (smbe.getNtStatus() != NtStatus.NT_STATUS_NOT_FOUND) {
+            throw smbe;
+          }
+        }
+        // If we get here, we apparently have a bad connection.
+        // Disconnect and try again.
+        if (log.level >= 2)
+          log.println("Retrying (" + retries + ") resolveDfs: " + request);
+        disconnect(true);
+        try {
+          Thread.sleep(500 + random.nextInt(5000));
+        } catch (InterruptedException e) {}
+      }
+    }
+    private void resolveDfs0(ServerMessageBlock request) throws SmbException {
         connect0();
 
         DfsReferral dr = dfs.resolve(
@@ -771,6 +798,40 @@ public class SmbFile extends URLConnection implements SmbConstants {
     }
     void send( ServerMessageBlock request,
                     ServerMessageBlock response ) throws SmbException {
+      // GoogleModified: We have a customer that encounters sporadic 
+      // 'The Parameter is incorrect' errors, apparently due to bad connections.
+      String savedPath = (request != null) ? request.path : null;
+      for (int retries = 1; retries < 4; retries++) {
+        try {
+          send0(request, response);
+          return;
+        } catch (SmbException smbe) {
+          if (smbe.getNtStatus() != NtStatus.NT_STATUS_INVALID_PARAMETER) {
+            throw smbe;
+          }
+        }
+        // If we get here, we got the 'The Parameter is incorrect' error.
+        // Disconnect and try again from scratch.
+        if (log.level >= 2)
+          log.println("Retrying (" + retries + ") send: " + request);
+        disconnect(true);
+        try {
+          Thread.sleep(500 + random.nextInt(5000));
+        } catch (InterruptedException e) {}
+        if (request != null) {
+          // resolveDfs() and tree.send() modify the request packet.
+          // I want to restore it before retrying.  request.reset()
+          // restores almost everything that was modified, except the path.
+          request.reset();
+          request.path = savedPath;
+        }
+        if (response != null)
+          response.reset();
+        connect0();
+      }
+    }
+    private void send0( ServerMessageBlock request,
+          ServerMessageBlock response ) throws SmbException {
         for( ;; ) {
             resolveDfs(request);
             try {
@@ -963,6 +1024,13 @@ int addressIndex;
                 if (log.level >= 3)
                     se.printStackTrace(log);
             }
+        }
+    }
+    void disconnect(boolean inError) {
+        if (isConnected()) {
+            tree.treeDisconnect(inError);
+            tree.session.logoff(inError);
+            tree = null;
         }
     }
     boolean isConnected() {
