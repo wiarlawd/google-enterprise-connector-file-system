@@ -12,7 +12,7 @@ File System Connector version 3 is a significant re-engineering of the File Syst
 == Prerequisites  ==
 
 Before applying an update you should have the following available to you:
-  * Administrative access to the GSA that the Connector is feeding.
+  * Administrative access to the GSA 6.14 or above that the Connector is feeding.
   * Access to the computer running the Connector and its Tomcat application server.  You will need sufficient access rights to start and stop Tomcat and modify files in its deployment directory.
   * A binary distribution of the Connector Manager version 3 release, available on the [http://code.google.com/p/google-enterprise-connector-manager/downloads/list Connector Manager Downloads] page.
   * A binary distribution of the File System Connector version 3 release, available on the [http://code.google.com/p/google-enterprise-connector-file-system/downloads/list File System Connector Downloads] page.
