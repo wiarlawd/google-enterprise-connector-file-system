@@ -22,6 +22,8 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.RepositoryLoginException;
 import com.google.enterprise.connector.spi.XmlUtils;
+import com.google.gdata.util.common.base.CharEscaper;
+import com.google.gdata.util.common.base.CharEscapers;
 
 import org.json.XML;
 
@@ -55,8 +57,13 @@ public class FileConnectorType implements ConnectorType {
   }
 
   private static final Logger LOG = Logger.getLogger(FileConnectorType.class.getName());
+
   private static final Map<String, String> EMPTY_CONFIG =
       Collections.emptyMap();
+
+  private static final CharEscaper JAVASCRIPT_ESCAPER =
+      CharEscapers.javascriptEscaper();
+
   private static boolean hasContent(String s) {
     /* We determine content by the presence of non-whitespace characters.
      * Our field values come from HTML input boxes which get maped to
@@ -128,8 +135,7 @@ public class FileConnectorType implements ConnectorType {
      * @return an HTML td element with a label element inside.
      */
     String getLabelHtml(ResourceBundle bundle, boolean highlightError) {
-      // TODO: ensure characters are HTML escaped
-      String label = getLabel(bundle);
+      String label = xmlEncodeAttributeValue(getLabel(bundle));
       String labelHtml = String.format("<b><label for=\"%s\">%s</label></b>", getName(), label);
       String tdStart = "<td valign=\"top\">";
       String tdEnd = "</td>";
@@ -320,8 +326,8 @@ public class FileConnectorType implements ConnectorType {
      *         available for user values
      */
     String getJavascriptToCreateMoreFields(String tableName, ResourceBundle bundle) {
-      // TODO: escape HTML characters
-      String cannotAddStr = bundle.getString(FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name());
+      String cannotAddStr = JAVASCRIPT_ESCAPER.escape(bundle.getString(
+          FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name()));
       StringBuilder buf = new StringBuilder();
       buf.append(SCRIPT_START);
       buf.append("function addMoreRowsToTable_" + tableName + "() { \n");
@@ -355,8 +361,8 @@ public class FileConnectorType implements ConnectorType {
     }
 
     String getJavaScriptInitiatingButton(String htmlTableName, ResourceBundle bundle) {
-      // TODO: escape HTML characters
-      String buttonStr = bundle.getString(FileSystemConnectorErrorMessages.ADD_ANOTHER_ROW_BUTTON.name());
+      String buttonStr = JAVASCRIPT_ESCAPER.escape(bundle.getString(
+          FileSystemConnectorErrorMessages.ADD_ANOTHER_ROW_BUTTON.name()));
       return String.format("<tr><td> </td><td> "
           + "<button id=\"more_%s_button\" type=\"button\" "
           + "onclick=\"addMoreRowsToTable_%s()\">" + buttonStr + "</button>"
