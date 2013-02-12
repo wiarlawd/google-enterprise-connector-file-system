@@ -17,7 +17,6 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
@@ -37,31 +36,69 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Builds ACLs for SMB file system Directories and Files.
+ * </p>
+ * Note that this connector, if feeding directories at all, feeds them as 
+ * DocumentType.ACL, not indexable documents.  For this reason, the ACLs 
+ * built for directories are built strictly for the purpose of inheritance
+ * and may not reflect the true permissions for that directory.  This allows 
+ * us to simplify the handling of INHERIT_ONLY and NO_PROPAGATE ACEs.
+ * </p>
+ * A note about the inheritance behaviours of ACEs, as described by Microsoft.
+ * From this Microsoft page describing the application of inheritance flags to
+ * ACEs:  http://support.microsoft.com/kb/220167
+ * </p>
+ * "This folder only": ACE flags = 0 : No inheritance applies to ACE.
+ * </p>
+ * "This folder, subfolders, and files":
+ * ACE flags = FLAG_OBJECT_INHERIT | FLAG_CONTAINER_INHERIT :
+ * All subordinate objects inherit this ACE, unless they are configured to
+ * block ACL inheritance altogether.
+ * </p>
+ * "This folder and subfolders": ACE flags = FLAG_CONTAINER_INHERIT :
+ * ACE propagates to subfolders of this container, but not to files within
+ * this container.
+ * </p>
+ * "This folder and files": ACE flags = FLAG_OBJECT_INHERIT :
+ * ACE propagates to files within this container, but not to subfolders.
+ * </p>
+ * "Subfolders and files only":
+ * ACE flags = FLAG_INHERIT_ONLY | FLAG_OBJECT_INHERIT | FLAG_CONTAINER_INHERIT:
+ * ACE does not apply to this container, but does propagate to both subfolders
+ * and files contained within.
+ * </p>
+ * "Subfolders only":
+ * ACE flags = FLAG_INHERIT_ONLY | FLAG_CONTAINER_INHERIT :
+ * ACE does not apply to this container, but propagates to subfolders.
+ * It does not propagate to contained files.
+ * </p>
+ * "Files only":
+ * ACE flags = FLAG_INHERIT_ONLY | FLAG_OBJECT_INHERIT :
+ * ACE does not apply to this container, but propagates to the files it
+ * contains. Subfolders do not receive this ACE.
+ * </p>
+ * "Apply permissions to objects and/or containers within this container only":
+ * ACE flags = * | FLAG_NO_PROPAGATE :
+ * This flag limits inheritance only to those sub-objects that are immediately
+ * subordinate to the current object.  It would be used in combination with
+ * other flags to indicate whether the ACE applies to this container,
+ * subordinate containers, and/or subordinate files.
+ * </p>
+ * More information regarding the explicit individual meanings of the ACE flags:
+ * FLAG_INHERIT_ONLY - This flag indicates that this ACE does not apply to the
+ * current object.
+ * FLAG_CONTAINER_INHERIT - This flag indicates that subordinate containers
+ * will inherit this ACE.
+ * FLAG_OBJECT_INHERIT - This flag indicates that subordinate files will
+ * inherit the ACE.
+ * FLAG_NO_PROPAGATE - This flag indicates that the subordinate object will
+ * not propagate the inherited ACE any further.
+ */
+
 abstract class AbstractSmbAclBuilder implements AclBuilder {
   private static final Logger LOGGER = Logger.getLogger(
       AbstractSmbAclBuilder.class.getName());
-
-  /** Returns true if the associated {@link ACE} is INHERIT_ONLY. */
-  protected static Predicate<ACE> isInheritOnlyAce = new Predicate<ACE>() {
-    public boolean apply(ACE ace) {
-      return ((ace.getFlags() & ACE.FLAGS_INHERIT_ONLY) ==
-              ACE.FLAGS_INHERIT_ONLY);
-    }
-  };
-
-  /** Returns true if the associated {@link ACE} is INHERITED. */
-  protected static Predicate<ACE> isInheritedAce = new Predicate<ACE>() {
-    public boolean apply(ACE ace) {
-      return ((ace.getFlags() & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED);
-    }
-  };
-
-  /**
-   * Returns true if the associated {@link ACE} is explicit for this
-   * node (neither INHERIT_ONLY or INHERITED).
-   */
-  protected static Predicate<ACE> isDirectAce =
-      Predicates.not(Predicates.<ACE>or(isInheritOnlyAce, isInheritedAce));
 
   protected final SmbFileDelegate file;
 

@@ -16,6 +16,7 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
 import jcifs.smb.ACE;
 import jcifs.smb.SmbException;
@@ -40,6 +41,50 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
    * True if this file has any inherited ACEs.
    */
   private final boolean hasInheritedAces;
+
+  /**
+   * Returns true if the associated {@link ACE} could be inherited by
+   * containers from which files will eventually inherit permissions.
+   * Note that we exclude NO_PROPAGATE ACEs, since those ACEs would never get
+   * propagated to a regular file.  We exclude CONTAINER_INHERIT ACEs, since
+   * they would never actually get inherited by a file.  We also exclude ACEs
+   * INHERITED from up the chain.
+   */
+  protected static Predicate<ACE> isContainerInheritAce = new Predicate<ACE>() {
+    public boolean apply(ACE ace) {
+      int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED
+                 | ACE.FLAGS_NO_PROPAGATE;
+      return (ace.getFlags() & mask) == ACE.FLAGS_OBJECT_INHERIT;
+    }
+  };
+
+  /**
+   * Returns true if the associated {@link ACE} could be inherited by
+   * regular files. Note that we exclude ACEs INHERITED from up the chain.
+   */
+  protected static Predicate<ACE> isObjectInheritAce = new Predicate<ACE>() {
+    public boolean apply(ACE ace) {
+      int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED;
+      return (ace.getFlags() & mask) == ACE.FLAGS_OBJECT_INHERIT;
+    }
+  };
+
+  /** Returns true if the associated {@link ACE} is INHERITED. */
+  protected static Predicate<ACE> isInheritedAce = new Predicate<ACE>() {
+    public boolean apply(ACE ace) {
+      return (ace.getFlags() & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED;
+    }
+  };
+
+  /**
+   * Returns true if the associated {@link ACE} is explicit for this
+   * node, not inherited from another node.
+   */
+  protected static Predicate<ACE> isDirectAce = new Predicate<ACE>() {
+    public boolean apply(ACE ace) {
+      return (ace.getFlags() & ACE.FLAGS_INHERITED) == 0;
+    }
+  };
 
   /**
    * Creates an {@link SmbAclBuilder}.
@@ -68,80 +113,47 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
 
   @Override
   public Acl getAcl() throws IOException {
-    if (LOGGER.isLoggable(Level.FINEST)) {
-      LOGGER.log(Level.FINEST, "ACEs for {0}: {1}",
-                 new Object[] { file, Arrays.toString(securityAces)});
-    }
+    return getAcl(securityAces, isDirectAce, "");
+  }
 
-    List<ACE> fileAllowAces = new ArrayList<ACE>();
-    List<ACE> fileDenyAces = new ArrayList<ACE>();
-    checkAndAddAces(securityAces, fileAllowAces, fileDenyAces,
-                    isDirectAce);
+  @Override
+  public Acl getContainerInheritAcl() throws IOException {
+    return getAcl(securityAces, isContainerInheritAce, "Inheritable Directory");
+  }
 
-    // If the file inherits any ACEs from its parent, explicitly add
-    // those that were INHERIT_ONLY (on the parent) to our ACEs.
-    if (hasInheritedAces) {
-      try {
-        SmbFileDelegate parent = file.getParentFile();
-        if (parent != null) {
-          ACE[] parentsecurityAces = parent.getSecurity();
-          checkAndAddAces(parentsecurityAces, fileAllowAces, fileDenyAces,
-                          isInheritOnlyAce);
-        }
-      } catch (ClassCastException e) {
-        LOGGER.log(Level.FINEST,"ClassCastException while getting parent ACLs: "
-                   + e.getMessage());
-      } catch (SmbException e) {
-        LOGGER.warning("Failed to get parent ACL: " + e.getMessage());
-        LOGGER.log(Level.FINEST, "Got SmbException while getting parent ACLs",
-                   e);
-      }
-    }
-
-    Acl acl = getAclFromAceList(fileAllowAces, fileDenyAces);
-    LOGGER.log(Level.FINEST, "ACL for {0}: {1}", new Object[] { file, acl });
-    return acl;
+  @Override
+  public Acl getFileInheritAcl() throws IOException {
+    return getAcl(securityAces, isObjectInheritAce, "Inheritable File");
   }
 
   @Override
   public Acl getInheritedAcl() throws IOException {
-    if (!hasInheritedAces) {
-      return null;
-    }
-
-    if (LOGGER.isLoggable(Level.FINEST)) {
-      LOGGER.log(Level.FINEST, "ACEs for {0}: {1}",
-                 new Object[] { file, Arrays.toString(securityAces)});
-    }
-
-    List<ACE> fileAllowAces = new ArrayList<ACE>();
-    List<ACE> fileDenyAces = new ArrayList<ACE>();
-    checkAndAddAces(securityAces, fileAllowAces, fileDenyAces,
-                    isInheritedAce);
-
-    Acl acl = getAclFromAceList(fileAllowAces, fileDenyAces);
-    LOGGER.log(Level.FINEST, "ACL for {0}: {1}", new Object[] { file, acl });
-    return acl;
+    return (hasInheritedAces)
+        ? getAcl(securityAces, isInheritedAce, "Inherited") : null;
   }
 
   @Override
   public Acl getShareAcl() throws IOException {
-    // getShareSecurity with true argument of SmbFile attempts to resolve
-    // the SIDs within each ACE form
-    ACE[] shareAces = file.getShareSecurity(true);
+    // SmbFile.getShareSecurity with true argument attempts to resolve
+    // the SIDs within each ACE form.
+    return getAcl(file.getShareSecurity(true), Predicates.<ACE>alwaysTrue(),
+                  "Share");
+  }
+
+  private Acl getAcl(ACE[] aces, Predicate<ACE> predicate, String type)
+      throws IOException {
     if (LOGGER.isLoggable(Level.FINEST)) {
-      LOGGER.log(Level.FINEST, "Share ACEs for {0}: {1}",
-                 new Object[] { file, Arrays.toString(shareAces)});
+      LOGGER.log(Level.FINEST, "{0} ACEs for {1}: {2}",
+          new Object[] { type, file, Arrays.toString(securityAces)});
     }
 
     List<ACE> fileAllowAces = new ArrayList<ACE>();
     List<ACE> fileDenyAces = new ArrayList<ACE>();
-    checkAndAddAces(shareAces, fileAllowAces, fileDenyAces,
-                    isDirectAce);
+    checkAndAddAces(aces, fileAllowAces, fileDenyAces, predicate);
 
     Acl acl = getAclFromAceList(fileAllowAces, fileDenyAces);
-    LOGGER.log(Level.FINEST, "Share ACL for {0}: {1}",
-               new Object[] { file, acl });
+    LOGGER.log(Level.FINEST, "{0} ACL for {1}: {2}",
+        new Object[] { type, file, acl });
     return acl;
   }
 

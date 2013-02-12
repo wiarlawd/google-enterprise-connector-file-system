@@ -43,6 +43,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private Acl acl;
   private Acl shareAcl;
   private Acl inheritedAcl;
+  private Acl containerInheritAcl;
+  private Acl fileInheritAcl;
   private long lastModified;
   private String fileContents;
   private boolean exists = true;
@@ -57,7 +59,8 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
    */
   public static enum Where { NONE, ALL, IS_DIRECTORY, IS_REGULAR_FILE,
       GET_LAST_MODIFIED, GET_ACL, GET_SHARE_ACL, GET_INHERITED_ACL, CAN_READ,
-      LIST_FILES, GET_DISPLAY_URL, LENGTH, EXISTS, GET_INPUT_STREAM }
+      LIST_FILES, GET_DISPLAY_URL, LENGTH, EXISTS, GET_INPUT_STREAM,
+      GET_CONTAINER_INHERIT_ACL, GET_FILE_INHERIT_ACL }
 
   void setException(Where where, Exception exception) {
     this.where = where;
@@ -176,7 +179,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   /**
    * Return the path to this file or directory.
    */
-  /* @Override */
+  @Override
   public String getPath() {
     if (parent == null) {
       return name;
@@ -192,17 +195,17 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   /**
    * Return the name to this file or directory.
    */
-  /* @Override */
+  @Override
   public String getName() {
     return name;
   }
 
-  /* @Override */
+  @Override
   public String getParent() {
     return (parent == null) ? null : parent.getPath();
   }
 
-  /* @Override */
+  @Override
   public String getDisplayUrl() throws RepositoryException {
     maybeThrowRepositoryException(Where.GET_DISPLAY_URL);
     try {
@@ -222,13 +225,13 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.readable = newValue;
   }
 
-  /* @Override */
+  @Override
   public boolean canRead() throws RepositoryException {
     maybeThrowRepositoryException(Where.CAN_READ);
     return readable;
   }
 
-  /* @Override */
+  @Override
   public Acl getAcl() throws RepositoryException, IOException {
     maybeThrowRepositoryException(Where.GET_ACL);
     maybeThrowIOException(Where.GET_ACL);
@@ -249,6 +252,20 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     return inheritedAcl;
   }
 
+  @Override
+  public Acl getContainerInheritAcl() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.GET_CONTAINER_INHERIT_ACL);
+    maybeThrowIOException(Where.GET_CONTAINER_INHERIT_ACL);
+    return containerInheritAcl;
+  }
+
+  @Override
+  public Acl getFileInheritAcl() throws RepositoryException, IOException {
+    maybeThrowRepositoryException(Where.GET_FILE_INHERIT_ACL);
+    maybeThrowIOException(Where.GET_FILE_INHERIT_ACL);
+    return fileInheritAcl;
+  }
+
   public void setAcl(Acl acl) {
     this.acl = acl;
   }
@@ -259,6 +276,14 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
 
   public void setInheritedAcl(Acl acl) {
     this.inheritedAcl = acl;
+  }
+
+  public void setContainerInheritAcl(Acl acl) {
+    this.containerInheritAcl = acl;
+  }
+
+  public void setFileInheritAcl(Acl acl) {
+    this.fileInheritAcl = acl;
   }
 
   public void setFileContents(String fileContents) {
@@ -272,7 +297,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.fileContents = fileContents;
   }
 
-  /* @Override */
+  @Override
   public InputStream getInputStream() throws IOException {
     maybeThrowIOException(Where.GET_INPUT_STREAM);
     if (isDir) {
@@ -282,14 +307,14 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     return new ByteArrayInputStream(fileContents.getBytes("UTF-8"));
   }
 
-  /* @Override */
+  @Override
   public long length() throws RepositoryException, IOException {
     maybeThrowRepositoryException(Where.LENGTH);
     maybeThrowIOException(Where.LENGTH);
     return fileContents.length();
   }
 
-  /* @Override */
+  @Override
   public boolean isDirectory() throws RepositoryException {
     maybeThrowRepositoryException(Where.IS_DIRECTORY);
     return isDir;
@@ -300,7 +325,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.isRegularFile = isRegularFile;
   }
 
-  /* @Override */
+  @Override
   public boolean isRegularFile() throws RepositoryException {
     maybeThrowRepositoryException(Where.IS_REGULAR_FILE);
     return isRegularFile;
@@ -315,7 +340,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.lastModified = lastModified;
   }
 
-  /* @Override */
+  @Override
   public long getLastModified() throws RepositoryException, IOException {
     maybeThrowRepositoryException(Where.GET_LAST_MODIFIED);
     maybeThrowIOException(Where.GET_LAST_MODIFIED);
@@ -361,7 +386,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     throw new RuntimeException("no such file: " + fileOrDirectoryName);
   }
 
-  /* @Override */
+  @Override
   public List<MockReadonlyFile> listFiles() throws DirectoryListingException,
       RepositoryException, IOException {
     maybeThrowListingException();
@@ -369,7 +394,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
       throw new IOException("not a directory: " + getPath());
     }
     Collections.sort(directoryContents, new Comparator<MockReadonlyFile>() {
-      /* @Override */
+      @Override
       public int compare(MockReadonlyFile o1, MockReadonlyFile o2) {
         return o1.getPath().compareTo(o2.getPath());
       }
@@ -377,7 +402,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     return directoryContents;
   }
 
-  /* @Override */
+  @Override
   public FileSystemType<?> getFileSystemType() {
     return (fileSystemType != null) ? fileSystemType
                                     : parent.getFileSystemType();
@@ -396,7 +421,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     return getPath();
   }
 
-  /* @Override */
+  @Override
   public boolean exists() throws RepositoryException {
     maybeThrowRepositoryException(Where.EXISTS);
     return this.exists;

@@ -102,6 +102,7 @@ interface AclBuilder {
     /**
      * Formats the ACE string based on the passed
      * AclFormat enum, user or group name and the domain string.
+     *
      * @param aclFormat Enum with the ACL format to use.
      * @param userOrGroup String representing user or group name.
      * @param domain String representing domain name.
@@ -189,6 +190,25 @@ interface AclBuilder {
    * file has no inherited ACEs.
    */
   public Acl getInheritedAcl() throws IOException;
+
+  /**
+   * Returns an ACL that would be inherited by subordinate containers such as 
+   * folders or directories.  Note the Microsoft Windows allows different
+   * sets of permissions to be inherited by files and folders from the
+   * parent folder.
+   *
+   * @throws IOException
+   */
+  public Acl getContainerInheritAcl() throws IOException;
+
+  /**
+   * Returns an ACL that would be inherited by subordinate files.
+   * Note the Microsoft Windows allows different sets of permissions to be 
+   * inherited by files and folders from the parent folder.
+   *
+   * @throws IOException
+   */
+  public Acl getFileInheritAcl() throws IOException;
 
   /**
    * Returns share ACL for the shared root.

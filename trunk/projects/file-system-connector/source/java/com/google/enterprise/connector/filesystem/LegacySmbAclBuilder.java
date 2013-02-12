@@ -29,7 +29,6 @@ import java.util.logging.Logger;
 /**
  * This was SmbAclBuilder at r351.
  */
-// TODO(bmj): Use the base class Predicates where appropriate.
 class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
   private static final Logger LOGGER = Logger.getLogger(
       LegacySmbAclBuilder.class.getName());
@@ -60,22 +59,32 @@ class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
 
   @Override
   public Acl getAcl() throws IOException {
-    List<ACE> finalAces = new ArrayList<ACE>();
     List<ACE> fileAces = new ArrayList<ACE>();
+    if (securityLevel != AceSecurityLevel.SHARE &&
+        !checkAndAddAces(fileAces, false)) {
+      return Acl.USE_HEAD_REQUEST;
+    }
     List<ACE> shareAces = new ArrayList<ACE>();
-    if (securityLevel != AceSecurityLevel.SHARE && !checkAndAddAces(fileAces, false)) {
+    if (securityLevel != AceSecurityLevel.FILE &&
+        !checkAndAddAces(shareAces, true)) {
       return Acl.USE_HEAD_REQUEST;
     }
-    if (securityLevel != AceSecurityLevel.FILE && !checkAndAddAces(shareAces, true)) {
-      return Acl.USE_HEAD_REQUEST;
-    }
-    finalAces = getFinalAces(fileAces, shareAces);
-
+    List<ACE> finalAces = getFinalAces(fileAces, shareAces);
     return getAclFromAceList(finalAces, null);
   }
 
   @Override
   public Acl getInheritedAcl() throws IOException {
+    return null;
+  }
+
+  @Override
+  public Acl getContainerInheritAcl() throws IOException {
+    return null;
+  }
+
+  @Override
+  public Acl getFileInheritAcl() throws IOException {
     return null;
   }
 
@@ -87,13 +96,15 @@ class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
   /**
    * Gets the ACEs at either File or Share level depending on the boolean
    * 'isShare' parameter and checks if there is a presence of a DENY ACE
-   * If it gets all the READ ACEs successfully, then it returns true otherwise false.
+   * If it gets all the READ ACEs successfully, then it returns true, 
+   * otherwise false.
    * @param aceList List where the ACEs need to be added.
-   * @param isShare parameter that decides whether to get file or share level ACEs
-   * @return true if ACEs are fetched successfully. False otherwise.
+   * @param isShare decides whether to get file or share level ACEs
+   * @return true if ACEs are fetched successfully; false otherwise
    * @throws IOException
    */
-  private boolean checkAndAddAces(List<ACE> aceList, boolean isShare) throws IOException {
+  private boolean checkAndAddAces(List<ACE> aceList, boolean isShare)
+      throws IOException {
     try {
       ACE securityAces[];
       String operation;
@@ -111,7 +122,7 @@ class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
       }
       for (ACE securityAce: securityAces) {
         if (!checkAndLogDenyAce(securityAce)) {
-          checkAndAddAce(securityAce, aceList);
+          checkAndAddAce(securityAce, aceList, null);
         } else {
           return false;
         }
@@ -125,22 +136,6 @@ class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
     }
     return true;
   }
-
-  /**
-   * Checks for various conditions on ACEs before adding them as valid READ
-   * ACEs.
-   * @param ace ACE to be checked and added.
-   * @param aceList List where the ACE needs to be added if it is a valid ACE
-   */
-  private void checkAndAddAce(ACE ace, List<ACE> aceList) {
-    if (isInheritOnlyAce(ace.getFlags())) {
-      LOGGER.finest("Filtering inherit only ACE " + ace + " for file "
-                    + file.getURL());
-      return;
-    }
-    super.checkAndAddAce(ace, aceList, null);
-  }
-    
 
   /**
    * Gets the final list of ACEs based on the level of Access and
@@ -256,13 +251,5 @@ class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
       return;
     }
     throw e;
-  }
-
-  /**
-   * Returns true if the passed in flags indicate the associated {@link ACE}
-   * applies to contained objects but not this one.
-   */
-  private boolean isInheritOnlyAce(int aceFlags) {
-    return (aceFlags & ACE.FLAGS_INHERIT_ONLY) == ACE.FLAGS_INHERIT_ONLY;
   }
 }

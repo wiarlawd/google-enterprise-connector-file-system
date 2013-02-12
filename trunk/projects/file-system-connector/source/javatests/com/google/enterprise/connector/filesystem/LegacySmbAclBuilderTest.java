@@ -429,7 +429,7 @@ public class LegacySmbAclBuilderTest extends TestCase {
       expect(ace.isAllow()).andReturn(true);
       expectLastCall().atLeastOnce();
       expect(ace.getFlags()).andReturn(0);
-      expectLastCall().atLeastOnce();
+      expectLastCall().anyTimes();
       expect(ace.getAccessMask())
           .andReturn(LegacySmbAclBuilder.READ_ACCESS_MASK);
       expectLastCall().atLeastOnce();
