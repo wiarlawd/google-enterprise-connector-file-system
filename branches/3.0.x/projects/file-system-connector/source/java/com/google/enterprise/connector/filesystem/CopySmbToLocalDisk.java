@@ -98,7 +98,7 @@ class CopySmbToLocalDisk {
   }
 
   private void copyOnto(InputStream in, OutputStream out) throws IOException {
-    byte buf[] = new byte[1024];
+    byte buf[] = new byte[1024 * 1024];
     int len;
     while ((len = in.read(buf)) > 0) {
       out.write(buf, 0, len);
@@ -118,11 +118,17 @@ class CopySmbToLocalDisk {
     }
     p = p.substring(src.getPath().length());
     File outFile = makeOutputFile(p);
-    InputStream in = inFile.getInputStream();
     OutputStream out = new FileOutputStream(outFile);
-    copyOnto(in,out);
-    out.close();
-    in.close();
+    try {
+      InputStream in = inFile.getInputStream();
+      try {
+        copyOnto(in, out);
+      } finally {
+        in.close();
+      }
+    } finally {
+      out.close();
+    }
   }
 
   private void processDirectory(ReadonlyFile<? extends ReadonlyFile<?>> d)

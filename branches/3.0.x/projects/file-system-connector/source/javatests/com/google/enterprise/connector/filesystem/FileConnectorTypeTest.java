@@ -53,6 +53,9 @@ public class FileConnectorTypeTest extends TestCase {
   private static final Pattern TAG_NAME = Pattern.compile("</?(\\w+)[^>]*>");
   private static final ResourceBundle US_BUNDLE =
       ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME, Locale.US);
+  private static final ResourceBundle FR_BUNDLE =
+      ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME,
+          Locale.FRANCE);
 
   private Map<String, String> config;
   private FileConnectorType type;
@@ -149,6 +152,34 @@ public class FileConnectorTypeTest extends TestCase {
     ConfigureResponse response = type.getConfigForm(Locale.getDefault());
     assertEquals("", response.getMessage());
     assertBalancedTags(response.getFormSnippet());
+  }
+
+  /*
+   * TODO(jlacey): This is a fragile test that depends on the presence
+   * of particular French translations in the form snippet.
+   */
+  private void testEscaping(String bundleKey, String bundleValue,
+      String escapedValue) {
+    ConfigureResponse response = type.getConfigForm(Locale.FRANCE);
+    assertEquals("", response.getMessage());
+
+    // Internal check to make sure the target French translation is still there.
+    assertEquals(bundleValue, FR_BUNDLE.getString(bundleKey));
+
+    String snippet = response.getFormSnippet();
+    assertFalse(snippet, snippet.contains(bundleValue));
+    assertTrue(snippet, snippet.contains(escapedValue));
+  }
+
+  public void testEscapedHtml() {
+    String bundleValue = "Nom d'utilisateur";
+    testEscaping("user", bundleValue, bundleValue.replace("'", "&#39;"));
+  }
+
+  public void testEscapedJavaScript() {
+    String bundleValue = "Impossible d'ajouter une ligne.";
+    testEscaping(FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name(),
+        bundleValue, bundleValue.replace("'", "\\x27"));
   }
 
   public void testGetPopulatedConfigFormEmptyConfig() {

@@ -92,27 +92,27 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     return fileSystemType;
   }
 
-  /* @Override */
+  @Override
   public String getPath() {
     return delegate.getPath();
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return delegate.getName();
   }
 
-  /* @Override */
+  @Override
   public String getParent() {
     return delegate.getParent();
   }
 
-  /* @Override */
+  @Override
   public String getDisplayUrl() {
     return getPath();
   }
 
-  /* @Override */
+  @Override
   public boolean exists() throws RepositoryException {
     try {
       return delegate.exists();
@@ -122,7 +122,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     }
   }
 
-  /* @Override */
+  @Override
   public boolean canRead() throws RepositoryException {
     try {
       return delegate.canRead() && !delegate.isHidden();
@@ -132,7 +132,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     }
   }
 
-  /* @Override */
+  @Override
   public boolean isDirectory() throws RepositoryException {
     try {
       return delegate.isDirectory();
@@ -142,7 +142,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     }
   }
 
-  /* @Override */
+  @Override
   public boolean isRegularFile() throws RepositoryException {
     try {
       return delegate.isFile();
@@ -152,7 +152,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     }
   }
 
-  /* @Override */
+  @Override
   public long getLastModified() throws IOException, RepositoryException {
     long lastModified;
     try {
@@ -165,15 +165,25 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     return lastModified;
   }
 
-  /* @Override */
+  @Override
   public long length() throws IOException, RepositoryException {
     return isRegularFile() ? delegate.length() : 0L;
   }
 
-  /* @Override */
+  @Override
   public Acl getAcl() throws IOException, RepositoryException {
     // TODO: figure out what the ACLs really are.
     return Acl.newPublicAcl();
+  }
+
+  @Override
+  public Acl getContainerInheritAcl() throws IOException, RepositoryException {
+    return getAcl();
+  }
+
+  @Override
+  public Acl getFileInheritAcl() throws IOException, RepositoryException {
+    return getAcl();
   }
 
   @Override
@@ -182,18 +192,18 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     return null;
   }
 
-  /* @Override */
+  @Override
   public Acl getShareAcl() throws IOException, RepositoryException {
     // TODO: figure out what the share ACLs really are.
     return null;
   }
 
-  /* @Override */
+  @Override
   public boolean acceptedBy(FilePatternMatcher matcher) {
     return matcher.acceptName(getPath());
   }
 
-  /* @Override */
+  @Override
   public InputStream getInputStream() throws IOException {
     // Can not throw RepositoryException here because of the
     // InputStreamFactory interface signature, so we avoid calling
@@ -216,7 +226,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     }
   }
 
-  /* @Override */
+  @Override
   public List<T> listFiles() throws IOException, RepositoryException,
       DirectoryListingException {
     String[] fileNames;
@@ -236,7 +246,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       result.add(newChild(fileNames[k]));
     }
     Collections.sort(result, new Comparator<T>() {
-      /* @Override */
+      @Override
       public int compare(T o1, T o2) {
         return o1.getPath().compareTo(o2.getPath());
       }

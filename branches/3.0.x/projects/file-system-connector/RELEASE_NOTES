@@ -10,6 +10,49 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
+Release 3.0.6, 19 February 2013
+===============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality. Users of version 3.0.0, 3.0.2, or 3.0.4 are strongly
+encouraged to upgrade.
+
+Issues fixed from last release:
+-------------------------------
+Issue 7418773: If a connection to the file server was lost, the JCIFS session
+               and transport layers were left in an inconsistent state. This
+               would result in nearly all subsequent requests throwing either
+               NT_STATUS_NOT_FOUND or "The parameter is incorrect" exceptions,
+               which would halt traversal. This release includes a new 
+               jcifs.jar which has been patched to retry broken connections.
+
+Issue 7577675: Localization strings were improperly escaped in JavaScript for
+               the connector configuration form.
+
+Issue 7684717: Files incorrectly inherit list folder contents permission.
+               List folder permissions grants read access to a folder and
+               its sub-folders, but it should not grant read access to the
+               files contained within those folders.
+
+Issue 7690736: Inherit-only ACEs should appear in an ACL associated with the
+               parent directory, not the child.  We were folding Inherit-only
+               ACEs from the parent onto the child.  Consequently, if the
+               parent ACE changed, that change would not be reflected in the
+               child's copy.
+
+Issue 7690993 (Code Site Issue 41): CopySmbToLocalDisk leaked Input/Output
+               Streams if exceptions are thrown when copying files.  This
+               could cause the process to run out of memory.
+
+Manual upgrade instructions
+---------------------------
+Note that this release includes a new jcifs.jar, which in addition to the new
+connector-filesystem.jar, should be copied to the Tomcat deployment directory:
+webapps/connector-manager/WEB-INF/lib.
+
+
 Release 3.0.4, 19 November 2012
 ===============================
 
@@ -21,8 +64,13 @@ to upgrade.
 
 Issues fixed from last release:
 -------------------------------
-Issue 6686185: Better error message when the traversal user has no access
-               rights on the file share.
+               Improve an error message in the admin console when the
+               traversal user has no access rights on the file share.
+
+Issue 7369489: Remove an unused AceSecurityLevel check from SmbAclBuilder.
+               Update AceSecurityLevel comment in advanced config to make
+               clear that the property is not used when inherited ACLs are
+               enabled with GSA 7.0.
 
 Issue 7383538: SmbAclBuilder.isReadAce() should include Generic access rights.
                The connector now recognizes ACE.GENERIC_ALL and ACE.GENERIC_READ

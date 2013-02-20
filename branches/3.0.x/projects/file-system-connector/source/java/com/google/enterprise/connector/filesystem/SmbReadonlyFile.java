@@ -226,15 +226,26 @@ public class SmbReadonlyFile
   public Acl getAcl() throws IOException, RepositoryException {
     try {
       return getAclBuilder().getAcl();
-    } catch (SmbException e) {
-      detectServerDown(e);
-      LOG.warning("Failed to get ACL: " + e.getMessage());
-      LOG.log(Level.FINEST, "Got SmbException while getting ACLs", e);
-      return Acl.USE_HEAD_REQUEST;
     } catch (IOException e) {
-      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
-              + "getting ACLs for " + this.getPath(), e);
-      throw e;
+      return processIOException(e, "");
+    }
+  }
+
+  @Override
+  public Acl getContainerInheritAcl() throws IOException, RepositoryException {
+    try {
+      return getAclBuilder().getContainerInheritAcl();
+    } catch (IOException e) {
+      return processIOException(e, "container inherit");
+    }
+  }
+
+  @Override
+  public Acl getFileInheritAcl() throws IOException, RepositoryException {
+    try {
+      return getAclBuilder().getFileInheritAcl();
+    } catch (IOException e) {
+      return processIOException(e, "file inherit");
     }
   }
 
@@ -242,15 +253,8 @@ public class SmbReadonlyFile
   public Acl getInheritedAcl() throws IOException, RepositoryException {
     try {
       return getAclBuilder().getInheritedAcl();
-    } catch (SmbException e) {
-      detectServerDown(e);
-      LOG.warning("Failed to get inherited ACL: " + e.getMessage());
-      LOG.log(Level.FINEST, "Got SmbException while getting inherited ACLs", e);
-      return Acl.USE_HEAD_REQUEST;
     } catch (IOException e) {
-      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
-          + "getting ACLs for " + this.getPath(), e);
-      throw e;
+      return processIOException(e, "inherited");
     }
   }
 
@@ -259,9 +263,22 @@ public class SmbReadonlyFile
     try {
       return getAclBuilder().getShareAcl();
     } catch (IOException e) {
-      detectServerDown(e);
-      LOG.log(Level.WARNING, "Failed to get share ACL for " + this.getPath(),
-              e);
+      processIOException(e, "share");
+      throw e;
+    }
+  }
+
+  private Acl processIOException(IOException e, String aclType) 
+      throws IOException, RepositoryException {
+    detectServerDown(e);    
+    if (e instanceof SmbException) {
+      LOG.warning("Failed to get " + aclType + " ACL: " + e.getMessage());
+      LOG.log(Level.FINEST, "Got SmbException while getting " + aclType
+              + " ACL", e);
+      return Acl.USE_HEAD_REQUEST;
+    } else {
+      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
+              + "getting " + aclType + " ACL for " + this.getPath(), e);
       throw e;
     }
   }

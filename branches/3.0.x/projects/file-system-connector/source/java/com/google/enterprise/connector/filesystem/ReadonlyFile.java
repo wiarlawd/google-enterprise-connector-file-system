@@ -110,15 +110,40 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   public Acl getInheritedAcl() throws IOException, RepositoryException;
 
   /**
+   * Returns an ACL that would be inherited by subordinate containers such as 
+   * folders or directories.  Note the Microsoft Windows allows different
+   * sets of permissions to be inherited by files and folders from the
+   * parent folder.
+   * @throws IOException
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
+   */
+  public Acl getContainerInheritAcl() throws IOException, RepositoryException;
+
+  /**
+   * Returns an ACL that would be inherited by subordinate files.
+   * Note the Microsoft Windows allows different sets of permissions to be 
+   * inherited by files and folders from the parent folder.
+   * @throws IOException
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
+   */
+  public Acl getFileInheritAcl() throws IOException, RepositoryException;
+
+  /**
    * Returns share level ACL.  (The getAcl method return file level ACL).
    * Returns null for non-windows share.
    * @throws IOException
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
    */
   public Acl getShareAcl() throws IOException, RepositoryException;
 
   /**
    * @return true if the file exists, is not hidden, and can be read;
    *         false otherwise
+   * @throws RepositoryException if there was an error accessing the repository.
+   *         For instance, a network file share is off-line.
    */
   public boolean canRead() throws RepositoryException;
 

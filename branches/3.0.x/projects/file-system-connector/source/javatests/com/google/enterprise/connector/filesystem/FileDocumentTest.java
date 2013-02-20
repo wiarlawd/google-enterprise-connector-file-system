@@ -31,6 +31,7 @@ import junit.framework.TestCase;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
@@ -53,6 +54,7 @@ public class FileDocumentTest extends TestCase {
   private List<String> denyGroups = Arrays.asList("domain1\\sales",
                                                   "domain1\\hr");
   private Acl acl = Acl.newAcl(users, groups, denyUsers, denyGroups);
+  private Acl fileOnlyAcl = Acl.newAcl(null, groups, null, denyGroups);
 
   private MockReadonlyFile root;
   private MockReadonlyFile bar;
@@ -140,13 +142,14 @@ public class FileDocumentTest extends TestCase {
 
   public void testAddNoInheritWithAcl() throws RepositoryException {
     foo.setInheritedAcl(null);
-    testAddNotPublicFileWithAcl(root.getPath());
+    testAddNotPublicFileWithAcl(FileDocument.SHARE_ACL_PREFIX + root.getPath());
   }
 
   public void testAddInheritFromParentWithAcl() throws RepositoryException {
     List<String> empty = Collections.emptyList();
     foo.setInheritedAcl(Acl.newAcl(empty, empty, empty, empty));
-    testAddNotPublicFileWithAcl(foo.getParent());
+    testAddNotPublicFileWithAcl(
+        FileDocument.FILE_INHERIT_ACL_PREFIX + foo.getParent());
   }
 
   private void testAddNotPublicFileWithAcl(String expectedInheritFrom)
@@ -195,6 +198,19 @@ public class FileDocumentTest extends TestCase {
         Value.getSingleValueString(doc, SpiConstants.PROPNAME_ISPUBLIC));
   }
 
+  private void validatePrincipals(Collection<Principal> expect,
+       Property property) throws RepositoryException {
+    if (expect == null) {
+      assertNull(property);
+      return;
+    }
+    ArrayList<String> names = new ArrayList<String>();
+    for (Principal principal : expect) {
+      names.add(principal.getName());
+    }
+    validateRepeatedProperty(names, property);
+  }
+
   private void validateRepeatedProperty(List<?> expect, Property property)
       throws RepositoryException {
     assertNotNull(property);
@@ -207,7 +223,7 @@ public class FileDocumentTest extends TestCase {
       size++;
       String name = (v instanceof PrincipalValue) ?
         ((PrincipalValue) v).getPrincipal().getName() : v.toString();
-      assertTrue(expect.contains(name));
+      assertTrue(name, expect.contains(name));
     }
     assertEquals(expect.size(), size);
   }
@@ -258,30 +274,45 @@ public class FileDocumentTest extends TestCase {
   public void testDirectoryWithAcl() throws RepositoryException {
     MockReadonlyFile dir = root.addSubdir("subFolder");
     dir.setLastModified(LAST_MODIFIED.getTimeInMillis());
-    dir.setAcl(acl);
-    Document doc = new FileDocument(dir, makeContext(true, false), root);
-    validateDirWithAcl(doc, dir.getParent());
+    dir.setInheritedAcl(acl);
+    validateDirWithAcl(dir, 
+        FileDocument.CONTAINER_INHERIT_ACL_PREFIX + dir.getParent());
   }
 
   public void testRootWithAcl() throws RepositoryException {
-    root.setAcl(acl);
-    Document doc = new FileDocument(root, makeContext(true, false), root);
-    validateDirWithAcl(doc, root.getPath());
+    validateDirWithAcl(root, FileDocument.SHARE_ACL_PREFIX + root.getPath());
   }
 
-  private void validateDirWithAcl(Document doc, String inheritFrom)
+  private void validateDirWithAcl(MockReadonlyFile dir, String inheritFrom)
+      throws RepositoryException {
+    dir.setContainerInheritAcl(acl);
+    dir.setFileInheritAcl(fileOnlyAcl);
+
+    FileDocument[] docs = FileDocument.getDocuments(dir, 
+        makeContext(true, false), root).toArray(new FileDocument[0]);
+    assertEquals(2, docs.length);
+
+    validateDirWithAcl(docs[0], acl, inheritFrom);
+    validateDirWithAcl(docs[1], fileOnlyAcl, inheritFrom);
+  }      
+
+  private void validateDirWithAcl(Document doc, Acl acl, String inheritFrom)
       throws RepositoryException {
     validateNotPublic(doc);
+
     Property usersProperty = doc.findProperty(SpiConstants.PROPNAME_ACLUSERS);
-    validateRepeatedProperty(users, usersProperty);
+    validatePrincipals(acl.getUsers(), usersProperty);
+
     Property groupsProperty = doc.findProperty(SpiConstants.PROPNAME_ACLGROUPS);
-    validateRepeatedProperty(groups, groupsProperty);
+    validatePrincipals(acl.getGroups(), groupsProperty);
+
     Property denyUsersProperty =
         doc.findProperty(SpiConstants.PROPNAME_ACLDENYUSERS);
-    validateRepeatedProperty(denyUsers, denyUsersProperty);
+    validatePrincipals(acl.getDenyUsers(), denyUsersProperty);
+
     Property denyGroupsProperty =
         doc.findProperty(SpiConstants.PROPNAME_ACLDENYGROUPS);
-    validateRepeatedProperty(denyGroups, denyGroupsProperty);
+    validatePrincipals(acl.getDenyGroups(), denyGroupsProperty);
 
     Property aclDocumentTypeProperty =
         doc.findProperty(SpiConstants.PROPNAME_DOCUMENTTYPE);

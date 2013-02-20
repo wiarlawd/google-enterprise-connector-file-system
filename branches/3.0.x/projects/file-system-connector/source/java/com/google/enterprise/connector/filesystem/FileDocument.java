@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
 import com.google.enterprise.connector.spi.Document;
@@ -46,19 +47,69 @@ public class FileDocument implements Document {
   private static final Logger LOGGER =
       Logger.getLogger(FileDocument.class.getName());
 
-  public static final String SHARE_ACL_PREFIX = "ShareACL://";
+  public static final String SHARE_ACL_PREFIX = "shareAcl:";
+  public static final String CONTAINER_INHERIT_ACL_PREFIX = "foldersAcl:";
+  public static final String FILE_INHERIT_ACL_PREFIX = "filesAcl:";
   private final ReadonlyFile<?> root;
   private final ReadonlyFile<?> file;
   private final DocumentContext context;
   private final AclProperties aclProperties;
   private final Map<String, List<Value>> properties;
+  private final String documentId;
+  private Acl acl = null;
+
+  /**
+   * Factory method that can create multiple SPI {@link Documents}
+   * representing a single {@link ReadonlyFile} instance.  This is
+   * used to create multiple ACL documents with different inheritance
+   * properties.
+   */
+  // TODO(bmj): Move ShareACL document creation to here.
+  static Collection<FileDocument> getDocuments(ReadonlyFile<?> file,
+      DocumentContext context, ReadonlyFile<?> root)
+      throws RepositoryException {
+    Preconditions.checkNotNull(file, "file may not be null");
+    Preconditions.checkNotNull(context, "context may not be null");
+    if (file.isDirectory() &&
+        context.getPropertyManager().isPushAcls()) {
+      try {
+        // SMB Container ACLs can have different inheritance behaviours
+        // for container children vs. regular file children.  For this
+        // reason, we may generate separate ACLs for containers;
+        // one from which containers inherit, one from which files inherit.
+        // Athough only creating a single ACL is tempting if the two
+        // ACLs are identical; if one changes in the future, its children
+        // may end up inheriting the wrong one.
+        FileDocument containerAcl = new FileDocument(file, context, root,
+            CONTAINER_INHERIT_ACL_PREFIX + file.getPath(),
+            file.getContainerInheritAcl());
+        FileDocument fileAcl = new FileDocument(file, context, root,
+            FILE_INHERIT_ACL_PREFIX + file.getPath(), 
+            file.getFileInheritAcl());
+        return ImmutableList.<FileDocument>of(containerAcl, fileAcl);
+      } catch (IOException e) {
+        throw new RepositoryDocumentException("Failed to get inheritable ACLs",
+                                              e);
+      }
+    } else {
+      // Return a single Document representing the file.
+      return ImmutableList.<FileDocument>of(
+          new FileDocument(file, context, root));
+    }
+  }
 
   FileDocument(ReadonlyFile<?> file, DocumentContext context,
                ReadonlyFile<?> root) throws RepositoryException {
-    Preconditions.checkNotNull(file, "file may not be null");
-    Preconditions.checkNotNull(root, "root may not be null");
+    this(file, context, root, file.getPath(), null);
+  }
+
+  private FileDocument(ReadonlyFile<?> file, DocumentContext context, 
+      ReadonlyFile<?> root, String docid, Acl acl) throws RepositoryException {
     Preconditions.checkNotNull(context, "context may not be null");
+    Preconditions.checkNotNull(root, "root may not be null");
     this.file = file;
+    this.documentId = docid;
+    this.acl = acl;
     this.root = root;
     this.context = context;
     this.aclProperties = context.getPropertyManager();
@@ -91,7 +142,7 @@ public class FileDocument implements Document {
   }
 
   String getDocumentId() {
-    return file.getPath();
+    return documentId;
   }
 
   private void fetchProperties() throws RepositoryException {
@@ -176,9 +227,7 @@ public class FileDocument implements Document {
    * Returns share ACL ID for the root.
    */
   public static String getRootShareAclId(ReadonlyFile<?> root) {
-    String rootPath = root.getPath();
-    return rootPath.replace(SmbFileSystemType.SMB_PATH_PREFIX,
-        SHARE_ACL_PREFIX);
+    return SHARE_ACL_PREFIX + root.getPath();
   }
 
   /*
@@ -186,7 +235,11 @@ public class FileDocument implements Document {
    */
   private void addAclProperties(ReadonlyFile<?> file)
       throws IOException, RepositoryException {
-    Acl acl = file.getAcl();
+    if (acl == null) {
+      // Fetch the ACL, if not done so already.  This is done lazily,
+      // since we might not always be feeding ACLs.
+      acl = file.getAcl();
+    }
     if (acl.isPublic()) {
       if (acl.isDeterminate()) {
         LOGGER.finest("ACL isPublic flag is true so setting "
@@ -205,8 +258,12 @@ public class FileDocument implements Document {
         addAclProperties(inheritedAcl);
       } else if (inheritedAcl == null) {
         inheritFrom = getRootShareAclId(root);
+      } else if (file.getParent() != null) {
+        inheritFrom = (file.isDirectory() 
+            ? CONTAINER_INHERIT_ACL_PREFIX : FILE_INHERIT_ACL_PREFIX)
+            + file.getParent();
       } else {
-        inheritFrom = file.getParent();
+        inheritFrom = null;
       }
       if (inheritFrom != null && aclProperties.supportsInheritedAcls()) {
         addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID, inheritFrom);
