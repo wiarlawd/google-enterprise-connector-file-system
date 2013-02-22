@@ -21,8 +21,13 @@ to upgrade.
 
 Issues fixed from last release:
 -------------------------------
-Issue 6686185: Better error message when the traversal user has no access
-               rights on the file share.
+               Improve an error message in the admin console when the
+               traversal user has no access rights on the file share.
+
+Issue 7369489: Remove an unused AceSecurityLevel check from SmbAclBuilder.
+               Update AceSecurityLevel comment in advanced config to make
+               clear that the property is not used when inherited ACLs are
+               enabled with GSA 7.0.
 
 Issue 7383538: SmbAclBuilder.isReadAce() should include Generic access rights.
                The connector now recognizes ACE.GENERIC_ALL and ACE.GENERIC_READ
