@@ -140,8 +140,7 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   public Acl getShareAcl() throws IOException, RepositoryException;
 
   /**
-   * @return true if the file exists, is not hidden, and can be read;
-   *         false otherwise
+   * @return true if the file exists, and can be read; false otherwise
    * @throws RepositoryException if there was an error accessing the repository.
    *         For instance, a network file share is off-line.
    */
@@ -183,7 +182,15 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
 
   /**
    * Returns true if the file actually exists in the file system false otherwise
-   * @return true / false depending on whether the file exists or not.
+   * @return true if the file exists; false otherwise
    */
   public boolean exists() throws RepositoryException;
+
+  /**
+   * Returns true if the file is a hidden file.
+   * The exact definition of "hidden" is system-dependent.
+   *
+   * @return true if the file is hidden; false otherwise
+   */
+  public boolean isHidden() throws RepositoryException;
 }

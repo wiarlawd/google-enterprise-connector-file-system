@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.Document;
+import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -53,7 +54,7 @@ class FileRetriever implements Retriever, TraversalContextAware {
       LOGGER.finest("Retrieving content for " + docid);
     }
     ReadonlyFile<?> file = getFile(docid);
-    if (file.isRegularFile() && file.canRead()) {
+    if (file.isRegularFile()) {
       try {
         long len = file.length();
         if (len > 0 && len <= traversalContext.maxDocumentSize()) {
@@ -96,15 +97,21 @@ class FileRetriever implements Retriever, TraversalContextAware {
   }
 
   /**
-   * Verify that we would have actually fed this file.
-   * First, a check that it is located under one of our startpaths.
-   * Next, does it (and all its ancesters), pass the PatternMatcher?
+   * Verify that we would have actually fed this file, and that it would still
+   * be a valid file to feed. First check that it is located under one of our
+   * startpaths.  Then verify the file is readable and not hidden or located
+   * under a hidden directory. Finally, does it (and all its ancesters),
+   * pass the PatternMatcher?
    *
    * @param file the ReadonlyFile in question
-   * @return true if file is qualified for retrieval
+   * @return true if file is qualified for retrieval; false otherwise
    */
   private boolean isQualifiedFile(ReadonlyFile<?> file)
       throws RepositoryException {
+    if (!file.canRead()) {
+      return false;
+    }
+
     // Check to see if the pathname is under one of our start points.
     // The start paths are normalized (have trailing slashes), so we should
     // not have false positives on partial matches. The start paths are sorted
@@ -123,6 +130,12 @@ class FileRetriever implements Retriever, TraversalContextAware {
     Credentials credentials = context.getCredentials();
     FileSystemType<?> fileSystemType = file.getFileSystemType();
     while (pathName.length() >= startPath.length()) {
+      // SMB Administrative Shares are marked as "hidden".  We will allow
+      // their contents to be retrieved, but we don't want to permit any
+      // other hidden files or hidden directories to be returned.
+      if (file.isHidden() && !pathName.equals(startPath)) {
+        return false;
+      }
       if (!matcher.acceptName(pathName)) {
         return false;
       }
@@ -132,12 +145,6 @@ class FileRetriever implements Retriever, TraversalContextAware {
         // That means the startPoint was the root and we are done.
         break;
       }
-      // Note: There is a subtle, yet beneficial side-effect happening here.
-      // The call to fileSystemType.getFile(), indirectly calls
-      // ReaonlyFile.canRead(), which fails if the file is hidden.
-      // So if any of our ancestors is hidden, a DocumentAccessException
-      // will get thrown out of here.  This prevents us from returning
-      // content that is under a hidden directory.
       file = fileSystemType.getFile(parentPath, credentials);
       pathName = file.getPath();
     }

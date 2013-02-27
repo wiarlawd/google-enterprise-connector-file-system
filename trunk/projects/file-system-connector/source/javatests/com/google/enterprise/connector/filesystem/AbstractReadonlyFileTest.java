@@ -68,23 +68,32 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
     assertFalse(nullFile1.equals(readonlyFile1));
   }
 
-  /** Tests that ReadonlyFile.canRead() does not allow hidden files. */
   public void testCanRead() throws Exception {
-    testCanRead(true, false, true);
-    testCanRead(true, true, false);
-    testCanRead(false, true, false);
-    testCanRead(false, false, false);
+    testCanRead(true);
+    testCanRead(false);
   }
 
-  private void testCanRead(boolean canRead, boolean hidden, boolean expected)
-      throws Exception {
+  private void testCanRead(boolean canRead)   throws Exception {
     AbstractReadonlyFileTest.MockFileSystemType type = getFileSystemType();
     FileDelegate delegate = getMockDelegate();
     expect(delegate.canRead()).andStubReturn(canRead);
-    expect(delegate.isHidden()).andStubReturn(hidden);
     replay(delegate);
     MockReadonlyFile file = new MockReadonlyFile(type, delegate);
-    assertEquals(expected, file.canRead());
+    assertEquals(canRead, file.canRead());
+  }
+
+  public void testIsHidden() throws Exception {
+    testIsHidden(true);
+    testIsHidden(false);
+  }
+
+  private void testIsHidden(boolean isHidden)   throws Exception {
+    AbstractReadonlyFileTest.MockFileSystemType type = getFileSystemType();
+    FileDelegate delegate = getMockDelegate();
+    expect(delegate.isHidden()).andStubReturn(isHidden);
+    replay(delegate);
+    MockReadonlyFile file = new MockReadonlyFile(type, delegate);
+    assertEquals(isHidden, file.isHidden());
   }
 
   public void testExistsException() throws Exception {
@@ -108,6 +117,20 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
         }
         public void test(MockReadonlyFile file) throws Exception {
           assertFalse(file.canRead());
+        }
+        public Class<? extends Exception> getExpectedException() {
+          return null;
+        }
+      });
+  }
+
+  public void testIsHiddenException() throws Exception {
+    testException(new CheckException() {
+        public void configure(FileDelegate delegate) throws Exception {
+          expect(delegate.isHidden()).andThrow(ioe);
+        }
+        public void test(MockReadonlyFile file) throws Exception {
+          assertFalse(file.isHidden());
         }
         public Class<? extends Exception> getExpectedException() {
           return null;

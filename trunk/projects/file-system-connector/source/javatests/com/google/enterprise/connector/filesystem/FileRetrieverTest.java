@@ -114,6 +114,31 @@ public class FileRetrieverTest extends TestCase {
     }
   }
 
+  public void testGetMetaDataHiddenFile() throws Exception {
+    testFile.setIsHidden(true);
+    try {
+      Document document = retriever.getMetaData(testFileName);
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      // Expected exception.
+    }
+  }
+
+  public void testGetMetaDataFileUnderHiddenDirectory() throws Exception {
+    testDir.setIsHidden(true);
+    try {
+      Document document = retriever.getMetaData(testFile2.getPath());
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      // Expected exception.
+    }
+  }
+
+  public void testGetMetaDataFileUnderHiddenStartPath() throws Exception {
+    root.setIsHidden(true);
+    testGetMetaData();
+  }
+
   public void testGetMetaData() throws Exception {
     Document document = retriever.getMetaData(testFileName);
     assertTrue(document instanceof FileDocument);
@@ -159,6 +184,32 @@ public class FileRetrieverTest extends TestCase {
     } catch (RepositoryDocumentException expected) {
       // Expected exception.
     }
+  }
+
+  public void testGetContentHiddenFile() throws Exception {
+    testFile.setIsHidden(true);
+    try {
+      InputStream is = retriever.getContent(testFileName);
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      // Expected exception.
+    }
+  }
+
+  public void testGetContentFileUnderHiddenDirectory() throws Exception {
+    testDir.setIsHidden(true);
+    try {
+      InputStream is = retriever.getContent(testFile2.getPath());
+      fail("Expected RepositoryDocumentException, but got none.");
+    } catch (RepositoryDocumentException expected) {
+      // Expected exception.
+    }
+  }
+
+  public void testGetContentFileUnderHiddenStartPath() throws Exception {
+    root.setIsHidden(true);
+    testGetContent();
+    testGetContentFileInSubdirectory();
   }
 
   public void testGetContent() throws Exception {
@@ -278,4 +329,3 @@ public class FileRetrieverTest extends TestCase {
     return new String(bytes, 0, numRead, "UTF-8");
   }
 }
-

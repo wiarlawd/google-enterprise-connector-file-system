@@ -125,7 +125,17 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   @Override
   public boolean canRead() throws RepositoryException {
     try {
-      return delegate.canRead() && !delegate.isHidden();
+      return delegate.canRead();
+    } catch (IOException e) {
+      detectGeneralErrors(e);
+      return false;
+    }
+  }
+
+  @Override
+  public boolean isHidden() throws RepositoryException {
+    try {
+      return delegate.isHidden();
     } catch (IOException e) {
       detectGeneralErrors(e);
       return false;
