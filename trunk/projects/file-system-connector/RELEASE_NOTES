@@ -10,8 +10,8 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
-Release 3.0.6, 19 February 2013
-===============================
+Release 3.0.6, 04 March 2013
+============================
 
 Introduction
 ------------
@@ -21,6 +21,12 @@ encouraged to upgrade.
 
 Issues fixed from last release:
 -------------------------------
+Issue 7355081: File System Connector did not support hidden file shares.
+               SMB "Administrative Shares" (those whose name end in '$') are
+               marked "hidden".  Even though the connector explicitly
+               excludes hidden files and files under hidden directories, the
+               connector now allows the user to specify a hidden start path.
+
 Issue 7418773: If a connection to the file server was lost, the JCIFS session
                and transport layers were left in an inconsistent state. This
                would result in nearly all subsequent requests throwing either
