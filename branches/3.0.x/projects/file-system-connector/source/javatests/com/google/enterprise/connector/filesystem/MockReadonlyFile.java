@@ -48,6 +48,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   private long lastModified;
   private String fileContents;
   private boolean exists = true;
+  private boolean isHidden = false;
   private boolean isRegularFile = true;
   private FileSystemType<?> fileSystemType = null;
 
@@ -60,7 +61,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   public static enum Where { NONE, ALL, IS_DIRECTORY, IS_REGULAR_FILE,
       GET_LAST_MODIFIED, GET_ACL, GET_SHARE_ACL, GET_INHERITED_ACL, CAN_READ,
       LIST_FILES, GET_DISPLAY_URL, LENGTH, EXISTS, GET_INPUT_STREAM,
-      GET_CONTAINER_INHERIT_ACL, GET_FILE_INHERIT_ACL }
+      GET_CONTAINER_INHERIT_ACL, GET_FILE_INHERIT_ACL, IS_HIDDEN }
 
   void setException(Where where, Exception exception) {
     this.where = where;
@@ -123,6 +124,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     this.fileContents = isDir ? null : "";
     this.directoryContents = isDir ? new ArrayList<MockReadonlyFile>() : null;
     this.readable = true;
+    this.isHidden = false;
     this.lastModified = clock.getTimeMillis();
     this.exception = null;
     this.acl = Acl.newPublicAcl();
@@ -229,6 +231,16 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   public boolean canRead() throws RepositoryException {
     maybeThrowRepositoryException(Where.CAN_READ);
     return readable;
+  }
+
+  public void setIsHidden(boolean isHidden) {
+    this.isHidden = isHidden;
+  }
+
+  @Override
+  public boolean isHidden() throws RepositoryException {
+    maybeThrowRepositoryException(Where.IS_HIDDEN);
+    return isHidden;
   }
 
   @Override

@@ -341,6 +341,58 @@ public class FileListerTest extends TestCase {
     runLister(root);
   }
 
+  public void testFilterHiddenFile() throws Exception {
+    ConfigureFile configureFile = new ConfigureFile() {
+        public boolean configure(MockReadonlyFile file) {
+          if ("fail1".equals(file.getName())) {
+            file.setIsHidden(true);
+            return false;
+          }
+          return true;
+        }
+      };
+
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/bar", "f1", "fail1", "f2");
+    runLister(root);
+  }
+
+  public void testFilterHiddenDirectory() throws Exception {
+    ConfigureFile configureFile = new ConfigureFile() {
+        public boolean configure(MockReadonlyFile file) {
+          if ("hidden".equals(file.getName())) {
+            file.setIsHidden(true);
+          }
+          return !file.getPath().contains("hidden");
+        }
+      };
+
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/foo/bar", "f1");
+    builder.addDir(configureFile, root, "visible", "f2");
+    builder.addDir(configureFile, root, "hidden", "f3", "f4");
+    runLister(root);
+  }
+
+  public void testNotFilterHiddenStartPoint() throws Exception {
+    ConfigureFile configureFile = new ConfigureFile() {
+        public boolean configure(MockReadonlyFile file) {
+          if ("hidden".equals(file.getName()) ||
+              "/share".equals(file.getName())) {
+            file.setIsHidden(true);
+          }
+          return !file.getPath().contains("hidden");
+        }
+      };
+
+    MockReadonlyFile root =
+        builder.addDir(configureFile, null, "/share", "f1");
+    builder.addDir(configureFile, root, "visible", "f2");
+    builder.addDir(configureFile, root, "hidden", "f3", "f4");
+    runLister(root);
+  }
+
+
   public void testFilterNotRegularFile() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) {

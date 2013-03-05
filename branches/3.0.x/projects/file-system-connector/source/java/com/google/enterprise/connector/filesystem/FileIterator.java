@@ -40,6 +40,7 @@ public class FileIterator {
   private static final Logger LOGGER =
       Logger.getLogger(FileIterator.class.getName());
 
+  private final ReadonlyFile<?> root;
   private final DocumentContext context;
   private final TraversalContext traversalContext;
   private final MimeTypeDetector mimeTypeDetector;
@@ -60,6 +61,7 @@ public class FileIterator {
                       DocumentContext context,
                       long ifModifiedSince,
                       boolean returnDirectories) {
+    this.root = root;
     this.context = context;
     this.traversalContext = context.getTraversalContext();
     this.ifModifiedSince = ifModifiedSince;
@@ -163,6 +165,12 @@ public class FileIterator {
         return false;
       }
 
+      if (f.isHidden()) {
+        LOGGER.log(Level.FINEST, "Skipping file {0} - hidden.",
+                   f.getPath());
+        return false;
+      }
+
       if (ifModifiedSince != 0L) {
         try {
           if (f.getLastModified() < ifModifiedSince) {
@@ -201,6 +209,12 @@ public class FileIterator {
 
   private List<? extends ReadonlyFile<?>> listFiles(ReadonlyFile<?> dir)
       throws RepositoryException {
+    // SMB Administrative shares are "hidden", so allow the start point to be
+    // traversed, even if it is hidden, but skip all other hidden directories.
+    if (dir.isHidden() && !(dir.getPath().equals(root.getPath()))) {
+      LOGGER.log(Level.FINE, "Skipping hidden directory {0}", dir.getPath());
+      return Collections.emptyList();
+    }
     try {
       List<? extends ReadonlyFile<?>> result = dir.listFiles();
       return result;
