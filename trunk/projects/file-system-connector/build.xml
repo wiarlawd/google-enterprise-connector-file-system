@@ -289,6 +289,15 @@
               file="${downloads.dir}/${downloads.prefix}.zip" />
   </target>
 
+  <target name="repackage" depends="init"
+          description="Repackage release candidate files for release.">
+    <echo message="Repackaging ${svn.branch} as ${version}." />
+    <property name="repackage.prefix" value="connector-filesystem-${version}"/>
+    <repackage-downloads downloads.dir="${downloads.dir}"
+                         downloads.prefix="${downloads.prefix}"
+                         repackage.prefix="${repackage.prefix}" />
+  </target>
+
   <target name="clean" description="Deletes all build files.">
     <delete dir="${build.dir}" />
     <delete dir="${downloads.dir}" />
