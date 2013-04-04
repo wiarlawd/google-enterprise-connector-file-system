@@ -177,8 +177,8 @@ class FileLister implements Lister, TraversalContextAware,
     LOGGER.fine("Starting File Lister");
     try {
       while (!service.isShutdown()) {
-        sleep(Sleep.SCHEDULE_DELAY);
         try {
+          sleep(Sleep.SCHEDULE_DELAY);
           boolean gotError = false;
           for (Future<Void> future : service.invokeAll(traversers)) {
             try {
@@ -236,7 +236,7 @@ class FileLister implements Lister, TraversalContextAware,
     }
   }
 
-  private void sleep(Sleep delay) {
+  private void sleep(Sleep delay) throws InterruptedException {
     int seconds = 0;
     synchronized (this) {
       if (schedule.isDisabled()) {
@@ -267,10 +267,9 @@ class FileLister implements Lister, TraversalContextAware,
     try {
       LOGGER.finest("Sleeping for " + seconds + " seconds.");
       Thread.sleep(1000L * seconds);
-    } catch (InterruptedException ie) {
-      // Awakened early from sleep.
+    } finally {
+      LOGGER.finest("Awake from sleep.");
     }
-    LOGGER.finest("Awake from sleep.");
   }
 
   /**
@@ -462,7 +461,11 @@ class FileLister implements Lister, TraversalContextAware,
             LOGGER.log(Level.WARNING, "Encountered an error traversing "
                        + startPath + " at document " + path, e);
             if (!isShutdown()) {
-              sleep(Sleep.ERROR_DELAY);
+              try {
+                sleep(Sleep.ERROR_DELAY);
+              } catch (InterruptedException ie) {
+                // Awake early from sleep.
+              }
             }
           }
         }
