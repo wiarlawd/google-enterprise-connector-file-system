@@ -25,6 +25,10 @@ Issue 7684717: Files incorrectly inherit list folder contents permission.
                its sub-folders, but it should not grant read access to the
                files contained within those folders.
 
+Issue 8511258: In a newly configured File system connector with Disable
+               Traversal option selected, the Disable Traversal option
+               was not respected.
+
 
 Release 3.0.6, 04 March 2013
 ============================
