@@ -10,6 +10,22 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
+Release 3.0.8, 12 April 2013
+============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality.
+
+Issues fixed from last release:
+-------------------------------
+Issue 7684717: Files incorrectly inherit list folder contents permission.
+               List folder permissions grants read access to a folder and
+               its sub-folders, but it should not grant read access to the
+               files contained within those folders.
+
+
 Release 3.0.6, 04 March 2013
 ============================
 
@@ -36,11 +52,6 @@ Issue 7418773: If a connection to the file server was lost, the JCIFS session
 
 Issue 7577675: Localization strings were improperly escaped in JavaScript for
                the connector configuration form.
-
-Issue 7684717: Files incorrectly inherit list folder contents permission.
-               List folder permissions grants read access to a folder and
-               its sub-folders, but it should not grant read access to the
-               files contained within those folders.
 
 Issue 7690736: Inherit-only ACEs should appear in an ACL associated with the
                parent directory, not the child.  We were folding Inherit-only
