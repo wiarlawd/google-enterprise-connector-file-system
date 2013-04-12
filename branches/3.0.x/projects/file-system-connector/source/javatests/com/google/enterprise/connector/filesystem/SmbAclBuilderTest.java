@@ -345,7 +345,9 @@ public class SmbAclBuilderTest extends TestCase {
         AclAccess.PERMIT, AceType.DIRECT);
     ACE fileAce3 = createACE("testing2", AclScope.GROUP,
         AclAccess.PERMIT, AceType.INHERIT_ONLY);
-    ACE[] fileAces = {fileAce, fileAce2, fileAce3};
+    ACE fileAce4 = createACE("testing3", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.CONTAINER_INHERITED);
+    ACE[] fileAces = {fileAce, fileAce2, fileAce3, fileAce4};
     expect(smbFile.getSecurity()).andReturn(fileAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
@@ -353,12 +355,12 @@ public class SmbAclBuilderTest extends TestCase {
 
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.getInheritedAcl();
-    // group deny ace for "accountants" is expected
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue(contains(acl.getGroups(), "accountants"));
     assertFalse(contains(acl.getGroups(), "testing1"));
     assertFalse(contains(acl.getGroups(), "testing2"));
+    assertFalse(contains(acl.getGroups(), "testing3"));
     assertTrue((acl.getDenyGroups()).isEmpty());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
@@ -376,7 +378,9 @@ public class SmbAclBuilderTest extends TestCase {
         AclAccess.DENY, AceType.DIRECT);
     ACE fileAce4 = createACE("testing2", AclScope.GROUP,
         AclAccess.DENY, AceType.INHERIT_ONLY);
-    ACE[] fileAces = {fileAce, fileAce2, fileAce3, fileAce4};
+    ACE fileAce5 = createACE("testing3", AclScope.GROUP,
+        AclAccess.DENY, AceType.CONTAINER_INHERITED);
+    ACE[] fileAces = {fileAce, fileAce2, fileAce3, fileAce4, fileAce4};
     expect(smbFile.getSecurity()).andReturn(fileAces);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
@@ -384,7 +388,6 @@ public class SmbAclBuilderTest extends TestCase {
 
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
     Acl acl = builder.getInheritedAcl();
-    // group deny ace for "accountants" is expected
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue(acl.getUsers().isEmpty());
@@ -393,6 +396,7 @@ public class SmbAclBuilderTest extends TestCase {
     assertTrue(contains(acl.getDenyGroups(), "Sales Managers"));
     assertFalse(contains(acl.getDenyGroups(), "testing1"));
     assertFalse(contains(acl.getDenyGroups(), "testing2"));
+    assertFalse(contains(acl.getDenyGroups(), "testing3"));
     verify(smbFile);
   }
 
@@ -674,7 +678,8 @@ public class SmbAclBuilderTest extends TestCase {
                  ACE.FLAGS_OBJECT_INHERIT),
     NO_PROPAGATE(ACE.FLAGS_NO_PROPAGATE | ACE.FLAGS_CONTAINER_INHERIT |
                  ACE.FLAGS_OBJECT_INHERIT),
-    INHERITED(ACE.FLAGS_INHERITED);
+    INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_OBJECT_INHERIT),
+    CONTAINER_INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_CONTAINER_INHERIT);
 
     public final int flags;
     AceType(int flags) {
