@@ -59,8 +59,9 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
   };
 
   /**
-   * Returns true if the associated {@link ACE} could be inherited by
-   * regular files. Note that we exclude ACEs INHERITED from up the chain.
+   * Returns true if the associated {@link ACE} could be inherited by regular
+   * files. We exclude CONTAINER_INHERIT ACEs, since they would never actually
+   * get inherited by a file. We also exclude ACEs INHERITED from up the chain.
    */
   protected static Predicate<ACE> isObjectInheritAce = new Predicate<ACE>() {
     public boolean apply(ACE ace) {
@@ -69,10 +70,15 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
     }
   };
 
-  /** Returns true if the associated {@link ACE} is INHERITED. */
+  /**
+   * Returns true if the associated {@link ACE} is INHERITED.
+   * We exclude CONTAINER_INHERIT ACEs, since they would never actually get
+   * inherited by a file. We also exclude ACEs INHERITED from up the chain.
+   */
   protected static Predicate<ACE> isInheritedAce = new Predicate<ACE>() {
     public boolean apply(ACE ace) {
-      return (ace.getFlags() & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED;
+      int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED;
+      return (ace.getFlags() & mask) == mask;
     }
   };
 
