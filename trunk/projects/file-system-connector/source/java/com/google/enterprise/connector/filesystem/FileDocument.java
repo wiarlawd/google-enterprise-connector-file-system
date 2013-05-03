@@ -153,6 +153,15 @@ public class FileDocument implements Document {
           SpiConstants.DocumentType.ACL.toString());
       addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
           SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString());
+    } else {
+      try {
+        long length = file.length();
+        addProperty(SpiConstants.PROPNAME_CONTENT_LENGTH,
+                    Value.getLongValue(length));
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "Failed to get file length for "
+                   + file.getPath(), e);
+      }
     }
     addProperty(SpiConstants.PROPNAME_FEEDTYPE,
         SpiConstants.FeedType.CONTENTURL.toString());
