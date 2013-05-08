@@ -158,10 +158,6 @@ abstract class AbstractSmbAclBuilder implements AclBuilder {
     }
   }
 
-  abstract public Acl getAcl() throws IOException;
-  abstract public Acl getInheritedAcl() throws IOException;
-  abstract public Acl getShareAcl() throws IOException;
-
   /*
    * Returns ACL from the list of ACEs
    */

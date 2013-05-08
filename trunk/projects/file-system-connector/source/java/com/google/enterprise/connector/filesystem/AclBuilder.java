@@ -185,6 +185,13 @@ interface AclBuilder {
   public Acl getAcl() throws IOException;
 
   /**
+   * Returns true if the file or folder has <em>any</em> inherited ACEs,
+   * even if those ACEs would not be returned by {@link #getInheritedAcl},
+   * {@link getContainerInheritAcl}, or {@link getFileInheritAcl}.
+   */
+  public boolean hasInheritedAcls() throws IOException;
+
+  /**
    * Returns inherited ACL, doesn't contain file level ACLs.
    * Returns null if inherited ACLs are not supported, or the
    * file has no inherited ACEs.

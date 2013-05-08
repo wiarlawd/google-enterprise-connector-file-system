@@ -67,6 +67,7 @@ public class SmbAclBuilderTest extends TestCase {
     replay(smbFile);
 
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertFalse(builder.hasInheritedAcls());
     Acl acl = builder.getAcl();
     assertNotNull(acl);
     assertNotNull(acl.getUsers());
@@ -337,6 +338,45 @@ public class SmbAclBuilderTest extends TestCase {
     verify(shareAce1);
   }
 
+  public void testACLForPresenceOfInheritedFolderLevelACE() throws IOException {
+    SmbFileDelegate smbFile = createMock(SmbFileDelegate.class);
+    ACE fileAce0 = createACE("accountants", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.ALL_INHERITED);
+    ACE fileAce1 = createACE("sales", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.OBJECT_INHERITED);
+    ACE fileAce2 = createACE("testing1", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.DIRECT);
+    ACE fileAce3 = createACE("testing2", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.INHERIT_ONLY);
+    ACE fileAce4 = createACE("testing3", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.CONTAINER_INHERITED);
+    ACE fileAce5 = createACE("testing4", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.INHERITED);
+    ACE[] fileAces =
+        {fileAce0, fileAce1, fileAce2, fileAce3, fileAce4, fileAce5};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.isDirectory()).andReturn(true);
+    expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertTrue(builder.hasInheritedAcls());
+    Acl acl = builder.getInheritedAcl();
+    assertNotNull(acl);
+    assertNotNull(acl.getGroups());
+    assertTrue(contains(acl.getGroups(), "accountants"));
+    assertTrue(contains(acl.getGroups(), "sales"));
+    assertFalse(contains(acl.getGroups(), "testing1"));
+    assertFalse(contains(acl.getGroups(), "testing2"));
+    assertFalse(contains(acl.getGroups(), "testing3"));
+    assertFalse(contains(acl.getGroups(), "testing4"));
+    assertTrue((acl.getDenyGroups()).isEmpty());
+    assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.getDenyUsers().isEmpty());
+    verify(smbFile);
+  }
+
   public void testACLForPresenceOfInheritedFileLevelACE() throws IOException {
     SmbFileDelegate smbFile = createMock(SmbFileDelegate.class);
     ACE fileAce = createACE("accountants", AclScope.GROUP,
@@ -345,22 +385,21 @@ public class SmbAclBuilderTest extends TestCase {
         AclAccess.PERMIT, AceType.DIRECT);
     ACE fileAce3 = createACE("testing2", AclScope.GROUP,
         AclAccess.PERMIT, AceType.INHERIT_ONLY);
-    ACE fileAce4 = createACE("testing3", AclScope.GROUP,
-        AclAccess.PERMIT, AceType.CONTAINER_INHERITED);
-    ACE[] fileAces = {fileAce, fileAce2, fileAce3, fileAce4};
+    ACE[] fileAces = {fileAce, fileAce2, fileAce3};
     expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.isDirectory()).andReturn(false);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
     replay(smbFile);
 
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertTrue(builder.hasInheritedAcls());
     Acl acl = builder.getInheritedAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
     assertTrue(contains(acl.getGroups(), "accountants"));
     assertFalse(contains(acl.getGroups(), "testing1"));
     assertFalse(contains(acl.getGroups(), "testing2"));
-    assertFalse(contains(acl.getGroups(), "testing3"));
     assertTrue((acl.getDenyGroups()).isEmpty());
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getDenyUsers().isEmpty());
@@ -378,15 +417,15 @@ public class SmbAclBuilderTest extends TestCase {
         AclAccess.DENY, AceType.DIRECT);
     ACE fileAce4 = createACE("testing2", AclScope.GROUP,
         AclAccess.DENY, AceType.INHERIT_ONLY);
-    ACE fileAce5 = createACE("testing3", AclScope.GROUP,
-        AclAccess.DENY, AceType.CONTAINER_INHERITED);
-    ACE[] fileAces = {fileAce, fileAce2, fileAce3, fileAce4, fileAce4};
+    ACE[] fileAces = {fileAce, fileAce2, fileAce3, fileAce4};
     expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.isDirectory()).andReturn(false);
     expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
     expectLastCall().anyTimes();
     replay(smbFile);
 
     SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertTrue(builder.hasInheritedAcls());
     Acl acl = builder.getInheritedAcl();
     assertNotNull(acl);
     assertNotNull(acl.getGroups());
@@ -396,7 +435,6 @@ public class SmbAclBuilderTest extends TestCase {
     assertTrue(contains(acl.getDenyGroups(), "Sales Managers"));
     assertFalse(contains(acl.getDenyGroups(), "testing1"));
     assertFalse(contains(acl.getDenyGroups(), "testing2"));
-    assertFalse(contains(acl.getDenyGroups(), "testing3"));
     verify(smbFile);
   }
 
@@ -542,6 +580,98 @@ public class SmbAclBuilderTest extends TestCase {
     verify(parentFile);
   }
 
+  /** Test hasInheritedAcls returns false when the file has no inherited ACEs. */
+  public void testHasInheritedAclsWithNoInheritedAcl() throws IOException {
+    SmbFileDelegate smbFile = createMock(SmbFileDelegate.class);
+    ACE fileAce1 = createACE("testing1", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.DIRECT);
+    ACE fileAce2 = createACE("testing2", AclScope.USER,
+        AclAccess.PERMIT, AceType.DIRECT);
+    ACE fileAce3 = createACE("testing3", AclScope.GROUP,
+        AclAccess.DENY, AceType.DIRECT);
+    ACE fileAce4 = createACE("testing4", AclScope.USER,
+        AclAccess.DENY, AceType.DIRECT);
+    ACE[] fileAces = {fileAce1, fileAce2, fileAce3, fileAce4};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertFalse(builder.hasInheritedAcls());
+    assertNull(builder.getInheritedAcl());
+    verify(smbFile);
+  }
+
+  /** Test hasInheritedAcls returns true when the file has inherited ACEs. */
+  public void testHasInheritedAclsWithInheritedAclOnFolder() throws IOException {
+    SmbFileDelegate smbFile = createMock(SmbFileDelegate.class);
+    ACE fileAce1 = createACE("testing1", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.ALL_INHERITED);
+    ACE fileAce2 = createACE("testing2", AclScope.USER,
+        AclAccess.PERMIT, AceType.CONTAINER_INHERITED);
+    ACE fileAce3 = createACE("testing3", AclScope.GROUP,
+        AclAccess.DENY, AceType.OBJECT_INHERITED);
+    ACE fileAce4 = createACE("testing4", AclScope.USER,
+        AclAccess.DENY, AceType.NO_PROPAGATE);
+    ACE[] fileAces = {fileAce1, fileAce2, fileAce3, fileAce4};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.isDirectory()).andReturn(true);
+    expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertTrue(builder.hasInheritedAcls());
+    Acl acl = builder.getInheritedAcl();
+    assertNotNull(acl);
+
+    // Make sure the inherited acl includes the normally inherited ace.
+    assertTrue(acl.toString(), contains(acl.getGroups(), "testing1"));
+    // Verify the inherited acl also includes the file-only inherit ace.
+    assertTrue(contains(acl.getDenyGroups(), "testing3"));
+    // And does not contain the container-only inherit ace.
+    assertFalse(contains(acl.getUsers(), "testing2"));
+    // Or no-propagate ace.
+    assertFalse(contains(acl.getDenyUsers(), "testing4"));
+    verify(smbFile);
+  }
+
+  /**
+   * Test hasInheritedAcls returns true, even if all inherited ACEs are filtered
+   * out when determining the final inherited ACL.  This is to verify that the
+   * inherit-from chain remains unbroken.
+   */
+  public void testHasInheritedAclsWithFilteredInheritedAclOnFolder()
+      throws IOException {
+    SmbFileDelegate smbFile = createMock(SmbFileDelegate.class);
+    ACE fileAce1 = createACE("testing1", AclScope.GROUP,
+        AclAccess.PERMIT, AceType.CONTAINER_INHERITED);
+    ACE fileAce2 = createACE("testing2", AclScope.USER,
+        AclAccess.PERMIT, AceType.CONTAINER_INHERITED);
+    ACE fileAce3 = createACE("testing3", AclScope.GROUP,
+        AclAccess.DENY, AceType.CONTAINER_INHERITED);
+    ACE fileAce4 = createACE("testing4", AclScope.USER,
+        AclAccess.DENY, AceType.NO_PROPAGATE);
+    ACE[] fileAces = {fileAce1, fileAce2, fileAce3, fileAce4};
+    expect(smbFile.getSecurity()).andReturn(fileAces);
+    expect(smbFile.isDirectory()).andReturn(true);
+    expect(smbFile.getURL()).andReturn(new URL("file", "host", "file"));
+    expectLastCall().anyTimes();
+    replay(smbFile);
+
+    SmbAclBuilder builder = new SmbAclBuilder(smbFile, fetcher);
+    assertTrue(builder.hasInheritedAcls());
+    Acl acl = builder.getInheritedAcl();
+    assertNotNull(acl);
+    // Verify that all the inherited ACEs were filtered out.
+    assertTrue(acl.getGroups().isEmpty());
+    assertTrue(acl.getDenyGroups().isEmpty());
+    assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.getDenyUsers().isEmpty());
+    verify(smbFile);
+  }
+
   /**
    * Windows does not include the "BUILTIN" domain in the SID.toDisplayString.
    * This tests that SmbAclBuilder correctly restores the BUILTIN domain
@@ -678,8 +808,11 @@ public class SmbAclBuilderTest extends TestCase {
                  ACE.FLAGS_OBJECT_INHERIT),
     NO_PROPAGATE(ACE.FLAGS_NO_PROPAGATE | ACE.FLAGS_CONTAINER_INHERIT |
                  ACE.FLAGS_OBJECT_INHERIT),
-    INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_OBJECT_INHERIT),
-    CONTAINER_INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_CONTAINER_INHERIT);
+    INHERITED(ACE.FLAGS_INHERITED),
+    ALL_INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_CONTAINER_INHERIT |
+                  ACE.FLAGS_OBJECT_INHERIT),
+    CONTAINER_INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_CONTAINER_INHERIT),
+    OBJECT_INHERITED(ACE.FLAGS_INHERITED | ACE.FLAGS_OBJECT_INHERIT);
 
     public final int flags;
     AceType(int flags) {

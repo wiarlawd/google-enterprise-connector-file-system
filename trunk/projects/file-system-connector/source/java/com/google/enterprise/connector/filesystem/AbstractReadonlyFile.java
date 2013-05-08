@@ -197,6 +197,11 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   }
 
   @Override
+  public boolean hasInheritedAcls() throws IOException, RepositoryException {
+    return false;
+  }
+
+  @Override
   public Acl getInheritedAcl() throws IOException, RepositoryException {
     // TODO: figure out what the inherited ACLs really are.
     return null;

@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 
 import jcifs.smb.ACE;
 import jcifs.smb.SmbException;
@@ -71,14 +72,27 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
   };
 
   /**
+   * Returns true if the associated {@link ACE} is INHERITED by a container.
+   * We include only OBJECT_INHERIT ACEs, since they are the only ones that
+   * could actually get inherited by a file.  We exclude NO_PROPAGATE ACEs
+   * since they could not propagate beyond this container onto a file.
+   */
+  protected static Predicate<ACE> isContainerInheritedAce =
+    new Predicate<ACE>() {
+      public boolean apply(ACE ace) {
+        int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED
+                   | ACE.FLAGS_NO_PROPAGATE;
+        return (ace.getFlags() & mask) ==
+               (ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED);
+      }
+    };
+
+  /**
    * Returns true if the associated {@link ACE} is INHERITED.
-   * We exclude CONTAINER_INHERIT ACEs, since they would never actually get
-   * inherited by a file. We also exclude ACEs INHERITED from up the chain.
    */
   protected static Predicate<ACE> isInheritedAce = new Predicate<ACE>() {
     public boolean apply(ACE ace) {
-      int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED;
-      return (ace.getFlags() & mask) == mask;
+      return (ace.getFlags() & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED;
     }
   };
 
@@ -105,21 +119,18 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
     // Get the security ACEs on the file, if not already available.
     // Also determines if any of those ACEs are inherited.
     securityAces = file.getSecurity();
-    boolean hasInheritedAces = false;
-    if (securityAces != null) {
-      for (ACE ace : securityAces) {
-        if (isInheritedAce.apply(ace)) {
-          hasInheritedAces = true;
-          break;
-        }
-      }
-    }
-    this.hasInheritedAces = hasInheritedAces;
+    this.hasInheritedAces = securityAces != null &&
+        Iterables.any(Arrays.asList(securityAces), isInheritedAce);
   }
 
   @Override
   public Acl getAcl() throws IOException {
     return getAcl(securityAces, isDirectAce, "");
+  }
+
+  @Override
+  public boolean hasInheritedAcls() {
+    return hasInheritedAces;
   }
 
   @Override
@@ -134,8 +145,19 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
 
   @Override
   public Acl getInheritedAcl() throws IOException {
-    return (hasInheritedAces)
-        ? getAcl(securityAces, isInheritedAce, "Inherited") : null;
+    // We filter ACEs on containers differently, since we want to exclude
+    // ACE.FLAGS_CONTAINER_INHERIT only ACEs (like List Folder Contents),
+    // and ACE.FLAGS_NO_PROPAGATE ACEs from the ACL.
+    // Note that at the file level, the ACE.FLAGS_OBJECT_INHERIT and the
+    // ACE.FLAGS_CONTAINER_INHERIT bits seem to have been stripped off,
+    // inherited ACEs have only the ACE.FLAGS_INHERITED bit set.
+    if (hasInheritedAces) {
+      return getAcl(securityAces,
+          (file.isDirectory() ? isContainerInheritedAce : isInheritedAce),
+          "Inherited");
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -150,7 +172,7 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
       throws IOException {
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.log(Level.FINEST, "{0} ACEs for {1}: {2}",
-          new Object[] { type, file, Arrays.toString(securityAces)});
+          new Object[] { type, file, Arrays.toString(aces)});
     }
 
     List<ACE> fileAllowAces = new ArrayList<ACE>();

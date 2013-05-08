@@ -232,6 +232,16 @@ public class SmbReadonlyFile
   }
 
   @Override
+  public boolean hasInheritedAcls() throws IOException, RepositoryException {
+    try {
+      return getAclBuilder().hasInheritedAcls();
+    } catch (IOException e) {
+      processIOException(e, "hasInherited");
+      return false;
+    }
+  }
+
+  @Override
   public Acl getContainerInheritAcl() throws IOException, RepositoryException {
     try {
       return getAclBuilder().getContainerInheritAcl();

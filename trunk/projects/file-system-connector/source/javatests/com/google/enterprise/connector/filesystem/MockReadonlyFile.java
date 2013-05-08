@@ -258,6 +258,12 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   @Override
+    public boolean hasInheritedAcls() throws RepositoryException, IOException {
+    return (inheritedAcl != null) || (containerInheritAcl != null)
+           || (fileInheritAcl != null);
+  }
+
+  @Override
   public Acl getInheritedAcl() throws RepositoryException, IOException {
     maybeThrowRepositoryException(Where.GET_INHERITED_ACL);
     maybeThrowIOException(Where.GET_INHERITED_ACL);
