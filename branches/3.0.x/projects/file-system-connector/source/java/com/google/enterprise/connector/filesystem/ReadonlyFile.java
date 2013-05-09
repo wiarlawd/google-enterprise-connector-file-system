@@ -102,6 +102,13 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
   public Acl getAcl() throws IOException, RepositoryException;
 
   /**
+   * Returns true if the file or folder has <em>any</em> inherited ACLs,
+   * even if those ACLs would not be returned by {@link #getInheritedAcl},
+   * {@link getContainerInheritAcl}, or {@link getFileInheritAcl}.
+   */
+  public boolean hasInheritedAcls() throws IOException, RepositoryException;
+
+  /**
    * Returns inherited ACL for this file or directory.
    * @throws IOException
    * @throws RepositoryException if there was an error accessing the repository.

@@ -74,6 +74,11 @@ class LegacySmbAclBuilder extends AbstractSmbAclBuilder {
   }
 
   @Override
+  public boolean hasInheritedAcls() {
+    return false;
+  }
+
+  @Override
   public Acl getInheritedAcl() throws IOException {
     return null;
   }

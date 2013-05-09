@@ -153,6 +153,15 @@ public class FileDocument implements Document {
           SpiConstants.DocumentType.ACL.toString());
       addProperty(SpiConstants.PROPNAME_ACLINHERITANCETYPE,
           SpiConstants.AclInheritanceType.CHILD_OVERRIDES.toString());
+    } else {
+      try {
+        long length = file.length();
+        addProperty(SpiConstants.PROPNAME_CONTENT_LENGTH,
+                    Value.getLongValue(length));
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "Failed to get file length for "
+                   + file.getPath(), e);
+      }
     }
     addProperty(SpiConstants.PROPNAME_FEEDTYPE,
         SpiConstants.FeedType.CONTENTURL.toString());
@@ -249,23 +258,20 @@ public class FileDocument implements Document {
     } else {
       addAclProperties(acl);
       String inheritFrom;
-      Acl inheritedAcl = file.getInheritedAcl();
       // If the file is the root, we want to flatten ACLs above the root.
       // Similarly, if the file has no inherited ACL, it will inherit directly
       // from the share.
       if (root.getPath().equals(file.getPath())) {
         inheritFrom = getRootShareAclId(root);
-        addAclProperties(inheritedAcl);
-      } else if (inheritedAcl == null) {
-        inheritFrom = getRootShareAclId(root);
-      } else if (file.getParent() != null) {
+        addAclProperties(file.getInheritedAcl());
+      } else if (file.hasInheritedAcls() && file.getParent() != null) {
         inheritFrom = (file.isDirectory() 
             ? CONTAINER_INHERIT_ACL_PREFIX : FILE_INHERIT_ACL_PREFIX)
             + file.getParent();
       } else {
-        inheritFrom = null;
+        inheritFrom = getRootShareAclId(root);
       }
-      if (inheritFrom != null && aclProperties.supportsInheritedAcls()) {
+      if (aclProperties.supportsInheritedAcls()) {
         addProperty(SpiConstants.PROPNAME_ACLINHERITFROM_DOCID, inheritFrom);
       }
     }
