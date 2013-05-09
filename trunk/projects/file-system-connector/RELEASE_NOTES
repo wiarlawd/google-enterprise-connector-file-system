@@ -10,8 +10,8 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
-Release 3.0.8, 12 April 2013
-============================
+Release 3.0.8, 08 May 2013
+==========================
 
 Introduction
 ------------
@@ -28,6 +28,13 @@ Issue 7684717: Files incorrectly inherit list folder contents permission.
 Issue 8511258: In a newly configured File system connector with Disable
                Traversal option selected, the Disable Traversal option
                was not respected.
+
+Issue 8592252: The connector supplies a google:contentlength property,
+               which specifies the length of the document content, in bytes.
+               This allows the Connector Manager's GetDocumentContent
+               servlet to supply the  Content-Length HTTP header in the
+               servlet response.  This works around a problem where
+               crawled files were truncated at 32 megabytes by the GSA.
 
 
 Release 3.0.6, 04 March 2013
