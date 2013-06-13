@@ -192,7 +192,7 @@ public class FileIterator {
 
         // TODO: Feed metadata for files with unsupported MIME types
         // based upon advanced configuration option.
-        String mimeType = mimeTypeDetector.getMimeType(f.getPath(), f);
+        String mimeType = mimeTypeDetector.getMimeType(f.getName(), f);
         if (traversalContext.mimeTypeSupportLevel(mimeType) <= 0) {
           LOGGER.log(Level.FINEST, "Skipping file {0} - unsupported or excluded"
               + " MIME type: {1}", new Object[] { f.getPath(), mimeType });
