@@ -9,6 +9,32 @@ documentation.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
+Release 3.2.0, 12 July 2013
+===========================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality.
+
+Issues fixed from last release:
+-------------------------------
+Issue 9415184: Connector blocked on I/O when calling MimeTypeDetector.
+               MimeTypeDetector would inadvertently attempt to open
+               some of the supplied files when it was attempting to
+               determine the MIME type by filename extension only.
+               Since the supplied names were rarely local files,
+               the MimeTypeDetector would quickly become backlogged
+               on blocked file I/O. The use of the underlying third
+               party MimeUtil library was altered to ensure that no
+               attempt would be made to open the named file.
+
+Version Compatibility
+=====================
+This version of the File System Connector requires Connector Manager
+3.2.0.  This version of the connector requires Java 6 JRE or newer.
+The use of a Java 5 runtime is no longer supported.
+
 
 Release 3.0.8, 08 May 2013
 ==========================
