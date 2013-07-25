@@ -99,6 +99,13 @@ abstract class SmbComTransaction extends ServerMessageBlock implements Enumerati
     void reset( int key, String lastName ) {
         reset();
     }
+
+    // SMC: getPadding may be overriden in some sub-classes to accomodate
+    // variations in other vendors' implementations.
+    public int getPadding() {
+        return PADDING_SIZE;
+    }
+
     public boolean hasMoreElements() {
         return hasMore;
     }
@@ -114,8 +121,8 @@ abstract class SmbComTransaction extends ServerMessageBlock implements Enumerati
             } else if (command == SMB_COM_NT_TRANSACT) {
                 parameterOffset += 2;
             }
-            pad = parameterOffset % PADDING_SIZE;
-            pad = pad == 0 ? 0 : PADDING_SIZE - pad;
+            pad = parameterOffset % this.getPadding();
+            pad = pad == 0 ? 0 : this.getPadding() - pad;
             parameterOffset += pad;
 
             totalParameterCount = writeParametersWireFormat( txn_buf, bufParameterOffset );
@@ -126,8 +133,8 @@ abstract class SmbComTransaction extends ServerMessageBlock implements Enumerati
             available -= parameterCount;
 
             dataOffset = parameterOffset + parameterCount;
-            pad1 = dataOffset % PADDING_SIZE;
-            pad1 = pad1 == 0 ? 0 : PADDING_SIZE - pad1;
+            pad1 = dataOffset % this.getPadding();
+            pad1 = pad1 == 0 ? 0 : this.getPadding() - pad1;
             dataOffset += pad1;
 
             totalDataCount = writeDataWireFormat( txn_buf, bufDataOffset );
@@ -143,8 +150,8 @@ abstract class SmbComTransaction extends ServerMessageBlock implements Enumerati
 
             parameterOffset = SECONDARY_PARAMETER_OFFSET;
             if(( totalParameterCount - parameterDisplacement ) > 0 ) {
-                pad = parameterOffset % PADDING_SIZE;
-                pad = pad == 0 ? 0 : PADDING_SIZE - pad;
+                pad = parameterOffset % this.getPadding();
+                pad = pad == 0 ? 0 : this.getPadding() - pad;
                 parameterOffset += pad;
             }
 
@@ -156,8 +163,8 @@ abstract class SmbComTransaction extends ServerMessageBlock implements Enumerati
             available -= parameterCount;
 
             dataOffset = parameterOffset + parameterCount;
-            pad1 = dataOffset % PADDING_SIZE;
-            pad1 = pad1 == 0 ? 0 : PADDING_SIZE - pad1;
+            pad1 = dataOffset % this.getPadding();
+            pad1 = pad1 == 0 ? 0 : this.getPadding() - pad1;
             dataOffset += pad1;
 
             dataDisplacement += dataCount;
