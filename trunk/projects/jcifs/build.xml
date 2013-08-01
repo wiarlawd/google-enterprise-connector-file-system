@@ -38,7 +38,12 @@ dependencies: Checks that all class dependencies are met.
     checksum: Creates MD5 checksums of the .zip and .tgz
               distributions.
 
-       usage: Displays this message.</echo>
+       usage: Displays this message.
+
+For Google builds, use the "clean" and "jar" targets. If needed,
+build "docs" and "javadocs" separately and check in the new
+documentation as a stand-alone change.
+        </echo>
     </target>
 
     <target name="hasServlet" unless="hasServlet">
@@ -94,8 +99,9 @@ dependencies: Checks that all class dependencies are met.
     </target>
 
     <target name="javadoc">
-        <delete dir="docs/api" quiet="true"/>
-        <mkdir dir="docs/api"/>
+        <delete quiet="true">
+          <fileset dir="docs/api" includes="**/*.html"/>
+        </delete>
         <javadoc destdir="docs/api" overview="docs/overview.html" author="true" version="true" use="true" windowtitle="JCIFS API">
             <fileset dir="src">
                 <include name="jcifs/Config.java"/>
@@ -147,7 +153,9 @@ dependencies: Checks that all class dependencies are met.
                 <include name="jcifs-${version}.jar"/>
             </fileset>
         </delete>
-        <delete dir="docs/api" quiet="true"/>
+        <delete quiet="true">
+          <fileset dir="docs/api" includes="**/*.html"/>
+        </delete>
         <delete quiet="true">
             <fileset dir="docs">
                 <include name="index.html"/>
