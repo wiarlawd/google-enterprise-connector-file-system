@@ -170,6 +170,7 @@
     <property name="lastAccessResetFlagForLocalWindows" value="true"/>
     <property name="supportsInheritedAcls" value="false"/>
     <property name="pushAclFlag" value="true"/>
+    <property name="useAuthzOnAclError" value="false"/>
     <property name="groupAclFormat" value="domain\group"/>
     <property name="userAclFormat" value="domain\user"/>
     <property name="globalNamespace" value="${googleGlobalNamespace}"/>

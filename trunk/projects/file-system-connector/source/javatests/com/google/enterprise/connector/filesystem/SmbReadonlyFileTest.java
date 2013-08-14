@@ -321,13 +321,29 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
     assertEquals(shareAcl, file.getShareAcl());
   }
 
-  public void testGetAclSmbException() throws Exception {
+  public void testGetAclUseAuthzOnAclError() throws Exception {
+    propertyFetcher.setUseAuthzOnAclError(true);
     testAclException(new CheckAclException() {
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getAcl()).andThrow(smbException);
         }
         public void test(TestSmbReadonlyFile file) throws Exception {
           assertEquals(Acl.USE_HEAD_REQUEST, file.getAcl());
+        }
+      });
+  }
+
+  public void testGetAclNotUseAuthzOnAclError() throws Exception {
+    propertyFetcher.setUseAuthzOnAclError(false);
+    testAclException(new CheckAclException() {
+        public void configure(AclBuilder builder) throws Exception {
+          expect(builder.getAcl()).andThrow(smbException);
+        }
+        public void test(TestSmbReadonlyFile file) throws Exception {
+          file.getAcl();
+        }
+        public Class<? extends Exception>getExpectedException() {
+          return SmbException.class;
         }
       });
   }
@@ -360,13 +376,29 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
       });
   }
 
-  public void testGetInheritedAclSmbException() throws Exception {
+  public void testGetInheritedAclUseAuthzOnAclError() throws Exception {
+    propertyFetcher.setUseAuthzOnAclError(true);
     testAclException(new CheckAclException() {
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getInheritedAcl()).andThrow(smbException);
         }
         public void test(TestSmbReadonlyFile file) throws Exception {
           assertEquals(Acl.USE_HEAD_REQUEST, file.getInheritedAcl());
+        }
+      });
+  }
+
+  public void testGetInheritedAclNotUseAuthzOnAclError() throws Exception {
+    propertyFetcher.setUseAuthzOnAclError(false);
+    testAclException(new CheckAclException() {
+        public void configure(AclBuilder builder) throws Exception {
+          expect(builder.getInheritedAcl()).andThrow(smbException);
+        }
+        public void test(TestSmbReadonlyFile file) throws Exception {
+          file.getInheritedAcl();
+        }
+        public Class<? extends Exception>getExpectedException() {
+          return SmbException.class;
         }
       });
   }

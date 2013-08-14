@@ -482,6 +482,10 @@ public class LegacySmbAclBuilderTest extends TestCase {
       return false;
     }
 
+    public boolean useAuthzOnAclError() {
+      return false;
+    }
+
     public String getGlobalNamespace() {
       return null;
     }

@@ -281,14 +281,14 @@ public class SmbReadonlyFile
   private Acl processIOException(IOException e, String aclType) 
       throws IOException, RepositoryException {
     detectServerDown(e);    
-    if (e instanceof SmbException) {
-      LOG.warning("Failed to get " + aclType + " ACL: " + e.getMessage());
-      LOG.log(Level.FINEST, "Got SmbException while getting " + aclType
-              + " ACL", e);
+    LOG.warning("Failed to get " + aclType + " ACL: " + e.getMessage());
+    if (LOG.isLoggable(Level.FINEST)) {
+      LOG.log(Level.FINEST, "Got Exception while getting " + aclType
+              + " ACL for " + this.getPath(), e);
+    }
+    if (e instanceof SmbException && smbPropertyFetcher.useAuthzOnAclError()) {
       return Acl.USE_HEAD_REQUEST;
     } else {
-      LOG.log(Level.WARNING, "Cannot process ACL: Got IOException while "
-              + "getting " + aclType + " ACL for " + this.getPath(), e);
       throw e;
     }
   }
