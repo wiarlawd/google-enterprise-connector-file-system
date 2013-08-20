@@ -59,6 +59,16 @@
     -->
 
     <!--
+    Flag to indicate whether files whose ACLs cannot be determined should
+    resort to late binding (using Connector Authorization), or be skipped.
+
+    The default value is "false" (skip files with ACL errors).
+    -->
+    <!--
+    <property name="useAuthzOnAclError" value="false"/>
+    -->
+
+    <!--
     Represents the format in which ACE entries should be fed to GSA for groups
     Possible values are:
       domain\group

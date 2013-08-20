@@ -268,5 +268,13 @@ interface AclBuilder {
      * @return the local namespace
      */
     String getLocalNamespace();
+
+    /**
+     * Returns {@code true} if Documents with missing or broken ACLs
+     * should fall back to use connector Authorization, or {@code false}
+     * if the Document should be skipped. The default behavior is to skip
+     * the document.
+     */
+    boolean useAuthzOnAclError();
   }
 }
