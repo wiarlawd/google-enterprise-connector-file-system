@@ -200,4 +200,16 @@ public interface ReadonlyFile<T extends ReadonlyFile<T>>
    * @return true if the file is hidden; false otherwise
    */
   public boolean isHidden() throws RepositoryException;
+
+  /**
+   * Returns true if the file has been modified since the supplied
+   * time. Note that this method may consider other file attributes
+   * than the last-modified timestamp to determine if the file and
+   * meta-data about the file may have changed.
+   *
+   * @param time milliseconds since the epoch.
+   * @return true if the file or its meta-data has changed at or after
+   *         {@code time}, or if the last modified time of the file is unknown.
+   */
+  public boolean isModifiedSince(long time) throws RepositoryException;
 }

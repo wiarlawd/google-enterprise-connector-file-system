@@ -161,26 +161,29 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   }
 
   /**
-   * Test lastModified returns the newer of create timestamp and last modified.
-   * Windows doesn't update last modified when copying, moving files, but
-   * does update create time (in some cases).
+   * Test that isModifiedSince uses the newer of create timestamp and last
+   * modified. Windows doesn't update last modified when copying, moving files,
+   * but does update create time (in some cases).
    */
   @Override
-  public void testLastModified() throws Exception {
-    testLastModified(0L, 0L);
-    testLastModified(10000L, 10000L);
-    testLastModified(10000L, 12000L);
-    testLastModified(12000L, 10000L);
+  public void testIsModifiedSince() throws Exception {
+    testModifiedSince(0L, 0L, 0L, true);
+    testModifiedSince(10000L, 10000L, 9000L, true);
+    testModifiedSince(10000L, 10000L, 11000L, false);
+    testModifiedSince(10000L, 12000L, 11000L, true);
+    testModifiedSince(12000L, 10000L, 11000L, true);
+    testModifiedSince(10000L, 12000L, 13000L, false);
+    testModifiedSince(12000L, 10000L, 13000L, false);
   }
 
-  private void testLastModified(long createTime, long modifyTime)
-      throws Exception {
+  private void testModifiedSince(long createTime, long modifyTime,
+      long sinceTime, boolean expected) throws Exception {
     TestSmbReadonlyFile file = getReadonlyFileToTest();
     SmbFileDelegate delegate = file.getDelegate();
     expect(delegate.createTime()).andStubReturn(createTime);
     expect(delegate.lastModified()).andStubReturn(modifyTime);
     replay(delegate);
-    assertEquals(Math.max(createTime, modifyTime), file.getLastModified());
+    assertEquals(expected, file.isModifiedSince(sinceTime));
   }
 
   public void testDetectServerDown() throws Exception {

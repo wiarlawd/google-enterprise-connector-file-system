@@ -176,6 +176,18 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
   }
 
   @Override
+  public boolean isModifiedSince(long time) throws RepositoryException {
+    try {
+      long lastModified = delegate.lastModified();
+      return (lastModified > 0L) ? (lastModified >= time) : true;
+    } catch (IOException e) {
+      detectGeneralErrors(e);
+      throw new RepositoryDocumentException(
+          "Failed to get last modified time for " + getPath(), e);
+    }
+  }
+
+  @Override
   public long length() throws IOException, RepositoryException {
     return isRegularFile() ? delegate.length() : 0L;
   }

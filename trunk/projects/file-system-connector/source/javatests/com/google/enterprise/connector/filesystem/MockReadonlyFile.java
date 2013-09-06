@@ -14,6 +14,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.DocumentAccessException;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.Clock;
 import com.google.enterprise.connector.util.SystemClock;
@@ -363,6 +364,17 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     maybeThrowRepositoryException(Where.GET_LAST_MODIFIED);
     maybeThrowIOException(Where.GET_LAST_MODIFIED);
     return lastModified;
+  }
+
+  @Override
+  public boolean isModifiedSince(long time) throws RepositoryException {
+    try {
+      long lastModified = getLastModified();
+      return (lastModified > 0) ? (lastModified >= time) : true;
+    } catch (IOException e) {
+      throw new RepositoryDocumentException(
+          "Failed to get last modified time for " + getPath(), e);
+    }
   }
 
   /**

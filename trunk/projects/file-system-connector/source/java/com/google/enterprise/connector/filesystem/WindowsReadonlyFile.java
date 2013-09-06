@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTime;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.File;
@@ -54,15 +55,15 @@ public class WindowsReadonlyFile
         new WindowsFileDelegate(delegate, name), accessTimeResetFlag);
   }
 
-  /* @Override */
+  @Override
   public String getPath() {
     String path = delegate.getAbsolutePath();
     return (delegate.isDirectory()) ? path + File.separatorChar : path;
   }
 
   /**
-   * Returns the newer of either the create timestamp or the last modified
-   * timestamp of the file.
+   * Returns true if either the create timestamp or the last modified
+   * timestamp of the file is newer than the supplied time.
    * <p>
    * According to <a href="http://support.microsoft.com/kb/299648">this
    * Microsoft document</a>, moving or renaming a file within the same file
@@ -72,7 +73,16 @@ public class WindowsReadonlyFile
    * timestamp, but does not alter the last modified timestamp.
    */
   @Override
-  public long getLastModified() throws IOException {
-    return WindowsFileTimeUtil.getLastModifiedTime(delegate.getAbsolutePath());
+  public boolean isModifiedSince(long time) throws RepositoryException {
+    try {
+      String path = delegate.getAbsolutePath();
+      long lastModified =
+          Math.max(WindowsFileTimeUtil.getLastModifiedTime(path),
+                   WindowsFileTimeUtil.getCreateTime(path));
+      return (lastModified > 0L) ? (lastModified >= time) : true;
+    } catch (IOException e) {
+      throw new RepositoryDocumentException(
+          "Failed to get last modified time for " + getPath(), e);
+    }
   }
 }

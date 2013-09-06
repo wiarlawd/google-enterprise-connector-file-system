@@ -78,8 +78,8 @@ class WindowsFileTimeUtil {
     implements FileTime {}
 
   /**
-   * Returns the newer of either the create timestamp or the last write
-   * timestamp of the file, as milliseconds since the epoc 01 January 1970.
+   * Returns the last write timestamp of the file, as milliseconds since
+   * the epoch 01 January 1970.
    * <p>
    * According to <a href="http://support.microsoft.com/kb/299648">this
    * Microsoft document</a>, moving or renaming a file within the same file
@@ -89,15 +89,34 @@ class WindowsFileTimeUtil {
    * timestamp, but does not alter the last modified timestamp.
    *
    * @param fileName Name of the file whose time is to be fetched
-   * @return last modify time of the file as milliseconds since the epoc
+   * @return last modify time of the file as milliseconds since the epoch
    *         01 January 1970
    */
   static long getLastModifiedTime(String fileName) throws IOException {
-    WindowsFileTime createTime = new WindowsFileTime();
     WindowsFileTime modifyTime = new WindowsFileTime();
-    getFileTimes(fileName, createTime, null, modifyTime);
-    return Math.max(createTime.toDate().getTime(), 
-                    modifyTime.toDate().getTime());
+    getFileTimes(fileName, null, null, modifyTime);
+    return modifyTime.toDate().getTime();
+  }
+
+  /**
+   * Returns the create timestamp of the file, as milliseconds since the
+   * epoch 01 January 1970.
+   * <p>
+   * According to <a href="http://support.microsoft.com/kb/299648">this
+   * Microsoft document</a>, moving or renaming a file within the same file
+   * system does not change either the last-modify timestamp of a file or
+   * the create timestamp of a file.  However, copying a file or moving it
+   * across filesystems (which involves an implicit copy) sets a new create
+   * timestamp, but does not alter the last modified timestamp.
+   *
+   * @param fileName Name of the file whose time is to be fetched
+   * @return create time of the file as milliseconds since the epoch
+   *         01 January 1970
+   */
+  static long getCreateTime(String fileName) throws IOException {
+    WindowsFileTime createTime = new WindowsFileTime();
+    getFileTimes(fileName, createTime, null, null);
+    return createTime.toDate().getTime();
   }
 
   /**

@@ -290,6 +290,16 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType<?>,
     }
   }
 
+  public void testIsModifiedSince() throws Exception {
+    long lastModified = file1.lastModified();
+    assertTrue(lastModified > 0L);
+    assertTrue(readonlyFile1.isModifiedSince(-1L));
+    assertTrue(readonlyFile1.isModifiedSince(0L));
+    assertTrue(readonlyFile1.isModifiedSince(lastModified - 1000));
+    assertTrue(readonlyFile1.isModifiedSince(lastModified));
+    assertFalse(readonlyFile1.isModifiedSince(lastModified + 1000));
+  }
+
   public void testHashCode() throws Exception {
     assertEquals(31 + file1.hashCode(), readonlyFile1.hashCode());
   }

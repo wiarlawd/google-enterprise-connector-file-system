@@ -172,14 +172,10 @@ public class FileIterator {
       }
 
       if (ifModifiedSince != 0L) {
-        try {
-          if (f.getLastModified() < ifModifiedSince) {
-            LOGGER.log(Level.FINEST, "Skipping file {0} - unmodified.",
-                       f.getPath());
-            return false;
-          }
-        } catch (IOException e) {
-          // Could not get lastModified time. That is OK for now.
+        if (!f.isModifiedSince(ifModifiedSince)) {
+          LOGGER.log(Level.FINEST, "Skipping file {0} - unmodified.",
+                     f.getPath());
+          return false;
         }
       }
 

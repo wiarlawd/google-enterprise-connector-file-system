@@ -301,8 +301,8 @@ public class SmbReadonlyFile
   }
 
   /**
-   * Returns the newer of either the create timestamp or the last modified
-   * timestamp of the file.
+   * Returns true if either the create timestamp or the last modified
+   * timestamp of the file is newer than the supplied time.
    * <p>
    * According to <a href="http://support.microsoft.com/kb/299648">this
    * Microsoft document</a>, moving or renaming a file within the same file
@@ -312,8 +312,16 @@ public class SmbReadonlyFile
    * timestamp, but does not alter the last modified timestamp.
    */
   @Override
-  public long getLastModified() throws SmbException {
-    return Math.max(delegate.lastModified(), delegate.createTime());
+  public boolean isModifiedSince(long time) throws RepositoryException {
+    try {
+      long lastModified =
+          Math.max(delegate.lastModified(), delegate.createTime());
+      return (lastModified > 0L) ? (lastModified >= time) : true;
+    } catch (IOException e) {
+      detectServerDown(e);
+      throw new RepositoryDocumentException(
+          "Failed to get last modified time for " + getPath(), e);
+    }
   }
 
   @VisibleForTesting
