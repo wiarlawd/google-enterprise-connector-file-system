@@ -101,7 +101,7 @@ class FileLister implements Lister, TraversalContextAware,
   private static enum Sleep {
     RETRY_DELAY,     // Wait Schedule.retryDelay at end of traversal.
     SCHEDULE_DELAY,  // Wait for Schedule traversal interval.
-    ERROR_DELAY      // 15 min wait after general error.
+    ERROR_DELAY      // 5 min wait after general error.
   }
 
   /**
@@ -244,7 +244,7 @@ class FileLister implements Lister, TraversalContextAware,
       } else {
         switch (delay) {
         case ERROR_DELAY:
-          seconds = 15 * 60;
+          seconds = 5 * 60;
           break;
         case RETRY_DELAY:
           seconds = schedule.getRetryDelay();
@@ -439,8 +439,9 @@ class FileLister implements Lister, TraversalContextAware,
         }
         while (!isShutdown()) {
           String path = "";
+          ReadonlyFile<?> file = null;
           try {
-            ReadonlyFile<?> file = iter.next();
+            file = iter.next();
             if (file == null) {
               break;	// No more files.
             }          
@@ -454,13 +455,11 @@ class FileLister implements Lister, TraversalContextAware,
           } catch (RepositoryException e) {
             // TODO (bmj): Ideally we should retry the failed file a few times
             // after increasing delays (1, 2, 4, 8 minutes to see if we can
-            // overcome apparently transient errors) before skipping
-            // over it. However, we will need to differentiate between
-            // RepositoryExceptions thrown by FileIterator.next() and ones
-            // throw after we have a ReadonlyFile already in hand.
+            // overcome apparently transient errors) before skipping over it.
             LOGGER.log(Level.WARNING, "Encountered an error traversing "
                        + startPath + " at document " + path, e);
             if (!isShutdown()) {
+              iter.pushBack(file);
               try {
                 sleep(Sleep.ERROR_DELAY);
               } catch (InterruptedException ie) {

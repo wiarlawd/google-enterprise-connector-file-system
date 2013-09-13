@@ -116,10 +116,10 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
           expect(delegate.canRead()).andThrow(ioe);
         }
         public void test(MockReadonlyFile file) throws Exception {
-          assertFalse(file.canRead());
+          file.canRead();
         }
         public Class<? extends Exception> getExpectedException() {
-          return null;
+          return RepositoryDocumentException.class;
         }
       });
   }
@@ -130,10 +130,10 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
           expect(delegate.isHidden()).andThrow(ioe);
         }
         public void test(MockReadonlyFile file) throws Exception {
-          assertFalse(file.isHidden());
+          file.isHidden();
         }
         public Class<? extends Exception> getExpectedException() {
-          return null;
+          return RepositoryDocumentException.class;
         }
       });
   }
@@ -144,10 +144,10 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
           expect(delegate.isDirectory()).andThrow(ioe);
         }
         public void test(MockReadonlyFile file) throws Exception {
-          assertFalse(file.isDirectory());
+          file.isDirectory();
         }
         public Class<? extends Exception> getExpectedException() {
-          return null;
+          return RepositoryDocumentException.class;
         }
       });
   }
@@ -158,10 +158,10 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
           expect(delegate.isFile()).andThrow(ioe);
         }
         public void test(MockReadonlyFile file) throws Exception {
-          assertFalse(file.isRegularFile());
+          file.isRegularFile();
         }
         public Class<? extends Exception> getExpectedException() {
-          return null;
+          return RepositoryDocumentException.class;
         }
       });
   }

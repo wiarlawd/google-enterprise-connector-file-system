@@ -85,6 +85,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
    *          operation
    */
   protected void detectGeneralErrors(IOException e) throws RepositoryException {
+    detectServerDown(e);
   }
 
   @Override
@@ -128,7 +129,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       return delegate.canRead();
     } catch (IOException e) {
       detectGeneralErrors(e);
-      return false;
+      throw new RepositoryDocumentException(e);
     }
   }
 
@@ -138,7 +139,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       return delegate.isHidden();
     } catch (IOException e) {
       detectGeneralErrors(e);
-      return false;
+      throw new RepositoryDocumentException(e);
     }
   }
 
@@ -148,7 +149,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       return delegate.isDirectory();
     } catch (IOException e) {
       detectGeneralErrors(e);
-      return false;
+      throw new RepositoryDocumentException(e);
     }
   }
 
@@ -158,7 +159,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       return delegate.isFile();
     } catch (IOException e) {
       detectGeneralErrors(e);
-      return false;
+      throw new RepositoryDocumentException(e);
     }
   }
 

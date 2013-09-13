@@ -145,8 +145,6 @@ public class SmbReadonlyFile
     LOG.finest("server down variables:" + smbe.getNtStatus() + rootCauseString
         + " " + smbe.getMessage());
 
-    /* TODO (bmj): Restore this once FileLister.Traverser is able to retry
-       failed documents after transient communication failures.
     // All pipe instances are busy.
     if (SmbException.NT_STATUS_INSTANCE_NOT_AVAILABLE == smbe.getNtStatus()
         || SmbException.NT_STATUS_PIPE_NOT_AVAILABLE == smbe.getNtStatus()
@@ -160,7 +158,6 @@ public class SmbReadonlyFile
         ("" + smbe).contains("timedout waiting for response")) {
       throw new RepositoryException("Server busy", smbe);
     }
-    */
 
     // Cannot connect to server.
     if (badCommunication && noTransport &&
