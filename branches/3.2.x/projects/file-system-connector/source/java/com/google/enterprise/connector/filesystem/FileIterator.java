@@ -17,6 +17,7 @@ package com.google.enterprise.connector.filesystem;
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.TraversalContext;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
@@ -97,6 +98,21 @@ public class FileIterator {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Push back the supplied ReadonlyFile onto the traversal stack.
+   * It will be the next item returned.
+   *
+   * @param file a ReadonlyFile
+   */
+  public void pushBack(ReadonlyFile<?> file) {
+    if (file != null) {
+      ArrayList<ReadonlyFile<?>> al = new ArrayList<ReadonlyFile<?>>(1);
+      al.add(file);
+      traversalStateStack.add(al);
+      positioned = true;
+    }
+  }
+
   private void setPositionToNextFile() throws RepositoryException {
     if (positioned) {
       return;
@@ -108,38 +124,60 @@ public class FileIterator {
 
       if (l.isEmpty()) {
         traversalStateStack.remove(traversalStateStack.size() - 1);
-      } else {
-        ReadonlyFile<?> f = l.get(0);
+        continue;
+      } 
+
+      ReadonlyFile<?> f = l.remove(0);
+      // Check for a pattern mismatch before hitting the server.
+      if (!f.acceptedBy(context.getFilePatternMatcher())) {
+        LOGGER.log(Level.FINER, "Skipping {0} - pattern mismatch.",
+                   f.getPath());
+        continue;
+      }
+
+      try {
         if (f.isDirectory()) {
-          l.remove(0);
-          if (f.acceptedBy(context.getFilePatternMatcher())) {
-            List<? extends ReadonlyFile<?>> files = listFiles(f);
-            if (!files.isEmpty()) {
-              if (returnDirectories) {
-                // Copy of the returned list because we modify our copy.
-                ArrayList<ReadonlyFile<?>> al = new ArrayList<ReadonlyFile<?>>();
-                // Add the proccessed dir to the top of the list for
-                // next method's immediate consumption.
-                // TODO: Handle ifModifiedSince for directories?
-                al.add(f);
-                al.addAll(files);
-                traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(al));
-                positioned = true;
-                return;
-              } else {
-                traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(files));
-              }
-            }
-          } else {
-            LOGGER.log(Level.FINEST,
-                "Skipping directory {0} - pattern mismatch.", f.getPath());
+          // SMB Administrative shares are "hidden", so allow the start point
+          // to be traversed even if hidden, but skip all other hidden dirs.
+          if (f.isHidden() && !(f.getPath().equals(root.getPath()))) {
+            LOGGER.log(Level.FINER, "Skipping directory {0} - hidden.",
+                       f.getPath());
+            continue;
           }
-        } else if (!isQualifyingFile(f)) {
-          l.remove(0);
-        } else {
+          List<? extends ReadonlyFile<?>> files = listFiles(f);
+          if (!files.isEmpty()) {
+            if (returnDirectories) {
+              // Copy of the returned list because we modify our copy.
+              ArrayList<ReadonlyFile<?>> al =
+                new ArrayList<ReadonlyFile<?>>(files.size() + 1);
+              // Add the proccessed dir to the top of the list for
+              // next method's immediate consumption.
+              // TODO: Handle ifModifiedSince for directories?
+              al.add(f);
+              al.addAll(files);
+              traversalStateStack.add(al);
+              positioned = true;
+              return;
+            } else {
+              traversalStateStack.add(new ArrayList<ReadonlyFile<?>>(files));
+            }
+          }
+        } else if (isQualifyingFile(f)) {
+          // Put it back on the stack to be returned as next.
+          l.add(0, f);
           positioned = true;
           return;
         }
+      } catch (DocumentAccessException e) {
+        LOGGER.log(Level.FINER, "Skipping {0} - access denied.",
+                   f.getPath());
+      } catch (RepositoryDocumentException rde) {
+        LOGGER.log(Level.WARNING, "Skipping " + f.getPath() + 
+                   " - access error.", rde);
+      } catch (RepositoryException re) {
+        // Put it back on the stack to try again.
+        l.add(0, f);
+        throw re;
       }
     }
   }
@@ -148,25 +186,19 @@ public class FileIterator {
       throws RepositoryException {
     try {
       if (!f.isRegularFile()) {
-        LOGGER.log(Level.FINEST, "Skipping {0} - not a regular file.",
-                   f.getPath());
-        return false;
-      }
-
-      if (!f.acceptedBy(context.getFilePatternMatcher())) {
-        LOGGER.log(Level.FINEST, "Skipping file {0} - pattern mismatch.",
+        LOGGER.log(Level.FINER, "Skipping {0} - not a regular file.",
                    f.getPath());
         return false;
       }
 
       if (!f.canRead()) {
-        LOGGER.log(Level.FINEST, "Skipping file {0} - no read access.",
+        LOGGER.log(Level.FINER, "Skipping file {0} - no read access.",
                    f.getPath());
         return false;
       }
 
       if (f.isHidden()) {
-        LOGGER.log(Level.FINEST, "Skipping file {0} - hidden.",
+        LOGGER.log(Level.FINER, "Skipping file {0} - hidden.",
                    f.getPath());
         return false;
       }
@@ -174,7 +206,7 @@ public class FileIterator {
       if (ifModifiedSince != 0L) {
         try {
           if (f.getLastModified() < ifModifiedSince) {
-            LOGGER.log(Level.FINEST, "Skipping file {0} - unmodified.",
+            LOGGER.log(Level.FINER, "Skipping file {0} - unmodified.",
                        f.getPath());
             return false;
           }
@@ -185,7 +217,7 @@ public class FileIterator {
 
       if (traversalContext != null) {
         if (traversalContext.maxDocumentSize() < f.length()) {
-          LOGGER.log(Level.FINEST, "Skipping file {0} - too big.",
+          LOGGER.log(Level.FINER, "Skipping file {0} - too big.",
                      f.getPath());
           return false;
         }
@@ -194,40 +226,32 @@ public class FileIterator {
         // based upon advanced configuration option.
         String mimeType = mimeTypeDetector.getMimeType(f.getName(), f);
         if (traversalContext.mimeTypeSupportLevel(mimeType) <= 0) {
-          LOGGER.log(Level.FINEST, "Skipping file {0} - unsupported or excluded"
+          LOGGER.log(Level.FINER, "Skipping file {0} - unsupported or excluded"
               + " MIME type: {1}", new Object[] { f.getPath(), mimeType });
           return false;
         }
       }
       return true;
     } catch (IOException ioe) {
-      LOGGER.log(Level.WARNING, "Skipping file {0} - access error: {1}",
-                 new Object[] { f.getPath(), ioe.getMessage() });
+      LOGGER.log(Level.WARNING, "Skipping file " + f.getPath() + 
+                 " - access error.", ioe);
       return false;
     }
   }
 
   private List<? extends ReadonlyFile<?>> listFiles(ReadonlyFile<?> dir)
       throws RepositoryException {
-    // SMB Administrative shares are "hidden", so allow the start point to be
-    // traversed, even if it is hidden, but skip all other hidden directories.
-    if (dir.isHidden() && !(dir.getPath().equals(root.getPath()))) {
-      LOGGER.log(Level.FINE, "Skipping hidden directory {0}", dir.getPath());
-      return Collections.emptyList();
-    }
     try {
-      List<? extends ReadonlyFile<?>> result = dir.listFiles();
-      return result;
+      return dir.listFiles();
     } catch (DirectoryListingException e) {
+      LOGGER.log(Level.WARNING, "Failed to list files in " + dir.getPath(),
+                 e);
+    } catch (RepositoryDocumentException e) {
       LOGGER.log(Level.WARNING, "Failed to list files in " + dir.getPath(),
                  e);
     } catch (IOException e) {
       LOGGER.log(Level.WARNING, "Failed to list files in " + dir.getPath(),
                  e);
-    } catch (DocumentAccessException e) {
-      LOGGER.log(Level.WARNING,
-                 "Due to insufficient privileges, failed to list files in "
-                 + dir.getPath(), e);
     }
     return Collections.emptyList();
   }

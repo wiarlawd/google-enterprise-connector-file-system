@@ -63,6 +63,7 @@
     <property name="lastAccessResetFlagForSmb" value="false"/>
     <property name="lastAccessResetFlagForLocalWindows" value="false"/>
     <property name="pushAclFlag" value="true"/>
+    <property name="useAuthzOnAclError" value="false"/>
     <property name="groupAclFormat" value="userOrGroup"/>
     <property name="userAclFormat" value="userOrGroup"/>
     <property name="supportsInheritedAcls" value="false"/>

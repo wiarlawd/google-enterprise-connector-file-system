@@ -15,6 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTime;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import java.io.IOException;
 import java.util.List;
@@ -56,27 +57,6 @@ public class WindowsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
   }
 
   @Override
-  public void testLastModified() throws Exception {
-    try {
-      super.testLastModified();
-    } catch (IOException e) {
-      // This probably means we are not running on Windows.
-      assertNotWindows(e.toString());
-    }
-  }
-
-  @Override
-  public void testLastModifiedNonExistFile() throws Exception {
-    try {
-      readonlyTest1.getLastModified();
-    } catch (IOException e) {
-      if (!e.getMessage().contains("last modified time")) {
-        assertNotWindows(e.toString());
-      }
-    }
-  }
-
-  @Override
   public void testListFiles() throws Exception {
     List<WindowsReadonlyFile> x = readonlyRoot.listFiles();
     assertNotNull(x);
@@ -86,6 +66,16 @@ public class WindowsReadonlyFileTest extends ConcreteReadonlyFileTestAbstract
     assertEquals(getAbsolutePath(dirB) + "/", x.get(2).getPath());
     assertEquals(getAbsolutePath(file1), x.get(3).getPath());
     assertEquals(getAbsolutePath(file2), x.get(4).getPath());
+  }
+
+  @Override
+  public void testIsModifiedSince() throws Exception {
+    try {
+      super.testIsModifiedSince();
+    } catch (RepositoryDocumentException e) {
+      // This probably means we are not running on Windows.
+      assertNotWindows(e.toString());
+    }
   }
 
   /**

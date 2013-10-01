@@ -54,6 +54,12 @@ public class FileSystemPropertyManager implements SmbFileProperties,
   private boolean supportsInheritedAcls;
 
   /**
+   * Flag to indicate whether files whose ACLs cannot be determined should
+   * resort to late binding (using Connector Authorization), or be skipped.
+   */
+  private boolean useAuthzOnAclError;
+
+  /**
    * Represents the flag to reset last access time
    * for SMB files.
    */
@@ -192,6 +198,23 @@ public class FileSystemPropertyManager implements SmbFileProperties,
    */
   public void setSupportsInheritedAcls(boolean supportsInheritedAcls) {
     this.supportsInheritedAcls = supportsInheritedAcls;
+  }
+
+  /**
+   * Returns {@code true} if Documents with missing or broken ACLs
+   * should fall back to use connector Authorization, or {@code false}
+   * if the Document should be skipped. The default behavior is to skip
+   * the document.
+   */
+  public boolean useAuthzOnAclError() {
+    return useAuthzOnAclError;
+  }
+
+  /**
+   * @param useAuthzOnAclError the useAuthzOnAclError flag to set
+   */
+  public void setUseAuthzOnAclError(boolean useAuthzOnAclError) {
+    this.useAuthzOnAclError = useAuthzOnAclError;
   }
 
   /**

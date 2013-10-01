@@ -9,6 +9,78 @@ documentation.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
+Release 3.2.2, 01 October 2013
+==============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality.
+
+Issues fixed from last release:
+-------------------------------
+
+Issue 6444005: "All pipe instances are busy" error intermittently strips the ACL
+               from a document when the document is fed.  By stripping the ACL,
+               authorization for the document falls back to connector 
+               authorization. An authentication mechanism that captures
+               credentials, such as HTTP or LDAP, is required for Connector
+               authorization. The file system connector does not support
+               authentication.
+
+               This release adds an advanced configuration option,
+               "useAuthzOnAclError". If this option is "true", then no ACL will
+               be provided, forcing connector authorization to be used. If the
+               option is "false", then a RepositoryDocumentException will be
+               thrown, forcing the document to be skipped. The default value
+               for the useAuthzOnAclError property is "false".
+
+               See also the fix to Issue 10783874 below.
+
+Issue 9364617: If last modified date was older than creation date filesystem
+               connector would feed creation date as the last modified date.
+               This would occur if files were copied or moved accross Microsoft
+               Windows filesystems.
+
+Issue 9654305: Traversal stops if file name contains line terminator characters.
+               Users may include newlines and other line separator characters
+               in their file names. This caused the pattern matcher for the 
+               include and exclude patterns to throw NullPointerException.
+
+               Filenames that contained these line terminators would fail:
+                 - carriage-return character ('\r')
+                 - newline (line feed) character ('\n')
+                 - next-line character ('\u0085')
+                 - line-separator character ('\u2028')
+                 - paragraph-separator character ('\u2029)
+
+               If customers actually want to include these characters in their
+               include or exclude patterns, they will need to specify the URL
+               escaped, UTF-8 encodings of the characters in the patterns:
+                 - carriage-return character ('\r')     %0D
+                 - newline (line feed) character ('\n') %0A
+                 - next-line character ('\u0085')       %C2%85
+                 - line-separator character ('\u2028')  %E2%80%A8
+                 - paragraph-separator ('\u2029)        %E2%80%A9
+
+               Google recommends you use regexpIgnoreCase to catch upper- and
+               lower-case representations of the hex encodings.
+
+Issue 10149530: Connector cannot retrieve ACLs from EMC Isilon storage system.
+
+Issue 10783874: Improve error handling for "All pipe instances are busy" errors.
+                The connector now interprets these as intermittent availability
+                issues with the file server, typically due to excess load.
+                The connector will stop traversals for a short period, then
+                reattempt access to the failed files.
+
+Manual upgrade instructions
+---------------------------
+Note that this release includes a new jcifs.jar, which in addition to the new
+connector-filesystem.jar, should be copied to the Tomcat deployment directory:
+webapps/connector-manager/WEB-INF/lib.
+
+
 Release 3.2.0, 12 July 2013
 ===========================
 

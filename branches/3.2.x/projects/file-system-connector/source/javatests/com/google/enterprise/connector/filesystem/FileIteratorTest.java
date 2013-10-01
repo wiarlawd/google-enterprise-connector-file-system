@@ -47,6 +47,43 @@ public class FileIteratorTest extends TestCase {
     propertyManager = new TestFileSystemPropertyManager();
   }
 
+  /** Test FileIterator.pushBack() */
+  public void testPushBack() throws Exception {
+    MockDirectoryBuilder builder = new MockDirectoryBuilder();
+    MockReadonlyFile root = builder.addDir(
+        MockDirectoryBuilder.CONFIGURE_FILE_ALL, null,
+        "/foo/bar", "f1", "f2");
+
+    @SuppressWarnings("unchecked") DocumentContext context =
+        new DocumentContext(null, null, null, mimeTypeDetector, propertyManager,
+                            null, Collections.singletonList("/"),
+                            (List<String>) Collections.EMPTY_LIST);
+    context.setTraversalContext(traversalContext);
+
+    FileIterator it = new FileIterator(root, context, 0L, false);
+
+    ReadonlyFile<?> file = it.next();
+    assertNotNull(file);
+    assertEquals("f1", file.getName());
+    it.pushBack(file);
+
+    file = it.next();
+    assertNotNull(file);
+    assertEquals("f1", file.getName());
+
+    file = it.next();
+    assertNotNull(file);
+    assertEquals("f2", file.getName());
+
+    assertNull(it.next());
+    it.pushBack(file);
+
+    file = it.next();
+    assertNotNull(file);
+    assertEquals("f2", file.getName());
+    assertNull(it.next());
+  }        
+
   public void testFullTraversal() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
         public boolean configure(MockReadonlyFile file) {

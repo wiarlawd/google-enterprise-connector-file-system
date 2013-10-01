@@ -928,6 +928,10 @@ public class SmbAclBuilderTest extends TestCase {
       return true;
     }
 
+    public boolean useAuthzOnAclError() {
+      return false;
+    }
+
     public String getGlobalNamespace() {
       return globalNamespace;
     }
