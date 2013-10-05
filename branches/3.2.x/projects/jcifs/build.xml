@@ -1,7 +1,7 @@
 <project name="jcifs" default="usage" basedir=".">
 
-    <property name="version" value="1.3.17.5"/>
-    <property name="reldate" value="November 16, 2012"/>
+    <property name="version" value="1.3.17.6"/>
+    <property name="reldate" value="23 August 2013"/>
 
     <!-- Google-modified build properties. -->
     <property file="${user.home}/google-enterprise-connector-filesystem.properties" />
@@ -38,7 +38,12 @@ dependencies: Checks that all class dependencies are met.
     checksum: Creates MD5 checksums of the .zip and .tgz
               distributions.
 
-       usage: Displays this message.</echo>
+       usage: Displays this message.
+
+For Google builds, use the "clean" and "jar" targets. If needed,
+build "docs" and "javadocs" separately and check in the new
+documentation as a stand-alone change.
+        </echo>
     </target>
 
     <target name="hasServlet" unless="hasServlet">
@@ -88,14 +93,15 @@ dependencies: Checks that all class dependencies are met.
                 <attribute name="Implementation-Version"
                            value="${version} (${TODAY})"/>
                 <attribute name="Google-Modified"
-                           value="Added set last access time capability. Fix threading issue in UniAddress. Fix file handle leak in SmbFile. Detect DCE RPC interface using English locale. Fix deadlock in Dfs. Retry bad connections in SmbFile."/>
+                           value="Added set last access time capability. Fix threading issue in UniAddress. Fix file handle leak in SmbFile. Detect DCE RPC interface using English locale. Fix deadlock in Dfs. Retry bad connections in SmbFile. Adjust NtTransaction padding to accomodate variations in vendor implementations."/>
             </manifest>
         </jar>
     </target>
 
     <target name="javadoc">
-        <delete dir="docs/api" quiet="true"/>
-        <mkdir dir="docs/api"/>
+        <delete quiet="true">
+          <fileset dir="docs/api" includes="**/*.html"/>
+        </delete>
         <javadoc destdir="docs/api" overview="docs/overview.html" author="true" version="true" use="true" windowtitle="JCIFS API">
             <fileset dir="src">
                 <include name="jcifs/Config.java"/>
@@ -147,7 +153,9 @@ dependencies: Checks that all class dependencies are met.
                 <include name="jcifs-${version}.jar"/>
             </fileset>
         </delete>
-        <delete dir="docs/api" quiet="true"/>
+        <delete quiet="true">
+          <fileset dir="docs/api" includes="**/*.html"/>
+        </delete>
         <delete quiet="true">
             <fileset dir="docs">
                 <include name="index.html"/>

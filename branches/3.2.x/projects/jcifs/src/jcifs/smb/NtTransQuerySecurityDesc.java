@@ -33,8 +33,15 @@ class NtTransQuerySecurityDesc extends SmbComNtTransaction {
         setupCount = 0;
         totalDataCount = 0;
         maxParameterCount = 4;
-        maxDataCount = 32768;
+        //maxDataCount = 32768;
+        maxDataCount = 65536;
         maxSetupCount = (byte)0x00;
+    }
+
+    // SMC: Override the padding in the base class only for this message
+    // to accomodate some variations in other vendors' implementations.
+    public int getPadding() {
+        return 4;
     }
 
     int writeSetupWireFormat( byte[] dst, int dstIndex ) {
