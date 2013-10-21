@@ -36,6 +36,7 @@ public class NtlmContext {
     int ntlmsspFlags;
     String workstation;
     boolean isEstablished = false;
+    boolean doSigning = false;
     byte[] serverChallenge = null;
     byte[] signingKey = null;
     String netbiosName = null;
@@ -44,6 +45,7 @@ public class NtlmContext {
 
     public NtlmContext(NtlmPasswordAuthentication auth, boolean doSigning) {
         this.auth = auth;
+        this.doSigning = doSigning;
         this.ntlmsspFlags = ntlmsspFlags |
                 NtlmFlags.NTLMSSP_REQUEST_TARGET |
                 NtlmFlags.NTLMSSP_NEGOTIATE_NTLM2 |
@@ -143,6 +145,9 @@ public class NtlmContext {
 
                     serverChallenge = msg2.getChallenge();
                     ntlmsspFlags &= msg2.getFlags();
+                    if (doSigning) {
+                        ntlmsspFlags |= NtlmFlags.NTLMSSP_NEGOTIATE_SIGN;
+                    }
 
 //                  netbiosName = getNtlmsspListItem(token, 0x0001);
 
