@@ -22,19 +22,19 @@ import com.google.enterprise.connector.spi.RepositoryException;
 public abstract class AbstractFileSystemType<T extends ReadonlyFile<T>>
     implements FileSystemType<T> {
 
-  /* @Override */
+  @Override
   public abstract T getFile(String path, Credentials credentials)
       throws RepositoryException;
 
-  /* @Override */
+  @Override
   public abstract String getName();
 
-  /* @Override */
+  @Override
   public boolean isPath(String path) {
     return (path == null) ? false : path.startsWith("/");
   }
 
-  /* @Override */
+  @Override
   public T getReadableFile(String path, Credentials credentials)
       throws RepositoryException {
     if (!isPath(path)) {
@@ -51,7 +51,7 @@ public abstract class AbstractFileSystemType<T extends ReadonlyFile<T>>
     return result;
   }
 
-  /* @Override */
+  @Override
   public boolean isUserPasswordRequired() {
     return false;
   }

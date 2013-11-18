@@ -41,17 +41,17 @@ public class Credentials implements AuthenticationIdentity {
     this.ntlmCredentials = null;
   }
 
-  /* @Override */
+  @Override
   public String getDomain() {
     return domain;
   }
 
-  /* @Override */
+  @Override
   public String getPassword() {
     return password;
   }
 
-  /* @Override */
+  @Override
   public String getUsername() {
     return userName;
   }

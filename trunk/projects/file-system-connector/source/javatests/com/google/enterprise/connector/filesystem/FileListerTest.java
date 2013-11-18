@@ -625,7 +625,7 @@ public class FileListerTest extends TestCase {
 
   private static class RecordingDocumentAcceptor extends ArrayList<FileDocument>
       implements DocumentAcceptor {
-    /* @Override */
+    @Override
     public void take(Document document)
         throws DocumentAcceptorException, RepositoryException {
       if (document instanceof FileDocument) {
@@ -640,10 +640,10 @@ public class FileListerTest extends TestCase {
       }
     }
 
-    /* @Override */
+    @Override
     public void flush() {}
 
-    /* @Override */
+    @Override
     public void cancel() {}
   }
 

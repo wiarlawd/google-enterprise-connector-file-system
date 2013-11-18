@@ -77,7 +77,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
    * @return a list of authorizations for document IDs.
    */
   // TODO: This will require work for non-SMB files.
-  /* @Override */
+  @Override
   public List<AuthorizationResponse> authorizeDocids(Collection<String> docIds,
       AuthenticationIdentity identity) throws RepositoryException {
     LOG.info("User name passed is : " + getShowString(identity.getUsername(),

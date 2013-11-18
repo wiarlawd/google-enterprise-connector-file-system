@@ -33,12 +33,12 @@ public class WindowsFileDelegate extends JavaFileDelegate
     super(f, name);
   }
 
-  /* @Override */
+  @Override
   public FileTime getLastAccessTime() throws IOException {
     return WindowsFileTimeUtil.getFileAccessTime(getAbsolutePath());
   }
 
-  /* @Override */
+  @Override
   public void setLastAccessTime(FileTime accessTime) throws IOException {
     WindowsFileTimeUtil.setFileAccessTime(getAbsolutePath(), accessTime);
   }

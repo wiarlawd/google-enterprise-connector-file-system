@@ -117,12 +117,12 @@ public class FileDocument implements Document {
     fetchProperties();
   }
 
-  /* @Override */
+  @Override
   public Set<String> getPropertyNames() {
     return Collections.unmodifiableSet(properties.keySet());
   }
 
-  /* @Override */
+  @Override
   public Property findProperty(String name) throws RepositoryException {
     // Delay fetching Content and MimeType until they are actually requested.
     // Retriever might not fetch content in the case of IfModifiedSince.

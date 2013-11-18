@@ -56,40 +56,40 @@ public class ExceptionalFileDelegate implements FileDelegate {
     }
   }
 
-  /* @Override */
+  @Override
   public String getPath() {
     return delegate.getPath();
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return delegate.getName();
   }
 
-  /* @Override */
+  @Override
   public String getParent() {
     return delegate.getParent();
   }
 
-  /* @Override */
+  @Override
   public boolean exists() throws IOException {
     maybeThrowIOException(Where.EXISTS);
     return delegate.exists();
   }
 
-  /* @Override */
+  @Override
   public boolean isDirectory() throws IOException {
     maybeThrowIOException(Where.IS_DIRECTORY);
     return delegate.isDirectory();
   }
 
-  /* @Override */
+  @Override
   public boolean isFile() throws IOException {
     maybeThrowIOException(Where.IS_FILE);
     return delegate.isFile();
   }
 
-  /* @Override */
+  @Override
   public long length() throws IOException {
     maybeThrowIOException(Where.LENGTH);
     return delegate.length();
@@ -101,7 +101,7 @@ public class ExceptionalFileDelegate implements FileDelegate {
     return delegate.lastModified();
   }
 
-  /* @Override */
+  @Override
   public boolean canRead() throws IOException {
     maybeThrowIOException(Where.CAN_READ);
     return delegate.canRead();
@@ -113,24 +113,24 @@ public class ExceptionalFileDelegate implements FileDelegate {
     return delegate.isHidden();
   }
 
-  /* @Override */
+  @Override
   public String[] list() throws IOException {
     maybeThrowIOException(Where.LIST);
     return delegate.list();
   }
 
-  /* @Override */
+  @Override
   public InputStream getInputStream() throws IOException {
     maybeThrowIOException(Where.GET_INPUT_STREAM);
     return delegate.getInputStream();
   }
 
-  /* @Override */
+  @Override
   public boolean equals(Object obj) {
     return delegate.equals(obj);
   }
 
-  /* @Override */
+  @Override
   public int hashCode() {
     return delegate.hashCode();
   }

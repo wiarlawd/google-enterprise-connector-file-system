@@ -113,17 +113,17 @@ public class FileConnectorType implements ConnectorType {
     }
 
     /* Fulfills Field interface except for getSnippet which requires value. */
-    /* @Override */
+    @Override
     public String getName() {
       return name;
     }
 
-    /* @Override */
+    @Override
     public boolean isMandatory() {
       return mandatory;
     }
 
-    /* @Override */
+    @Override
     public String getLabel(ResourceBundle bundle) {
       return bundle.getString(getName());
     }
@@ -671,21 +671,21 @@ public class FileConnectorType implements ConnectorType {
     return resourceBundle;
   }
 
-  /* @Override */
+  @Override
   public ConfigureResponse getConfigForm(Locale locale) {
     ResourceBundle resourceBundle = getResourceBundle(locale);
     FormManager formManager = new FormManager(EMPTY_CONFIG, resourceBundle, pathParser);
     return new ConfigureResponse("", formManager.getFormRows(null));
   }
 
-  /* @Override */
+  @Override
   public ConfigureResponse getPopulatedConfigForm(Map<String, String> config, Locale locale) {
     FormManager formManager = new FormManager(config, getResourceBundle(locale), pathParser);
     ConfigureResponse res = new ConfigureResponse("", formManager.getFormRows(null));
     return res;
   }
 
-  /* @Override */
+  @Override
   public ConfigureResponse validateConfig(Map<String, String> config, Locale locale,
       ConnectorFactory factory) {
     FormManager formManager = new FormManager(config, getResourceBundle(locale), pathParser);

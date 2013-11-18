@@ -33,7 +33,7 @@ public class JavaFileDelegate extends File implements FileDelegate {
     super(f, name);
   }
 
-  /* @Override */
+  @Override
   public InputStream getInputStream() throws IOException {
     return new BufferedInputStream(new FileInputStream(this));
   }

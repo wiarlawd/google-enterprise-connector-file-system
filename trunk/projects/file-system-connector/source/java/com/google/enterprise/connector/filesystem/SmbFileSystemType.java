@@ -119,7 +119,7 @@ public class SmbFileSystemType extends AbstractFileSystemType<SmbReadonlyFile> {
    * @throws IllegalArgumentException if {@link #isPath} returns false for
    * path.
    */
-  /* @Override */
+  @Override
   public SmbReadonlyFile getReadableFile(final String smbStylePath,
       final Credentials credentials)
       throws RepositoryException, WrongSmbTypeException {

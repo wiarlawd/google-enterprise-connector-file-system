@@ -42,13 +42,13 @@ class FileRetriever implements Retriever, TraversalContextAware {
     this.context = context;
   }
 
-  /* @Override */
+  @Override
   public void setTraversalContext(TraversalContext traversalContext) {
     this.traversalContext = traversalContext;
     context.setTraversalContext(traversalContext);
   }
 
-  /* @Override */
+  @Override
   public InputStream getContent(String docid) throws RepositoryException {
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.finest("Retrieving content for " + docid);
@@ -69,7 +69,7 @@ class FileRetriever implements Retriever, TraversalContextAware {
     return null;
   }
 
-  /* @Override */
+  @Override
   public Document getMetaData(String docid) throws RepositoryException {
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.finest("Retrieving meta-data for " + docid);

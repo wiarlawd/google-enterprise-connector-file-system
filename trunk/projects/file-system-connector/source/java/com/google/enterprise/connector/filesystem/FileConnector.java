@@ -42,32 +42,32 @@ public class FileConnector
     this.retriever = retriever;
   }
 
-  /* @Override */
+  @Override
   public Session login() {
     return this;
   }
 
-  /* @Override */
+  @Override
   public AuthenticationManager getAuthenticationManager() {
     return null;
   }
 
-  /* @Override */
+  @Override
   public AuthorizationManager getAuthorizationManager() {
     return authorizationManager;
   }
 
-  /* @Override */
+  @Override
   public TraversalManager getTraversalManager() {
     return null;
   }
 
-  /* @Override */
+  @Override
   public Lister getLister() {
     return lister;
   }
 
-  /* @Override */
+  @Override
   public Retriever getRetriever() {
     return retriever;
   }
