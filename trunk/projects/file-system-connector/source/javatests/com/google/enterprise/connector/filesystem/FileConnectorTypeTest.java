@@ -298,7 +298,7 @@ public class FileConnectorTypeTest extends TestCase {
     assertTrue(snippet.contains(RED_OFF));
   }
 
-  public void filterEmptyUserEnteredList() {
+  public void testFilterEmptyUserEnteredList() {
     final List<String> empty = ImmutableList.of();
     List<String> result = FileConnectorType.filterUserEnteredList(empty);
     assertEquals(0, result.size());

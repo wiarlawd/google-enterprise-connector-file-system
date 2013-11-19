@@ -259,7 +259,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
   }
 
   @Override
-    public boolean hasInheritedAcls() throws RepositoryException, IOException {
+  public boolean hasInheritedAcls() throws RepositoryException, IOException {
     return (inheritedAcl != null) || (containerInheritAcl != null)
            || (fileInheritAcl != null);
   }
@@ -442,6 +442,7 @@ public class MockReadonlyFile implements ReadonlyFile<MockReadonlyFile> {
     fileSystemType = type;
   }
 
+  @Override
   public boolean acceptedBy(FilePatternMatcher matcher) {
     return matcher.acceptName(getPath());
   }

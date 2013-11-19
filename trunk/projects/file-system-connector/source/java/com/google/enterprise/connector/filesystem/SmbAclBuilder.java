@@ -52,6 +52,7 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
    * INHERITED from up the chain.
    */
   protected static Predicate<ACE> isContainerInheritAce = new Predicate<ACE>() {
+    @Override
     public boolean apply(ACE ace) {
       int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED
                  | ACE.FLAGS_NO_PROPAGATE;
@@ -65,6 +66,7 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
    * get inherited by a file. We also exclude ACEs INHERITED from up the chain.
    */
   protected static Predicate<ACE> isObjectInheritAce = new Predicate<ACE>() {
+    @Override
     public boolean apply(ACE ace) {
       int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED;
       return (ace.getFlags() & mask) == ACE.FLAGS_OBJECT_INHERIT;
@@ -79,6 +81,7 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
    */
   protected static Predicate<ACE> isContainerInheritedAce =
     new Predicate<ACE>() {
+      @Override
       public boolean apply(ACE ace) {
         int mask = ACE.FLAGS_OBJECT_INHERIT | ACE.FLAGS_INHERITED
                    | ACE.FLAGS_NO_PROPAGATE;
@@ -91,6 +94,7 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
    * Returns true if the associated {@link ACE} is INHERITED.
    */
   protected static Predicate<ACE> isInheritedAce = new Predicate<ACE>() {
+    @Override
     public boolean apply(ACE ace) {
       return (ace.getFlags() & ACE.FLAGS_INHERITED) == ACE.FLAGS_INHERITED;
     }
@@ -101,6 +105,7 @@ class SmbAclBuilder extends AbstractSmbAclBuilder {
    * node, not inherited from another node.
    */
   protected static Predicate<ACE> isDirectAce = new Predicate<ACE>() {
+    @Override
     public boolean apply(ACE ace) {
       return (ace.getFlags() & ACE.FLAGS_INHERITED) == 0;
     }

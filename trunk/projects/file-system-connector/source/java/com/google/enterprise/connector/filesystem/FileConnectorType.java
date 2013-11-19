@@ -146,7 +146,9 @@ public class FileConnectorType implements ConnectorType {
       return tdStart + labelHtml + tdEnd;
     }
 
-    public abstract String getSnippet(ResourceBundle bundle, boolean hightlighError);
+    @Override
+    public abstract String getSnippet(ResourceBundle bundle,
+        boolean highlightError);
 
     /** @param config immutable Map of configuration parameters */
     abstract void setValueFrom(Map<String, String> config);

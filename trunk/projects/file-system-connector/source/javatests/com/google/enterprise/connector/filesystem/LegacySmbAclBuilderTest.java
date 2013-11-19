@@ -459,37 +459,47 @@ public class LegacySmbAclBuilderTest extends TestCase {
         this.userAclFormat = userAclFormat;
     }
 
+    @Override
     public String getAceSecurityLevel() {
         return aceLevel;
     }
 
+    @Override
     public String getGroupAclFormat() {
         return groupAclFormat;
     }
 
+    @Override
     public String getUserAclFormat() {
         return userAclFormat;
     }
+
+    @Override
     public boolean isMarkAllDocumentsPublic() {
       return false;
     }
 
+    @Override
     public boolean isPushAcls() {
       return true;
     }
 
+    @Override
     public boolean supportsInheritedAcls() {
       return false;
     }
 
+    @Override
     public boolean useAuthzOnAclError() {
       return false;
     }
 
+    @Override
     public String getGlobalNamespace() {
       return null;
     }
 
+    @Override
     public String getLocalNamespace() {
       return null;
     }

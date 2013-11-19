@@ -904,38 +904,47 @@ public class SmbAclBuilderTest extends TestCase {
       this.localNamespace = localNamespace;
     }
 
+    @Override
     public String getAceSecurityLevel() {
         return aceLevel;
     }
 
+    @Override
     public String getGroupAclFormat() {
         return groupAclFormat;
     }
 
+    @Override
     public String getUserAclFormat() {
         return userAclFormat;
     }
 
+    @Override
     public boolean isMarkAllDocumentsPublic() {
       return false;
     }
 
+    @Override
     public boolean isPushAcls() {
       return true;
     }
 
+    @Override
     public boolean supportsInheritedAcls() {
       return true;
     }
 
+    @Override
     public boolean useAuthzOnAclError() {
       return false;
     }
 
+    @Override
     public String getGlobalNamespace() {
       return globalNamespace;
     }
 
+    @Override
     public String getLocalNamespace() {
       return localNamespace;
     }

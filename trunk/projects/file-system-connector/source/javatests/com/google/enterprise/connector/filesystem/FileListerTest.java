@@ -246,6 +246,7 @@ public class FileListerTest extends TestCase {
 
   private void testFeedNoDirectories(boolean pushAcls) throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) throws Exception {
           return file.isRegularFile();
         }
@@ -268,6 +269,7 @@ public class FileListerTest extends TestCase {
     traversalContext.setMaxDocumentSize(maxSizeData.length());
 
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if (file.getName().contains("TooBig")) {
             file.setFileContents(tooBigData);
@@ -297,6 +299,7 @@ public class FileListerTest extends TestCase {
   public void testFilterExcludedFile() throws Exception {
     List<String> exclude = ImmutableList.of("excluded.txt$");
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           return !"excluded.txt".equals(file.getName());
         }
@@ -310,6 +313,7 @@ public class FileListerTest extends TestCase {
 
   public void testFilterIOException() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("fail1".equals(file.getName())) {
             file.setException(MockReadonlyFile.Where.LENGTH,
@@ -327,6 +331,7 @@ public class FileListerTest extends TestCase {
 
   public void testFilterUnreadable() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("fail1".equals(file.getName())) {
             file.setCanRead(false);
@@ -343,6 +348,7 @@ public class FileListerTest extends TestCase {
 
   public void testFilterHiddenFile() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("fail1".equals(file.getName())) {
             file.setIsHidden(true);
@@ -359,6 +365,7 @@ public class FileListerTest extends TestCase {
 
   public void testFilterHiddenDirectory() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("hidden".equals(file.getName())) {
             file.setIsHidden(true);
@@ -376,6 +383,7 @@ public class FileListerTest extends TestCase {
 
   public void testNotFilterHiddenStartPoint() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("hidden".equals(file.getName()) ||
               "/share".equals(file.getName())) {
@@ -395,6 +403,7 @@ public class FileListerTest extends TestCase {
 
   public void testFilterNotRegularFile() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("PRN:".equals(file.getName())) {
             // Its not a directory, but not a regular file either.
@@ -415,6 +424,7 @@ public class FileListerTest extends TestCase {
     traversalContext.setMimeTypeSet(mimeTypes);
 
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           return !file.getName().endsWith(".avi");
         }
@@ -427,6 +437,7 @@ public class FileListerTest extends TestCase {
 
   public void testRootNotExists() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if (file.getParent() == null) {
             file.setExists(false);
@@ -442,6 +453,7 @@ public class FileListerTest extends TestCase {
 
   public void testRootNoAccess() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if (file.getParent() == null) {
             file.setCanRead(false);
@@ -457,6 +469,7 @@ public class FileListerTest extends TestCase {
 
   public void testRootOffLine() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if (file.getParent() == null) {
             file.setException(MockReadonlyFile.Where.ALL,
@@ -486,6 +499,7 @@ public class FileListerTest extends TestCase {
 
   private void testRootListFilesException(final Exception e) throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if (file.getParent() == null) {
             file.setException(MockReadonlyFile.Where.LIST_FILES, e);
@@ -513,6 +527,7 @@ public class FileListerTest extends TestCase {
   private void testNonRootListFilesException(final Exception e)
       throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("bad-dir".equals(file.getName())) {
             file.setException(MockReadonlyFile.Where.LIST_FILES, e);
@@ -529,6 +544,7 @@ public class FileListerTest extends TestCase {
 
   public void testNonRootDocumentAccessException() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if ("top-secret".equals(file.getName())) {
             file.setCanRead(false);

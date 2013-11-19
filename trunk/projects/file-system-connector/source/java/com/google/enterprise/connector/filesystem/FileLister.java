@@ -355,6 +355,7 @@ class FileLister implements Lister, TraversalContextAware,
       this.ndc = NDC.peek();
     }
 
+    @Override
     public Void call() throws Exception {
       NDC.clear();
       NDC.push(ndc);

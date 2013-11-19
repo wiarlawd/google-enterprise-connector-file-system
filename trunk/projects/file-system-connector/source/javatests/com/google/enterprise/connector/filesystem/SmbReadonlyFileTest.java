@@ -327,9 +327,11 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   public void testGetAclUseAuthzOnAclError() throws Exception {
     propertyFetcher.setUseAuthzOnAclError(true);
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getAcl()).andThrow(smbException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           assertEquals(Acl.USE_HEAD_REQUEST, file.getAcl());
         }
@@ -339,12 +341,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   public void testGetAclNotUseAuthzOnAclError() throws Exception {
     propertyFetcher.setUseAuthzOnAclError(false);
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getAcl()).andThrow(smbException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return SmbException.class;
         }
@@ -353,12 +358,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetAclServerDownException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getAcl()).andThrow(serverDownException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return RepositoryException.class;
         }
@@ -367,12 +375,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetAclIoException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getAcl()).andThrow(ioException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return ioException.getClass();
         }
@@ -382,9 +393,11 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   public void testGetInheritedAclUseAuthzOnAclError() throws Exception {
     propertyFetcher.setUseAuthzOnAclError(true);
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getInheritedAcl()).andThrow(smbException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           assertEquals(Acl.USE_HEAD_REQUEST, file.getInheritedAcl());
         }
@@ -394,12 +407,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
   public void testGetInheritedAclNotUseAuthzOnAclError() throws Exception {
     propertyFetcher.setUseAuthzOnAclError(false);
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getInheritedAcl()).andThrow(smbException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getInheritedAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return SmbException.class;
         }
@@ -408,12 +424,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetInheritedAclServerDownException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getInheritedAcl()).andThrow(serverDownException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getInheritedAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return RepositoryException.class;
         }
@@ -422,12 +441,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetInheritedAclIoException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getInheritedAcl()).andThrow(ioException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getInheritedAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return ioException.getClass();
         }
@@ -436,12 +458,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetShareAclSmbException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getShareAcl()).andThrow(smbException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getShareAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return smbException.getClass();
         }
@@ -450,12 +475,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetShareAclServerDownException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getShareAcl()).andThrow(serverDownException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getShareAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return RepositoryException.class;
         }
@@ -464,12 +492,15 @@ public class SmbReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetShareAclIoException() throws Exception {
     testAclException(new CheckAclException() {
+        @Override
         public void configure(AclBuilder builder) throws Exception {
           expect(builder.getShareAcl()).andThrow(ioException);
         }
+        @Override
         public void test(TestSmbReadonlyFile file) throws Exception {
           file.getShareAcl();
         }
+        @Override
         public Class<? extends Exception>getExpectedException() {
           return ioException.getClass();
         }

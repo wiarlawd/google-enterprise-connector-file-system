@@ -98,12 +98,15 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testExistsException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.exists()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.exists();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return RepositoryDocumentException.class;
         }
@@ -112,12 +115,15 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testCanReadException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.canRead()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.canRead();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return RepositoryDocumentException.class;
         }
@@ -126,12 +132,15 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testIsHiddenException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.isHidden()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.isHidden();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return RepositoryDocumentException.class;
         }
@@ -140,12 +149,15 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testIsDirectoryException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.isDirectory()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.isDirectory();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return RepositoryDocumentException.class;
         }
@@ -154,12 +166,15 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testIsRegularFileException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.isFile()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.isRegularFile();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return RepositoryDocumentException.class;
         }
@@ -168,12 +183,15 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetLastModifiedFileException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.lastModified()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.getLastModified();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
@@ -182,13 +200,16 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetInputStreamException1() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.isFile()).andStubReturn(true);
           expect(delegate.getInputStream()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.getInputStream();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
@@ -197,13 +218,16 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testGetInputStreamException2() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.isFile()).andStubReturn(false);
           expect(delegate.getInputStream()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.getInputStream();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
@@ -212,13 +236,16 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
 
   public void testListFilesException() throws Exception {
     testException(new CheckException() {
+        @Override
         public void configure(FileDelegate delegate) throws Exception {
           expect(delegate.isDirectory()).andStubReturn(true);
           expect(delegate.list()).andThrow(ioe);
         }
+        @Override
         public void test(MockReadonlyFile file) throws Exception {
           file.listFiles();
         }
+        @Override
         public Class<? extends Exception> getExpectedException() {
           return IOException.class;
         }
@@ -276,7 +303,7 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
     }
 
     @Override
-      public MockReadonlyFile newChild(String name) {
+    public MockReadonlyFile newChild(String name) {
       FileDelegate child = AbstractReadonlyFileTest.this
           .getDelegate(absolutePath(getPath(), name));
       return new MockReadonlyFile(type, child);

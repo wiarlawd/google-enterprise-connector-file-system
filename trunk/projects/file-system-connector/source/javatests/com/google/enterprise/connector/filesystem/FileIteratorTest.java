@@ -86,6 +86,7 @@ public class FileIteratorTest extends TestCase {
 
   public void testFullTraversal() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) {
           if (file.getName().contains("newer")) {
             file.setLastModified(NEWER);
@@ -106,6 +107,7 @@ public class FileIteratorTest extends TestCase {
   /** Only return newer files, plus all directories. */
   public void testIncrementalTraversal() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) throws Exception {
           if (file.getName().contains("newer")) {
             file.setLastModified(NEWER);
@@ -124,6 +126,7 @@ public class FileIteratorTest extends TestCase {
   /** If no newer files, still return all directories. */
   public void testIncrementalTraversalNoNewestFiles() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) throws Exception {
           if (file.getName().contains("newer")) {
             file.setLastModified(NEWER);
@@ -152,6 +155,7 @@ public class FileIteratorTest extends TestCase {
 
   private void noDirectoriesTest() throws Exception {
     ConfigureFile configureFile = new ConfigureFile() {
+        @Override
         public boolean configure(MockReadonlyFile file) throws Exception {
           return !file.isDirectory();
         }
