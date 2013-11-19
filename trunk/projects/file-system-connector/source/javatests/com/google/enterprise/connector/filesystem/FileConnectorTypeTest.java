@@ -288,8 +288,11 @@ public class FileConnectorTypeTest extends TestCase {
     ConfigureResponse response = type.validateConfig(config,
         Locale.getDefault(), new MockFileConnectorFactory());
     assertNotNull(response);
-    String errorMessage = "Error: patterns eliminated start path";
-    assertTrue(response.getMessage().contains(errorMessage));
+    String errorMessage = US_BUNDLE.getString(
+        FileSystemConnectorErrorMessages.PATTERNS_ELIMINATED_START_PATH.name())
+        .replace("%1$s", config.get("start_1"));
+    assertTrue(response.getMessage(),
+        response.getMessage().contains(errorMessage));
     String snippet = response.getFormSnippet();
     assertTrue(snippet.contains(RED_ON));
     assertTrue(snippet.contains(RED_OFF));
