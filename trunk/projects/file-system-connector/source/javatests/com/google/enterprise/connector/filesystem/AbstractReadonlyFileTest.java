@@ -14,13 +14,11 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
-
 import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 
-import junit.framework.TestCase;
+import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import java.io.IOException;
 import java.util.Collections;

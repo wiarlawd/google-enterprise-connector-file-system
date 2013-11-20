@@ -14,8 +14,8 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * A {@link FileDelegate} implementation that wraps another FileDelegate,

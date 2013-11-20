@@ -14,8 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import jcifs.smb.ACE;
 import jcifs.smb.SmbAuthException;
 import jcifs.smb.SmbException;

@@ -20,7 +20,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 
 import jcifs.smb.ACE;
-import jcifs.smb.SmbException;
 
 import java.io.IOException;
 import java.util.ArrayList;

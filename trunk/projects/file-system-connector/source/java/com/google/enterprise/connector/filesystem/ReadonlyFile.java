@@ -18,7 +18,6 @@ import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.util.InputStreamFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 /**

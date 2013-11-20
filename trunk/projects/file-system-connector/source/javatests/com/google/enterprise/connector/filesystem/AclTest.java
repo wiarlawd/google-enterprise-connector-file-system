@@ -18,8 +18,8 @@ import com.google.enterprise.connector.spi.Principal;
 
 import junit.framework.TestCase;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;

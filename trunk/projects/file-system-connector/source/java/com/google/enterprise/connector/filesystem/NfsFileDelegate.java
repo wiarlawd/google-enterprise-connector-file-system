@@ -17,8 +17,8 @@ package com.google.enterprise.connector.filesystem;
 import com.sun.xfile.XFile;
 import com.sun.xfile.XFileInputStream;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * An implementation of {@link FileDelegate} that wraps

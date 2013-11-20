@@ -24,8 +24,8 @@ import com.google.enterprise.connector.util.diffing.testing.FakeTraversalContext
 
 import junit.framework.TestCase;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 
