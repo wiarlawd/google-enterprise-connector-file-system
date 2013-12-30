@@ -363,7 +363,7 @@ public class FileConnectorType implements ConnectorType {
     }
 
     String getJavaScriptInitiatingButton(String htmlTableName, ResourceBundle bundle) {
-      String buttonStr = JAVASCRIPT_ESCAPER.escape(bundle.getString(
+      String buttonStr = xmlEncodeAttributeValue(bundle.getString(
           FileSystemConnectorErrorMessages.ADD_ANOTHER_ROW_BUTTON.name()));
       return String.format("<tr><td> </td><td> "
           + "<button id=\"more_%s_button\" type=\"button\" "
