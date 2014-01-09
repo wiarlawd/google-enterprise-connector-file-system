@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.enterprise.connector.spi.ConfigureResponse;
+import com.google.enterprise.connector.util.connectortype.ConnectorFields.Field;
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
 import junit.framework.TestCase;
@@ -109,7 +110,7 @@ public class FileConnectorTypeTest extends TestCase {
 
     // Create a complete configuration. For now, most of the values are nonsense.
     config = Maps.newHashMap();
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       config.put(field.getName(), field.getLabel(US_BUNDLE));
     }
 
@@ -220,7 +221,7 @@ public class FileConnectorTypeTest extends TestCase {
     assertEquals("", response.getMessage());
     String snippet = response.getFormSnippet();
     assertBalancedTags(snippet);
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       assertTrue(snippet.contains(">" + field.getLabel(US_BUNDLE) + "<"));
     }
   }
@@ -237,7 +238,7 @@ public class FileConnectorTypeTest extends TestCase {
 
   public void testValidateIncompleteConfig() {
     // Remove each config key and make sure it fails gracefully.
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       Map<String, String> temporarilyRemoved = Maps.newHashMap();
       Iterator<Map.Entry<String, String>> it = config.entrySet().iterator();
       while (it.hasNext()) {
@@ -267,7 +268,7 @@ public class FileConnectorTypeTest extends TestCase {
         response.getMessage());
     int ix = 0;
     String snippet = response.getFormSnippet();
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       ix = snippet.indexOf(RED_ON, ix);
       assertTrue(ix >= 0);
       ix = snippet.indexOf(field.getLabel(US_BUNDLE), ix);
