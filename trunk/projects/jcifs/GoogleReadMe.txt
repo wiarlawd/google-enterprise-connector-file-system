@@ -4,9 +4,9 @@ If you modify JCIFS here, please follow these guidelines:
 
 0) Make sure you define a build.bootclasspath property in your
    ${user.home}/google-enterprise-connector-filesystem.properties
-   file that points at a Java 1.5 boot classpath.  This allows
+   file that points at a Java 6 boot classpath.  This allows
    the jcifs.jar file to load correctly in deployments running
-   Java 1.5 (which we currently still support).
+   Java 6 (which we currently still support).
 
 1) When building, use the ant targets "clean" and "jar".
    Avoid the targets "all", "jcifs", and "distrib", as they will
