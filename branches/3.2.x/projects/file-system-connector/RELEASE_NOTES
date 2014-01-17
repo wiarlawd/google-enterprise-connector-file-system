@@ -9,6 +9,39 @@ documentation.
 
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
+
+Release 3.2.4, 16 January 2014
+==============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality.
+
+Issues Fixed Since 3.2.2
+------------------------
+5222004 - Error message was unclear when start paths are not accepted
+          by the include or exclude patterns.
+
+9252758 - "Add another row" button label on the configuration form
+          was encoded incorrectly.  This would cause the label to display
+          incorrectly for some language translations.
+
+11308734, 11307394 - Enforce message signing in jCIFS. This improves
+          compatibility with Network Appliance storage systems.
+
+Version Compatibility
+---------------------
+This version of the file system connector requires Connector Manager 3.2.4,
+or later.
+
+Manual upgrade instructions
+---------------------------
+Note that this release includes a new jcifs.jar, which in addition to the new
+connector-filesystem.jar, should be copied to the Tomcat deployment directory:
+webapps/connector-manager/WEB-INF/lib.
+
+
 Release 3.2.2, 01 October 2013
 ==============================
 
@@ -19,7 +52,6 @@ new functionality.
 
 Issues fixed from last release:
 -------------------------------
-
 Issue 6444005: "All pipe instances are busy" error intermittently strips the ACL
                from a document when the document is fed.  By stripping the ACL,
                authorization for the document falls back to connector 
@@ -109,7 +141,7 @@ Issue 9415184: Connector blocked on I/O when calling MimeTypeDetector.
 
 Version Compatibility
 ---------------------
-This version of the File System Connector requires Connector Manager 3.2.0.
+This version of the file system connector requires Connector Manager 3.2.0.
 This version of the connector requires Java 6 JRE or newer.
 The use of a Java 5 runtime is no longer supported.
 

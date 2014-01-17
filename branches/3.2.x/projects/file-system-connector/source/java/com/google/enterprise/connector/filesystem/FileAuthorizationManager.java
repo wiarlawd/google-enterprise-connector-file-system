@@ -18,7 +18,6 @@ import com.google.common.base.Strings;
 import com.google.enterprise.connector.spi.AuthenticationIdentity;
 import com.google.enterprise.connector.spi.AuthorizationManager;
 import com.google.enterprise.connector.spi.AuthorizationResponse;
-import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.util.ArrayList;
@@ -77,7 +76,7 @@ public class FileAuthorizationManager implements AuthorizationManager {
    * @return a list of authorizations for document IDs.
    */
   // TODO: This will require work for non-SMB files.
-  /* @Override */
+  @Override
   public List<AuthorizationResponse> authorizeDocids(Collection<String> docIds,
       AuthenticationIdentity identity) throws RepositoryException {
     LOG.info("User name passed is : " + getShowString(identity.getUsername(),

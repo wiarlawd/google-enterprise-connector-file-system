@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.enterprise.connector.spi.ConfigureResponse;
+import com.google.enterprise.connector.util.connectortype.ConnectorFields.Field;
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
 import junit.framework.TestCase;
@@ -42,8 +43,6 @@ import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- */
 public class FileConnectorTypeTest extends TestCase {
   // These patterns are not general.
   private static final Pattern O_TAG = Pattern.compile("<(\\w+)[^>]*>");
@@ -51,11 +50,19 @@ public class FileConnectorTypeTest extends TestCase {
   private static final Pattern TAG = Pattern.compile(String.format("(%s)|(%s)",
       O_TAG, C_TAG));
   private static final Pattern TAG_NAME = Pattern.compile("</?(\\w+)[^>]*>");
+
   private static final ResourceBundle US_BUNDLE =
       ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME, Locale.US);
+
   private static final ResourceBundle FR_BUNDLE =
       ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME,
           Locale.FRANCE);
+
+  private static final Locale TURKISH = new Locale("tr");
+
+  private static final ResourceBundle TR_BUNDLE =
+      ResourceBundle.getBundle(FileConnectorType.RESOURCE_BUNDLE_NAME,
+          TURKISH);
 
   private Map<String, String> config;
   private FileConnectorType type;
@@ -103,7 +110,7 @@ public class FileConnectorTypeTest extends TestCase {
 
     // Create a complete configuration. For now, most of the values are nonsense.
     config = Maps.newHashMap();
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       config.put(field.getName(), field.getLabel(US_BUNDLE));
     }
 
@@ -156,30 +163,50 @@ public class FileConnectorTypeTest extends TestCase {
 
   /*
    * TODO(jlacey): This is a fragile test that depends on the presence
-   * of particular French translations in the form snippet.
+   * of particular translations in the form snippet.
    */
-  private void testEscaping(String bundleKey, String bundleValue,
+  private void testEscaping(Locale locale, ResourceBundle bundle,
+      String bundleKey, String bundleValue, String absentValue,
       String escapedValue) {
-    ConfigureResponse response = type.getConfigForm(Locale.FRANCE);
+    ConfigureResponse response = type.getConfigForm(locale);
     assertEquals("", response.getMessage());
 
     // Internal check to make sure the target French translation is still there.
-    assertEquals(bundleValue, FR_BUNDLE.getString(bundleKey));
+    assertEquals(bundleValue, bundle.getString(bundleKey));
 
     String snippet = response.getFormSnippet();
-    assertFalse(snippet, snippet.contains(bundleValue));
-    assertTrue(snippet, snippet.contains(escapedValue));
+    assertFalse("Snippet contains " + absentValue + ": " + snippet,
+        snippet.contains(absentValue));
+    assertTrue("Snippet does not contain " + bundleValue + ": " + snippet,
+        snippet.contains(escapedValue));
   }
 
   public void testEscapedHtml() {
     String bundleValue = "Nom d'utilisateur";
-    testEscaping("user", bundleValue, bundleValue.replace("'", "&#39;"));
+    testEscaping(Locale.FRANCE, FR_BUNDLE, "user", bundleValue, bundleValue,
+        bundleValue.replace("'", "&#39;"));
   }
 
   public void testEscapedJavaScript() {
     String bundleValue = "Impossible d'ajouter une ligne.";
-    testEscaping(FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name(),
-        bundleValue, bundleValue.replace("'", "\\x27"));
+    testEscaping(Locale.FRANCE, FR_BUNDLE,
+        FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name(),
+        bundleValue, bundleValue, bundleValue.replace("'", "\\x27"));
+  }
+
+  public void testEscapedHtmlUnicode() {
+    String bundleValue = "Kullan\u0131c\u0131 ad\u0131";
+    String absentValue = "Kullan\\u0131c\\u0131 ad\\u0131";
+    testEscaping(TURKISH, TR_BUNDLE, "user", bundleValue, absentValue,
+        bundleValue);
+  }
+
+  public void testEscapedJavaScriptUnicode() {
+    String bundleValue = "Ba\u015fka bir sat\u0131r eklenemez";
+    String escapedValue = "Ba\\u015fka bir sat\\u0131r eklenemez";
+    testEscaping(TURKISH, TR_BUNDLE,
+        FileSystemConnectorErrorMessages.CANNOT_ADD_ANOTHER_ROW.name(),
+        bundleValue, bundleValue, escapedValue);
   }
 
   public void testGetPopulatedConfigFormEmptyConfig() {
@@ -194,7 +221,7 @@ public class FileConnectorTypeTest extends TestCase {
     assertEquals("", response.getMessage());
     String snippet = response.getFormSnippet();
     assertBalancedTags(snippet);
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       assertTrue(snippet.contains(">" + field.getLabel(US_BUNDLE) + "<"));
     }
   }
@@ -211,7 +238,7 @@ public class FileConnectorTypeTest extends TestCase {
 
   public void testValidateIncompleteConfig() {
     // Remove each config key and make sure it fails gracefully.
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       Map<String, String> temporarilyRemoved = Maps.newHashMap();
       Iterator<Map.Entry<String, String>> it = config.entrySet().iterator();
       while (it.hasNext()) {
@@ -241,7 +268,7 @@ public class FileConnectorTypeTest extends TestCase {
         response.getMessage());
     int ix = 0;
     String snippet = response.getFormSnippet();
-    for (FileConnectorType.Field field : FileConnectorType.getRequiredFieldsForTesting()) {
+    for (Field field : FileConnectorType.getRequiredFieldsForTesting()) {
       ix = snippet.indexOf(RED_ON, ix);
       assertTrue(ix >= 0);
       ix = snippet.indexOf(field.getLabel(US_BUNDLE), ix);
@@ -288,14 +315,17 @@ public class FileConnectorTypeTest extends TestCase {
     ConfigureResponse response = type.validateConfig(config,
         Locale.getDefault(), new MockFileConnectorFactory());
     assertNotNull(response);
-    String errorMessage = "Error: patterns eliminated start path";
-    assertTrue(response.getMessage().contains(errorMessage));
+    String errorMessage = US_BUNDLE.getString(
+        FileSystemConnectorErrorMessages.PATTERNS_ELIMINATED_START_PATH.name())
+        .replace("%1$s", config.get("start_1"));
+    assertTrue(response.getMessage(),
+        response.getMessage().contains(errorMessage));
     String snippet = response.getFormSnippet();
     assertTrue(snippet.contains(RED_ON));
     assertTrue(snippet.contains(RED_OFF));
   }
 
-  public void filterEmptyUserEnteredList() {
+  public void testFilterEmptyUserEnteredList() {
     final List<String> empty = ImmutableList.of();
     List<String> result = FileConnectorType.filterUserEnteredList(empty);
     assertEquals(0, result.size());

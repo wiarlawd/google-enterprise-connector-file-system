@@ -41,37 +41,37 @@ public class MockLastAccessFileDelegate implements LastAccessFileDelegate {
     this.name = name;
   }
 
-  /* @Override */
+  @Override
   public String getPath() {
     return (parent == null) ? name : parent.getPath() + "/" + name;
   }
 
-  /* @Override */
+  @Override
   public String getName() {
     return name;
   }
 
-  /* @Override */
+  @Override
   public String getParent() {
     return (parent == null) ? null : parent.getPath();
   }
 
-  /* @Override */
+  @Override
   public boolean isDirectory() {
     return true;
   }
 
-  /* @Override */
+  @Override
   public boolean isFile() {
     return true;
   }
 
-  /* @Override */
+  @Override
   public boolean exists() {
     return true;
   }
 
-  /* @Override */
+  @Override
   public boolean canRead() {
     return true;
   }
@@ -81,34 +81,34 @@ public class MockLastAccessFileDelegate implements LastAccessFileDelegate {
     return false;
   }
 
-  /* @Override */
+  @Override
   public long length() {
     return FILE_CONTENTS.length();
   }
 
-  /* @Override */
+  @Override
   public long lastModified() {
     return 1000;
   }
 
-  /* @Override */
+  @Override
   public String[] list() {
     lastAccess += 1000;
     return DIR_CONTENTS;
   }
 
-  /* @Override */
+  @Override
   public InputStream getInputStream() {
     lastAccess += 1000;
     return new ByteArrayInputStream(FILE_CONTENTS.getBytes());
   }
 
-  /* @Override */
+  @Override
   public FileTime getLastAccessTime() {
     return new MockFileTime(lastAccess);
   }
 
-  /* @Override */
+  @Override
   public void setLastAccessTime(FileTime accessTime) {
     lastAccess = ((MockFileTime) accessTime).fileTime;
   }

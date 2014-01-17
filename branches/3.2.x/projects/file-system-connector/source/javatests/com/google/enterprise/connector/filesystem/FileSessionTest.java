@@ -24,7 +24,6 @@ import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import junit.framework.TestCase;
 
-import java.io.IOException;
 import java.util.Collections;
 
 /** Test Session aspect of FileConnector. */

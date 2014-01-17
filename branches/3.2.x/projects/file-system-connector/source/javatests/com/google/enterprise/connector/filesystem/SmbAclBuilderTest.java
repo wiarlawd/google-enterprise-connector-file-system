@@ -14,6 +14,13 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+
 import com.google.common.base.Predicates;
 import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
 import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
@@ -23,24 +30,16 @@ import com.google.enterprise.connector.spi.SpiConstants.AclAccess;
 import com.google.enterprise.connector.spi.SpiConstants.AclScope;
 import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.verify;
+import jcifs.smb.ACE;
+import jcifs.smb.SID;
+
+import junit.framework.TestCase;
 
 import java.io.IOException;
 import java.net.URL;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import jcifs.smb.ACE;
-import jcifs.smb.SID;
-import jcifs.smb.SmbFile;
-import junit.framework.TestCase;
 
 /**
  * Tests for the {@link Acl} class.
@@ -904,38 +903,47 @@ public class SmbAclBuilderTest extends TestCase {
       this.localNamespace = localNamespace;
     }
 
+    @Override
     public String getAceSecurityLevel() {
         return aceLevel;
     }
 
+    @Override
     public String getGroupAclFormat() {
         return groupAclFormat;
     }
 
+    @Override
     public String getUserAclFormat() {
         return userAclFormat;
     }
 
+    @Override
     public boolean isMarkAllDocumentsPublic() {
       return false;
     }
 
+    @Override
     public boolean isPushAcls() {
       return true;
     }
 
+    @Override
     public boolean supportsInheritedAcls() {
       return true;
     }
 
+    @Override
     public boolean useAuthzOnAclError() {
       return false;
     }
 
+    @Override
     public String getGlobalNamespace() {
       return globalNamespace;
     }
 
+    @Override
     public String getLocalNamespace() {
       return localNamespace;
     }

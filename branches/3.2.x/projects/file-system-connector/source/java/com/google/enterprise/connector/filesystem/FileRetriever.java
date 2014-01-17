@@ -15,7 +15,6 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.Document;
-import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.DocumentNotFoundException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
@@ -24,8 +23,8 @@ import com.google.enterprise.connector.spi.SkippedDocumentException;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalContextAware;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,13 +41,13 @@ class FileRetriever implements Retriever, TraversalContextAware {
     this.context = context;
   }
 
-  /* @Override */
+  @Override
   public void setTraversalContext(TraversalContext traversalContext) {
     this.traversalContext = traversalContext;
     context.setTraversalContext(traversalContext);
   }
 
-  /* @Override */
+  @Override
   public InputStream getContent(String docid) throws RepositoryException {
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.finest("Retrieving content for " + docid);
@@ -69,7 +68,7 @@ class FileRetriever implements Retriever, TraversalContextAware {
     return null;
   }
 
-  /* @Override */
+  @Override
   public Document getMetaData(String docid) throws RepositoryException {
     if (LOGGER.isLoggable(Level.FINEST)) {
       LOGGER.finest("Retrieving meta-data for " + docid);

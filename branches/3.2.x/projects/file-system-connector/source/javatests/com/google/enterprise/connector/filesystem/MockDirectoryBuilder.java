@@ -72,7 +72,7 @@ public class MockDirectoryBuilder {
    */
   public List<MockReadonlyFile> getExpected() {
     Collections.sort(expected, new Comparator<MockReadonlyFile>() {
-      /* @Override */
+      @Override
       public int compare(MockReadonlyFile o1, MockReadonlyFile o2) {
         return o1.getPath().compareTo(o2.getPath());
       }

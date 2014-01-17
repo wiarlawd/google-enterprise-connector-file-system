@@ -19,11 +19,11 @@ import com.google.enterprise.connector.filesystem.LastAccessFileDelegate.FileTim
 import com.google.enterprise.connector.spi.RepositoryException;
 
 import java.io.FilterInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

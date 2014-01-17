@@ -33,7 +33,7 @@ public class MockFileConnectorFactory implements ConnectorFactory {
   private FileLister lister;
   private FileRetriever retriever;
 
-  /* @Override */
+  @Override
   public Connector makeConnector(Map<String, String> config)
       throws RepositoryException {
     FileSystemTypeRegistry fileSystemTypeRegistry = new FileSystemTypeRegistry(

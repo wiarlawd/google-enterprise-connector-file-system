@@ -17,12 +17,12 @@ package com.google.enterprise.connector.filesystem;
 import com.google.enterprise.connector.spi.Connector;
 import com.google.enterprise.connector.util.diffing.testing.TestDirectoryManager;
 
+import junit.framework.TestCase;
+
 import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.ClassPathResource;
-
-import junit.framework.TestCase;
 
 import java.io.File;
 import java.util.HashMap;

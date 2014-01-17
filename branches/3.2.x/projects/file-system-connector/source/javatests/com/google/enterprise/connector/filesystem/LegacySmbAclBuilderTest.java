@@ -14,26 +14,27 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
-import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
-import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
-import com.google.enterprise.connector.spi.Principal;
-
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 
+import com.google.enterprise.connector.filesystem.AclBuilder.AceSecurityLevel;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclFormat;
+import com.google.enterprise.connector.filesystem.AclBuilder.AclProperties;
+import com.google.enterprise.connector.spi.Principal;
+
+import jcifs.smb.ACE;
+import jcifs.smb.SID;
+
+import junit.framework.TestCase;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import jcifs.smb.ACE;
-import jcifs.smb.SID;
-import junit.framework.TestCase;
 
 /**
  * Tests for the {@link LegacySmbAclBuilder} class.
@@ -459,37 +460,47 @@ public class LegacySmbAclBuilderTest extends TestCase {
         this.userAclFormat = userAclFormat;
     }
 
+    @Override
     public String getAceSecurityLevel() {
         return aceLevel;
     }
 
+    @Override
     public String getGroupAclFormat() {
         return groupAclFormat;
     }
 
+    @Override
     public String getUserAclFormat() {
         return userAclFormat;
     }
+
+    @Override
     public boolean isMarkAllDocumentsPublic() {
       return false;
     }
 
+    @Override
     public boolean isPushAcls() {
       return true;
     }
 
+    @Override
     public boolean supportsInheritedAcls() {
       return false;
     }
 
+    @Override
     public boolean useAuthzOnAclError() {
       return false;
     }
 
+    @Override
     public String getGlobalNamespace() {
       return null;
     }
 
+    @Override
     public String getLocalNamespace() {
       return null;
     }

@@ -20,7 +20,6 @@ import junit.framework.TestCase;
 
 import java.util.Collections;
 
-
 /** Tests FileConnector; particular emphasis on getTraversalManager. */
 public class FileConnectorTest extends TestCase {
 

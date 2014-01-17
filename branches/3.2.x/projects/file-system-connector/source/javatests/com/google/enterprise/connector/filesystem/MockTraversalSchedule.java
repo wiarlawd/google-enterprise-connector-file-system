@@ -35,19 +35,19 @@ public class MockTraversalSchedule implements TraversalSchedule {
   }
 
   /** Returns the target traversal rate in documents per minute. */
-  /* @Override */
+  @Override
   public int getTraversalRate() {
     return load;
   }
 
   /** Returns the number of seconds to delay after finding no new content. */
-  /* @Override */
+  @Override
   public int getRetryDelay() {
     return retryDelay;
   }
 
   /** Returns {@code true} if the traversal schedule is disabled. */
-  /* @Override */
+  @Override
   public boolean isDisabled() {
     return isDisabled;
   }
@@ -56,7 +56,7 @@ public class MockTraversalSchedule implements TraversalSchedule {
    * Returns {@code true} if the current time is within a scheduled traversal
    * interval.
    */
-  /* @Override */
+  @Override
   public boolean inScheduledInterval() {
     return inInterval;
   }
@@ -64,7 +64,7 @@ public class MockTraversalSchedule implements TraversalSchedule {
   /**
    * Returns the number of seconds until the next scheduled traversal interval.
    */
-  /* @Override */
+  @Override
   public int nextScheduledInterval() {
     return (inInterval) ? 0 : 2;
   }
@@ -73,7 +73,7 @@ public class MockTraversalSchedule implements TraversalSchedule {
    * Returns {@code true} if traversals could run at this time,
    * equivalent to <pre>!isDisabled() && inScheduledInterval()</pre>.
    */
-  /* @Override */
+  @Override
   public boolean shouldRun() {
     return !isDisabled() && inScheduledInterval();
   }

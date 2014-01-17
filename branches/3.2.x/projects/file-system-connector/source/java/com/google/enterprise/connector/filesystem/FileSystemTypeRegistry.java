@@ -58,6 +58,7 @@ public class FileSystemTypeRegistry implements Iterable<FileSystemType<?>> {
   /**
    * Returns an {@link Iterator} for known {@link FileSystemType} objects.
    */
+  @Override
   public Iterator<FileSystemType<?>> iterator() {
     return factories.values().iterator();
   }

@@ -15,9 +15,7 @@
 package com.google.enterprise.connector.filesystem;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.enterprise.connector.spi.RepositoryException;
 
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**

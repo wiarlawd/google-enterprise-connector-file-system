@@ -143,7 +143,7 @@ public abstract class ReadonlyFileTestAbstract<T extends FileSystemType<?>,
     assertEquals(getAbsolutePath(file1), readonlyFile1.toString());
   }
 
-  public String contents(InputStream in) throws IOException {
+  protected String contents(InputStream in) throws IOException {
     StringBuilder result = new StringBuilder();
     byte[] buf = new byte[BUF_SIZE];
     int count = in.read(buf);

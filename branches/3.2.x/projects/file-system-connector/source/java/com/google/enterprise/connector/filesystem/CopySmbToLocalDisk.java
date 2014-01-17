@@ -166,31 +166,37 @@ class CopySmbToLocalDisk {
   }
 
   private static class SmbProperties extends FileSystemPropertyManager {
-
+    @Override
     public String getAceSecurityLevel() {
       return AceSecurityLevel.FILEANDSHARE.name();
     }
 
+    @Override
     public String getGroupAclFormat() {
       return AclFormat.DOMAIN_BACKSLASH_GROUP.getFormat();
     }
 
+    @Override
     public String getUserAclFormat() {
       return AclFormat.DOMAIN_BACKSLASH_USER.getFormat();
     }
 
+    @Override
     public boolean isLastAccessResetFlagForSmb() {
       return false;
     }
 
+    @Override
     public boolean isMarkAllDocumentsPublic() {
       return false;
     }
 
+    @Override
     public boolean isPushAcls() {
       return false;
     }
 
+    @Override
     public boolean supportsInheritedAcls() {
       return false;
     }

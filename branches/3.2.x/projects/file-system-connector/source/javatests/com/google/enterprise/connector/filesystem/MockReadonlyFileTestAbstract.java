@@ -14,21 +14,21 @@
 
 package com.google.enterprise.connector.filesystem;
 
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
 import org.easymock.IAnswer;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -80,6 +80,7 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
     }
   }
 
+  @Override
   protected String getAbsolutePath(F delegate) throws IOException {
     // Look up path in our map of files first.  If found there, return it.
     // Otherwise risk calling a possibly unconfigured mock.
@@ -160,6 +161,7 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
    * @param name the name of the child delegate.
    * @return a FileDelegate for the child.
    */
+  @Override
   protected F getDelegate(F parent, String name) {
     String parentPath = files.inverse().get(parent);
     if (parentPath != null) {
@@ -193,6 +195,7 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
    * @param name the name of the directory to create.
    * @return a FileDelegate for the created directory.
    */
+  @Override
   protected F addDir(F parent, String name) throws IOException {
     String parentPath;
     if (parent == null) {
@@ -216,6 +219,7 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
    * @param name the name of the file to create.
    * @param contents the contents of the file.
    */
+  @Override
   protected F addFile(F parent, String name, String contents)
       throws IOException {
     String parentPath = files.inverse().get(parent);
@@ -236,10 +240,12 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
   /** Answer for FileDelegate.getPath(). */
   private class GetPathAnswer implements IAnswer<String> {
     private final F file;
+
     public GetPathAnswer(F file) {
       this.file = file;
     }
 
+    @Override
     public String answer() {
       return answerGetPath(file);
     }
@@ -264,6 +270,7 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
       this.parentPath = parentPath;
     }
 
+    @Override
     public String answer() {
       return answerGetParent(parent, parentPath);
     }
@@ -277,11 +284,13 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
   private class GetNameAnswer implements IAnswer<String> {
     private final F file;
     private final String name;
+
     public GetNameAnswer(F file, String name) {
       this.file = file;
       this.name = name;
     }
 
+    @Override
     public String answer() {
       return answerGetName(file, name);
     }
@@ -294,6 +303,7 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
       bytes = content.getBytes("UTF-8");
     }
 
+    @Override
     public InputStream answer() {
       return new ByteArrayInputStream(bytes);
     }
@@ -302,10 +312,12 @@ public abstract class MockReadonlyFileTestAbstract<T extends FileSystemType<?>,
   /** Answer for FileDelegate.list(). */
   private class ListAnswer implements IAnswer<String[]> {
     private final F dir;
+
     public ListAnswer(F dir) {
       this.dir = dir;
     }
 
+    @Override
     public String[] answer() throws IOException {
       String path = normalizePath(dir.getPath());
       List<String> children = Lists.newArrayList();

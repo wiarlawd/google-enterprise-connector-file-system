@@ -22,12 +22,9 @@ import com.google.enterprise.connector.spi.Principal;
 import com.google.enterprise.connector.spi.SpiConstants.CaseSensitivityType;
 
 import jcifs.smb.ACE;
-import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SID;
-import jcifs.smb.SmbException;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;

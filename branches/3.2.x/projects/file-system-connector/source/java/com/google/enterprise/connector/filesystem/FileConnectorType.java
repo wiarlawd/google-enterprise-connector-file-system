@@ -22,6 +22,9 @@ import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
 import com.google.enterprise.connector.spi.RepositoryLoginException;
 import com.google.enterprise.connector.spi.XmlUtils;
+import com.google.enterprise.connector.util.connectortype.ConnectorFields.AbstractField;
+import com.google.enterprise.connector.util.connectortype.ConnectorFields.Field;
+import com.google.enterprise.connector.util.connectortype.ConnectorFields.SingleLineField;
 import com.google.gdata.util.common.base.CharEscaper;
 import com.google.gdata.util.common.base.CharEscapers;
 
@@ -42,7 +45,6 @@ import java.util.logging.Logger;
  * Facilitates creating a FileConnector by providing an HTML web form
  * for user configuration.  Provides initial form, performs validation
  * and manages retries by providing error messages.
- *
  */
 public class FileConnectorType implements ConnectorType {
   public static Credentials newCredentials(String domainName, String userName,
@@ -81,154 +83,6 @@ public class FileConnectorType implements ConnectorType {
   * purposefully class private.
   */
 
-  /**
-   * This represents a single configuration field. This interface is
-   * currently only needed so tests do not need access to AbstractField.
-   */
-  static interface Field {
-    String getName();
-
-    boolean isMandatory();
-
-    String getLabel(ResourceBundle bundle);
-
-    /** @return a tr element with two td elements inside for
-     *          Config form
-     */
-    String getSnippet(ResourceBundle bundle, boolean highlightError);
-  }
-
-  /**
-   * Holds information common to fields like their names and ways to
-   * show their name as an HTML label.  Does not hold value of field; instead
-   * subclass has to handle value.
-   */
-  private abstract static class AbstractField implements Field {
-    private final String name;
-    private final boolean mandatory;  // is field necessary for valid configuration?
-
-    public AbstractField(String name, boolean mandatory) {
-      this.name = name;
-      this.mandatory = mandatory;
-    }
-
-    /* Fulfills Field interface except for getSnippet which requires value. */
-    /* @Override */
-    public String getName() {
-      return name;
-    }
-
-    /* @Override */
-    public boolean isMandatory() {
-      return mandatory;
-    }
-
-    /* @Override */
-    public String getLabel(ResourceBundle bundle) {
-      return bundle.getString(getName());
-    }
-
-    /**
-     * Makes HTML that could be used as a field label.
-     * Intended to be helpful inside {@link #getSnippet}.
-     *
-     * @return an HTML td element with a label element inside.
-     */
-    String getLabelHtml(ResourceBundle bundle, boolean highlightError) {
-      String label = xmlEncodeAttributeValue(getLabel(bundle));
-      String labelHtml = String.format("<b><label for=\"%s\">%s</label></b>", getName(), label);
-      String tdStart = "<td valign=\"top\">";
-      String tdEnd = "</td>";
-      if (highlightError) {
-        tdStart = tdStart + "<font color=\"red\">";
-        tdEnd = "</font>" + tdEnd;
-      }
-      return tdStart + labelHtml + tdEnd;
-    }
-
-    public abstract String getSnippet(ResourceBundle bundle, boolean hightlighError);
-
-    /** @param config immutable Map of configuration parameters */
-    abstract void setValueFrom(Map<String, String> config);
-
-    /** Does this field store some user input? */
-    abstract boolean hasValue();
-
-    /**
-     * Returns the provided attribute value with XML special characters
-     * escaped. This really just provides a convenience wrapper around
-     * {@link XmlUtils#xmlAppendAttr}.
-     */
-    protected String xmlEncodeAttributeValue(String v) {
-      try {
-        StringBuilder sb = new StringBuilder();
-        XmlUtils.xmlAppendAttrValue(v, sb);
-        return sb.toString();
-      } catch (IOException ioe) {
-        /*
-         * The IOException can occur because XmlUtils.xmlAppendAttrValue
-         * appends to an Appendable which may throw an IOException. In our case
-         * we pass in a StringBuilder so no  IOException should occur.
-         */
-        LOG.log(Level.SEVERE,
-            "Xml escaping encountered unexpected error ", ioe);
-        throw new IllegalStateException(
-            "Xml escaping encountered unexpected error ", ioe);
-      }
-    }
-  }
-
-  /**
-   * Represents a configurable parameter of FileConnector.  The parameter's
-   * value is gathered using a single HTML input element.
-   */
-  private static class SingleLineField extends AbstractField {
-    private static final String ONE_LINE_INPUT_HTML =
-        "<td><input name=\"%s\" id=\"%s\" type=\"%s\" value=\"%s\"></input></td>";
-
-    private static final String FORMAT = "<tr> %s " + ONE_LINE_INPUT_HTML + "</tr>";
-
-    private final boolean isPassword;
-
-    private final String defaultValue;
-
-    private String value;  // user's one input line value
-
-    SingleLineField(String name, boolean mandatory, boolean isPassword) {
-      this(name, mandatory, isPassword, "");
-    }
-
-    SingleLineField(String name, boolean mandatory, boolean isPassword,
-        String defaultValue) {
-      super(name, mandatory);
-      this.isPassword = isPassword;
-      this.defaultValue = defaultValue;
-      this.value = defaultValue;
-    }
-
-    @Override
-    void setValueFrom(Map<String, String> config) {
-      String newValue = config.get(getName());
-      this.value = hasContent(newValue) ? newValue.trim() : defaultValue;
-    }
-
-    @Override
-    boolean hasValue() {
-      return hasContent(value);
-    }
-
-    @Override
-    public String getSnippet(ResourceBundle bundle, boolean highlightError) {
-      return String.format(FORMAT, getLabelHtml(bundle, highlightError),
-          getName(), getName(),
-          isPassword ? "password" : "text", xmlEncodeAttributeValue(value));
-    }
-
-    String getValue() {
-      return value;
-    }
-  }
-
   // HTML code allowing insertion of javascript
   private static final String SCRIPT_START =
       "<script type=\"text/javascript\"><![CDATA[\n";
@@ -251,7 +105,13 @@ public class FileConnectorType implements ConnectorType {
     }
 
     @Override
-    void setValueFrom(Map<String, String> config) {
+    public void setValueFromString(String valueString) {
+      // TODO(jlacey): Easy enough to implement, but not needed.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setValueFrom(Map<String, String> config) {
       lines = new ArrayList<String>();
       for (int i = 0; i < MAX_INPUT_LINES; i++) {
         String currentName = getName() + "_" + i;
@@ -287,7 +147,7 @@ public class FileConnectorType implements ConnectorType {
     }
 
     @Override
-    boolean hasValue() {
+    public boolean hasValue() {
       return hasAtLeastOneUserValue();
     }
 
@@ -361,7 +221,7 @@ public class FileConnectorType implements ConnectorType {
     }
 
     String getJavaScriptInitiatingButton(String htmlTableName, ResourceBundle bundle) {
-      String buttonStr = JAVASCRIPT_ESCAPER.escape(bundle.getString(
+      String buttonStr = xmlEncodeAttributeValue(bundle.getString(
           FileSystemConnectorErrorMessages.ADD_ANOTHER_ROW_BUTTON.name()));
       return String.format("<tr><td> </td><td> "
           + "<button id=\"more_%s_button\" type=\"button\" "
@@ -405,8 +265,9 @@ public class FileConnectorType implements ConnectorType {
       tempFields.add(domainField = new SingleLineField("domain", false, false));
       tempFields.add(userField = new SingleLineField("user", false, false));
       tempFields.add(passwordField = new SingleLineField("password", false, true));
-      tempFields.add(fullTraversalField =
-          new SingleLineField("fulltraversal", false, false, "1"));
+      fullTraversalField = new SingleLineField("fulltraversal", false, false);
+      fullTraversalField.setDefaultValue("1");
+      tempFields.add(fullTraversalField);
       fields = Collections.unmodifiableList(tempFields);
 
       this.bundle = bundle;
@@ -671,21 +532,21 @@ public class FileConnectorType implements ConnectorType {
     return resourceBundle;
   }
 
-  /* @Override */
+  @Override
   public ConfigureResponse getConfigForm(Locale locale) {
     ResourceBundle resourceBundle = getResourceBundle(locale);
     FormManager formManager = new FormManager(EMPTY_CONFIG, resourceBundle, pathParser);
     return new ConfigureResponse("", formManager.getFormRows(null));
   }
 
-  /* @Override */
+  @Override
   public ConfigureResponse getPopulatedConfigForm(Map<String, String> config, Locale locale) {
     FormManager formManager = new FormManager(config, getResourceBundle(locale), pathParser);
     ConfigureResponse res = new ConfigureResponse("", formManager.getFormRows(null));
     return res;
   }
 
-  /* @Override */
+  @Override
   public ConfigureResponse validateConfig(Map<String, String> config, Locale locale,
       ConnectorFactory factory) {
     FormManager formManager = new FormManager(config, getResourceBundle(locale), pathParser);

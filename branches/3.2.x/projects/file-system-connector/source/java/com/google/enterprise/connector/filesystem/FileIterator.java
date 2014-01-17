@@ -16,9 +16,9 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.common.collect.Lists;
 import com.google.enterprise.connector.spi.DocumentAccessException;
-import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.io.IOException;
@@ -77,13 +77,11 @@ public class FileIterator {
     traversalStateStack.add(list);
   }
 
-  /* @Override */
   public boolean hasNext() throws RepositoryException {
     setPositionToNextFile();
     return !traversalStateStack.isEmpty();
   }
 
-  /* @Override */
   public ReadonlyFile<?> next() throws RepositoryException {
     if (!hasNext()) {
       return null;
@@ -93,7 +91,6 @@ public class FileIterator {
     return traversalStateStack.get(traversalStateStack.size() - 1).remove(0);
   }
 
-  /* @Override */
   public void remove() {
     throw new UnsupportedOperationException();
   }
