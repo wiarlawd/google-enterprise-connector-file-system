@@ -261,30 +261,6 @@ public class FileListerTest extends TestCase {
               TRAVERSAL_SCHEDULE, pushAcls);
   }
 
-  public void testFilterTooBig() throws Exception {
-    final String maxSizeData = "not too big and not too small ends here<";
-    final String tooBigData = maxSizeData + "x";
-    traversalContext.setMaxDocumentSize(maxSizeData.length());
-
-    ConfigureFile configureFile = new ConfigureFile() {
-        @Override
-        public boolean configure(MockReadonlyFile file) {
-          if (file.getName().contains("TooBig")) {
-            file.setFileContents(tooBigData);
-            return false;
-          } else if (file.getName().contains("Big")) {
-            file.setFileContents(maxSizeData);
-          }
-          return true;
-        }
-      };
-
-    MockReadonlyFile root = builder.addDir(configureFile, null, "/foo/bar",
-                                           "f1", "Big", "TooBig");
-    builder.addDir(configureFile, root, "d1", "d1Big", "d1TooBig");
-    runLister(root, INCLUDE_ALL_PATTERNS, EXCLUDE_NONE_PATTERNS);
-  }
-
   public void testFilterExcludedDirectory() throws Exception {
     List<String> include = ImmutableList.of("/foo/bar");
     List<String> exclude = ImmutableList.of("/foo/bar/excluded");
@@ -307,24 +283,6 @@ public class FileListerTest extends TestCase {
         builder.addDir(configureFile, null, "/foo/bar", "f1.doc");
     builder.addDir(configureFile, root, "d1", "excluded.txt", "included.txt");
     runLister(root, INCLUDE_ALL_PATTERNS, exclude);
-  }
-
-  public void testFilterIOException() throws Exception {
-    ConfigureFile configureFile = new ConfigureFile() {
-        @Override
-        public boolean configure(MockReadonlyFile file) {
-          if ("fail1".equals(file.getName())) {
-            file.setException(MockReadonlyFile.Where.LENGTH,
-                              new IOException("Expected IOException"));
-            return false;
-          }
-          return true;
-        }
-      };
-
-    MockReadonlyFile root =
-        builder.addDir(configureFile, null, "/foo/bar", "f1", "fail1", "f2");
-    runLister(root);
   }
 
   public void testFilterUnreadable() throws Exception {
@@ -414,22 +372,6 @@ public class FileListerTest extends TestCase {
 
     MockReadonlyFile root =
         builder.addDir(configureFile, null, "/foo/bar", "f1", "f2", "PRN:");
-    runLister(root);
-  }
-
-  public void testFilterMimeType() throws Exception {
-    Set<String> mimeTypes = Collections.singleton("text/plain");
-    traversalContext.setMimeTypeSet(mimeTypes);
-
-    ConfigureFile configureFile = new ConfigureFile() {
-        @Override
-        public boolean configure(MockReadonlyFile file) {
-          return !file.getName().endsWith(".avi");
-        }
-      };
-
-    MockReadonlyFile root =
-      builder.addDir(configureFile, null, "/foo/bar", "f1.txt", "exclude.avi");
     runLister(root);
   }
 
