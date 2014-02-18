@@ -14,8 +14,6 @@
 
 package com.google.enterprise.connector.filesystem;
 
-import com.google.enterprise.connector.util.IOExceptionHelper;
-
 import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SmbFile;
 
@@ -87,8 +85,7 @@ public class SmbFileDelegate extends SmbFile
           try {
             super.close();
           } catch (RuntimeException e) {
-            throw IOExceptionHelper.newIOException(
-                "Failed to close input stream.", e);
+            throw new IOException("Failed to close input stream.", e);
           }
         }
       };

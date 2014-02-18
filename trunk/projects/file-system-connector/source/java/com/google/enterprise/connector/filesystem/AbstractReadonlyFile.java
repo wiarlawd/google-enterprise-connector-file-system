@@ -16,7 +16,6 @@ package com.google.enterprise.connector.filesystem;
 
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.util.IOExceptionHelper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -170,7 +169,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       lastModified = delegate.lastModified();
     } catch (IOException e) {
       detectGeneralErrors(e);
-      throw IOExceptionHelper.newIOException(
+      throw new IOException(
           "Failed to get last modified time for " + getPath(), e);
     }
     return lastModified;
@@ -249,8 +248,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       } catch (RepositoryException re) {
         // Ignored.
       }
-      throw IOExceptionHelper.newIOException(
-          "Failed to get input stream for " + getPath(), e);
+      throw new IOException("Failed to get input stream for " + getPath(), e);
     }
   }
 
@@ -262,7 +260,7 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
       fileNames = delegate.list();
     } catch (IOException e) {
       detectGeneralErrors(e);
-      throw IOExceptionHelper.newIOException(
+      throw new IOException(
            "Failed to list files in directory " + getPath(), e);
     }
     if (fileNames == null) {
