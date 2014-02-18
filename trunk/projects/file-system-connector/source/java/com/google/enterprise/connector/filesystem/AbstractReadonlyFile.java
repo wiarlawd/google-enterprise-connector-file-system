@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -267,6 +268,9 @@ public abstract class AbstractReadonlyFile<T extends AbstractReadonlyFile<T>>
     if (fileNames == null) {
       throw new DirectoryListingException("Failed to list files in "
                                           + getPath());
+    } else if (fileNames.length == 0 && LOG.isLoggable(Level.FINEST)) {
+      // Log empty directories for traceability.
+      LOG.finest("Found no files in directory " + getPath());
     }
     List<T> result = new ArrayList<T>(fileNames.length);
     for (int k = 0; k < fileNames.length; ++k) {

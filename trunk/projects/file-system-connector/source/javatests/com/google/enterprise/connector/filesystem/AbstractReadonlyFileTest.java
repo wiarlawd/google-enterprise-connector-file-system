@@ -17,7 +17,9 @@ package com.google.enterprise.connector.filesystem;
 import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
 
+import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 
 import java.io.IOException;
@@ -64,6 +66,16 @@ public class AbstractReadonlyFileTest extends MockReadonlyFileTestAbstract
     assertEquals(31, nullFile1.hashCode());
     assertTrue(nullFile1.equals(nullFile2));
     assertFalse(nullFile1.equals(readonlyFile1));
+  }
+
+  public void testEmptyDirectory() throws Exception {
+    AbstractReadonlyFileTest.MockFileSystemType type = getFileSystemType();
+    FileDelegate delegate = getMockDelegate();
+    expect(delegate.list()).andReturn(new String[0]);
+    replay(delegate);
+    MockReadonlyFile file = new MockReadonlyFile(type, delegate);
+    assertEquals(ImmutableList.<MockReadonlyFile>of(), file.listFiles());
+    verify(delegate);
   }
 
   public void testCanRead() throws Exception {
