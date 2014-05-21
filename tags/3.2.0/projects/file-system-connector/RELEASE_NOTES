@@ -17,8 +17,20 @@ Introduction
 This is a maintenance release that improves quality without adding any
 new functionality.
 
-Issues fixed from last release:
--------------------------------
+Open Issues
+-----------
+8737663 - Inheritance URLs in ACLs in Crawl-time Metadata are not
+          normalized in GSA 7.0. If the Connector Manager host name is
+          uppercase, then a mismatch in case breaks the ACL
+          inheritance chain and access is denied to all documents.
+          This issue is fixed in GSA 7.2.
+
+          Workaround: Edit the feed.contenturl.prefix property in
+          WEB-INF/applicationContext.properties to use a lowercase
+          host name.
+
+Issues Fixed Since 3.0.8
+------------------------
 Issue 8161087: The Connector now supplies file metadata at crawl-time,
                rather than feed-time, for GSA versions 7.2 and newer.
                This avoids issue 6781122, wherein the internal metadata
@@ -37,9 +49,10 @@ Issue 9415184: Connector blocked on I/O when calling MimeTypeDetector.
 
 Version Compatibility
 ---------------------
-This version of the File System Connector requires Connector Manager 3.2.0.
+This version of the file system connector requires Connector Manager 3.2.0.
 This version of the connector requires Java 6 JRE or newer.
 The use of a Java 5 runtime is no longer supported.
+This version requires GSA 7.2, or 7.0.14.G.216 or later.
 
 
 Release 3.0.8, 08 May 2013
