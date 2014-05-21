@@ -18,6 +18,18 @@ Introduction
 This is a maintenance release that improves quality without adding any
 new functionality.
 
+Open Issues
+-----------
+8737663 - Inheritance URLs in ACLs in Crawl-time Metadata are not
+          normalized in GSA 7.0. If the Connector Manager host name is
+          uppercase, then a mismatch in case breaks the ACL
+          inheritance chain and access is denied to all documents.
+          This issue is fixed in GSA 7.2.
+
+          Workaround: Edit the feed.contenturl.prefix property in
+          WEB-INF/applicationContext.properties to use a lowercase
+          host name.
+
 Issues Fixed Since 3.2.2
 ------------------------
 5222004 - Error message was unclear when start paths are not accepted
@@ -33,7 +45,7 @@ Issues Fixed Since 3.2.2
 Version Compatibility
 ---------------------
 This version of the file system connector requires Connector Manager 3.2.4,
-or later.
+or later. This version requires GSA 7.2, or 7.0.14.G.216 or later.
 
 Manual upgrade instructions
 ---------------------------
@@ -50,8 +62,20 @@ Introduction
 This is a maintenance release that improves quality without adding any
 new functionality.
 
-Issues fixed from last release:
--------------------------------
+Open Issues
+-----------
+8737663 - Inheritance URLs in ACLs in Crawl-time Metadata are not
+          normalized in GSA 7.0. If the Connector Manager host name is
+          uppercase, then a mismatch in case breaks the ACL
+          inheritance chain and access is denied to all documents.
+          This issue is fixed in GSA 7.2.
+
+          Workaround: Edit the feed.contenturl.prefix property in
+          WEB-INF/applicationContext.properties to use a lowercase
+          host name.
+
+Issues Fixed Since 3.2.0
+------------------------
 Issue 6444005: "All pipe instances are busy" error intermittently strips the ACL
                from a document when the document is fed.  By stripping the ACL,
                authorization for the document falls back to connector 
@@ -106,6 +130,13 @@ Issue 10783874: Improve error handling for "All pipe instances are busy" errors.
                 The connector will stop traversals for a short period, then
                 reattempt access to the failed files.
 
+Version Compatibility
+---------------------
+This version of the file system connector requires Connector Manager 3.2.0.
+This version of the connector requires Java 6 JRE or newer.
+The use of a Java 5 runtime is no longer supported.
+This version requires GSA 7.2, or 7.0.14.G.216 or later.
+
 Manual upgrade instructions
 ---------------------------
 Note that this release includes a new jcifs.jar, which in addition to the new
@@ -121,8 +152,20 @@ Introduction
 This is a maintenance release that improves quality without adding any
 new functionality.
 
-Issues fixed from last release:
--------------------------------
+Open Issues
+-----------
+8737663 - Inheritance URLs in ACLs in Crawl-time Metadata are not
+          normalized in GSA 7.0. If the Connector Manager host name is
+          uppercase, then a mismatch in case breaks the ACL
+          inheritance chain and access is denied to all documents.
+          This issue is fixed in GSA 7.2.
+
+          Workaround: Edit the feed.contenturl.prefix property in
+          WEB-INF/applicationContext.properties to use a lowercase
+          host name.
+
+Issues Fixed Since 3.0.8
+------------------------
 Issue 8161087: The Connector now supplies file metadata at crawl-time,
                rather than feed-time, for GSA versions 7.2 and newer.
                This avoids issue 6781122, wherein the internal metadata
@@ -144,6 +187,7 @@ Version Compatibility
 This version of the file system connector requires Connector Manager 3.2.0.
 This version of the connector requires Java 6 JRE or newer.
 The use of a Java 5 runtime is no longer supported.
+This version requires GSA 7.2, or 7.0.14.G.216 or later.
 
 
 Release 3.0.8, 08 May 2013
