@@ -24,7 +24,7 @@ Google recommends that you use the installer for installing the connector. You m
       set PATH=%PATH%;
    
       Add the following lines just before "rem Set standard command for invoking Java":
-      rem Google Enterpise Connector Logging
+      rem Google Search Appliance Connector Logging
       set CONNECTOR_LOGGING=%CATALINA_HOME%\webapps\connector-manager\WEB-INF\lib\connector-logging.jar
       if not exist "%CONNECTOR_LOGGING%" goto noConnectorLogging
       set CLASSPATH=%CLASSPATH%;%CONNECTOR_LOGGING%
@@ -37,7 +37,7 @@ Google recommends that you use the installer for installing the connector. You m
       export PATH="$PATH":"$JRE_HOME"/bin
      
       Add the following lines just before "# OSX hack to CLASSPATH":
-      # Google Enterpise Connector Logging
+      # Google Search Appliance Connector Logging
       CONNECTOR_LOGGING="$CATALINA_HOME"/webapps/connector-manager/WEB-INF/lib/connector-logging.jar
       if [ -f "$CONNECTOR_LOGGING ]; then
       CLASSPATH="$CLASSPATH":"$CONNECTOR_LOGGING"
