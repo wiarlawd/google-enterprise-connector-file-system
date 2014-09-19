@@ -185,6 +185,8 @@ synchronized (session.transport()) {
             treeDisconnect(true);
             connectionState = 0;
             throw se;
+        } finally {
+            session.transport.notifyAll();
         }
 }
     }
