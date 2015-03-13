@@ -32,7 +32,6 @@
   <property name="config.dir" value="config" />
   <property name="logging-properties.file" value="${config.dir}/logging.properties" />
   <property name="thirdparty-prod-jar.dir" location="third_party/prod" />
-  <property name="thirdparty-tests-jar.dir" location="third_party/tests" />
 
   <property name="copying.file" value="COPYING" />
   <property name="readme.file" value="README" />
@@ -145,11 +144,10 @@
           <include name="**/json.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
-          <include name="**/junit.jar" />
+          <include name="**/*.jar" />
         </fileset>
         <fileset dir="${spi.jar.dir}" includes="**/connector-spi.jar" />
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-        <fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
         <pathelement location="${jar-prod.file}" />
       </classpath>
     </javac>
@@ -179,11 +177,10 @@
           <include name="**/*.jar" />
         </fileset>
         <fileset dir="${connector-manager-thirdparty-tests-jar.dir}">
-          <include name="**/junit.jar" />
+          <include name="**/*.jar" />
         </fileset>
         <fileset dir="${spi.jar.dir}" includes="**/*.jar" />
         <fileset dir="${thirdparty-prod-jar.dir}" includes="**/*.jar" />
-        <fileset dir="${thirdparty-tests-jar.dir}" includes="**/*.jar" />
         <pathelement location="${jar-prod.file}" />
       </classpath>
       <formatter type="xml" />

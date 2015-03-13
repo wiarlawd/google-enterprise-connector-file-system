@@ -1,11 +1,11 @@
 <project name="jcifs" default="usage" basedir=".">
 
-    <property name="version" value="1.3.17.7"/>
-    <property name="reldate" value="22 October 2013"/>
+    <property name="version" value="1.3.17.8"/>
+    <property name="reldate" value="18 September 2014"/>
 
     <!-- Google-modified build properties. -->
     <property file="${user.home}/google-enterprise-connector-filesystem.properties" />
-    <property name="COMPILE_TARGET" value="1.5" />
+    <property name="COMPILE_TARGET" value="1.6" />
     <property name="COMPILE_BOOTCLASSPATH" value="${build.bootclasspath}" />
     <property name="connector-manager-thirdparty-prod-jar.dir"
               location="${connector.manager.home}/connector-manager/third-party/prod" />
@@ -93,7 +93,7 @@ documentation as a stand-alone change.
                 <attribute name="Implementation-Version"
                            value="${version} (${TODAY})"/>
                 <attribute name="Google-Modified"
-                           value="Added set last access time capability. Fix threading issue in UniAddress. Fix file handle leak in SmbFile. Detect DCE RPC interface using English locale. Fix deadlock in Dfs. Retry bad connections in SmbFile. Adjust NtTransaction padding to accomodate variations in vendor implementations. Enforce signing message. Fix message length for NTcreateAndX messages."/>
+                           value="Added set last access time capability. Fix threading issue in UniAddress. Fix file handle leak in SmbFile. Detect DCE RPC interface using English locale. Fix deadlock in Dfs. Retry bad connections in SmbFile. Adjust NtTransaction padding to accomodate variations in vendor implementations. Enforce signing message. Fix message length for NTcreateAndX messages. Fix missing notification in SmbTree Transport locking."/>
             </manifest>
         </jar>
     </target>

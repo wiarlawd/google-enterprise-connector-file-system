@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.enterprise.connector.spi.Document;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
+import com.google.enterprise.connector.spi.SkippedDocumentException;
 import com.google.enterprise.connector.spi.SpiConstants;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.util.MimeTypeDetector;
@@ -288,6 +289,28 @@ public class FileRetrieverTest extends TestCase {
     InputStream is = retriever.getContent(testFileName);
     assertNotNull(is);
     assertEquals(MAX_SIZE_DATA, streamToString(is));
+  }
+
+  public void testGetContentExcludedMimeType() throws Exception {
+    MockReadonlyFile archive = root.addFile("test.tar.gz", TEST_DATA);
+    try {
+      InputStream is = retriever.getContent(archive.getPath());
+      fail("Expected SkippedDocumentException, but got none.");
+    } catch (SkippedDocumentException expected) {
+      // Expected exception.
+    }
+  }
+
+  public void testGetContentUnsupportedMimeType() throws Exception {
+    MockReadonlyFile archive = root.addFile("test.jpg", TEST_DATA);
+    TraversalContext traversalContext = new FakeTraversalContext() {
+        @Override
+        public int mimeTypeSupportLevel(String mimeType) {
+          return 0;
+        }
+      };
+    retriever.setTraversalContext(traversalContext);
+    assertNull(retriever.getContent(testFileName));
   }
 
   public void testGetContentIOException() throws Exception {

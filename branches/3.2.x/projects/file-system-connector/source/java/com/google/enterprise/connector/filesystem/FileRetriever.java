@@ -22,6 +22,7 @@ import com.google.enterprise.connector.spi.Retriever;
 import com.google.enterprise.connector.spi.SkippedDocumentException;
 import com.google.enterprise.connector.spi.TraversalContext;
 import com.google.enterprise.connector.spi.TraversalContextAware;
+import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,11 +35,13 @@ class FileRetriever implements Retriever, TraversalContextAware {
 
   private final PathParser pathParser;
   private final DocumentContext context;
+  private final MimeTypeDetector mimeTypeDetector;
   private TraversalContext traversalContext;
 
   public FileRetriever(PathParser pathParser, DocumentContext context) {
     this.pathParser = pathParser;
     this.context = context;
+    this.mimeTypeDetector = context.getMimeTypeDetector();
   }
 
   @Override
@@ -49,30 +52,47 @@ class FileRetriever implements Retriever, TraversalContextAware {
 
   @Override
   public InputStream getContent(String docid) throws RepositoryException {
-    if (LOGGER.isLoggable(Level.FINEST)) {
-      LOGGER.finest("Retrieving content for " + docid);
-    }
+    LOGGER.log(Level.FINEST, "Retrieving content for {0}", docid);
     ReadonlyFile<?> file = getFile(docid);
     if (file.isRegularFile()) {
       try {
+        String mimeType = mimeTypeDetector.getMimeType(file.getName(), file);
+        int supportLevel = traversalContext.mimeTypeSupportLevel(mimeType);
         long len = file.length();
-        if (len > 0 && len <= traversalContext.maxDocumentSize()) {
+        if (supportLevel > 0 && len > 0 &&
+            len <= traversalContext.maxDocumentSize()) {
           return file.getInputStream();
+        } else {
+          if (supportLevel < 0) {
+            throw new SkippedDocumentException("Skipping file " + docid
+                + " - excluded MIME type: " + mimeType);
+          } else if (supportLevel == 0) {
+            LOGGER.log(Level.FINER, "Returning no content for file {0}"
+                + " - unsupported MIME type: {1}",
+                new Object[] { docid, mimeType });
+          } else if (len <= 0) {
+            LOGGER.log(Level.FINER, "Returning no content for file {0}"
+                 + " - empty file", docid);
+          } else if (len > traversalContext.maxDocumentSize()) {
+            LOGGER.log(Level.FINER, "Returning no content for file {0}"
+                 + " - too large", docid);
+          }
+          return null;
         }
       } catch (IOException e) {
         throw new RepositoryDocumentException("Failed to open file: " + docid,
                                               e);
       }
+    } else {
+      LOGGER.log(Level.FINER, "Returning no content for file {0}"
+          + " - not a regular file", docid);
     }
-    LOGGER.finest("Returning no content for " + docid);
     return null;
   }
 
   @Override
   public Document getMetaData(String docid) throws RepositoryException {
-    if (LOGGER.isLoggable(Level.FINEST)) {
-      LOGGER.finest("Retrieving meta-data for " + docid);
-    }
+    LOGGER.log(Level.FINEST, "Retrieving meta-data for {0}", docid);
     ReadonlyFile<?> file = getFile(docid);
     return new FileDocument(file, context, getRoot(file));
   }

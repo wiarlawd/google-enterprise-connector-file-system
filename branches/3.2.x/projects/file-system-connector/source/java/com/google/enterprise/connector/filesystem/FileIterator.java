@@ -18,8 +18,6 @@ import com.google.common.collect.Lists;
 import com.google.enterprise.connector.spi.DocumentAccessException;
 import com.google.enterprise.connector.spi.RepositoryDocumentException;
 import com.google.enterprise.connector.spi.RepositoryException;
-import com.google.enterprise.connector.spi.TraversalContext;
-import com.google.enterprise.connector.util.MimeTypeDetector;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,8 +41,6 @@ public class FileIterator {
 
   private final ReadonlyFile<?> root;
   private final DocumentContext context;
-  private final TraversalContext traversalContext;
-  private final MimeTypeDetector mimeTypeDetector;
   private final long ifModifiedSince;
   private final boolean returnDirectories;
 
@@ -64,10 +60,8 @@ public class FileIterator {
                       boolean returnDirectories) {
     this.root = root;
     this.context = context;
-    this.traversalContext = context.getTraversalContext();
     this.ifModifiedSince = ifModifiedSince;
     this.traversalStateStack = Lists.newArrayList();
-    this.mimeTypeDetector = context.getMimeTypeDetector();
     this.returnDirectories = returnDirectories;
     this.positioned = false;
 
@@ -181,59 +175,38 @@ public class FileIterator {
 
   private boolean isQualifyingFile(ReadonlyFile<?> f)
       throws RepositoryException {
-    try {
-      if (!f.isRegularFile()) {
-        LOGGER.log(Level.FINER, "Skipping {0} - not a regular file.",
-                   f.getPath());
-        return false;
-      }
 
-      if (!f.canRead()) {
-        LOGGER.log(Level.FINER, "Skipping file {0} - no read access.",
-                   f.getPath());
-        return false;
-      }
+    if (!f.isRegularFile()) {
+      LOGGER.log(Level.FINER, "Skipping {0} - not a regular file.",
+                 f.getPath());
+      return false;
+    }
 
-      if (f.isHidden()) {
-        LOGGER.log(Level.FINER, "Skipping file {0} - hidden.",
-                   f.getPath());
-        return false;
-      }
+    if (!f.canRead()) {
+      LOGGER.log(Level.FINER, "Skipping file {0} - no read access.",
+                 f.getPath());
+      return false;
+    }
 
-      if (ifModifiedSince != 0L) {
-        try {
-          if (f.getLastModified() < ifModifiedSince) {
-            LOGGER.log(Level.FINER, "Skipping file {0} - unmodified.",
-                       f.getPath());
-            return false;
-          }
-        } catch (IOException e) {
-          // Could not get lastModified time. That is OK for now.
-        }
-      }
+    if (f.isHidden()) {
+      LOGGER.log(Level.FINER, "Skipping file {0} - hidden.",
+                 f.getPath());
+      return false;
+    }
 
-      if (traversalContext != null) {
-        if (traversalContext.maxDocumentSize() < f.length()) {
-          LOGGER.log(Level.FINER, "Skipping file {0} - too big.",
+    if (ifModifiedSince != 0L) {
+      try {
+        if (f.getLastModified() < ifModifiedSince) {
+          LOGGER.log(Level.FINER, "Skipping file {0} - unmodified.",
                      f.getPath());
           return false;
         }
-
-        // TODO: Feed metadata for files with unsupported MIME types
-        // based upon advanced configuration option.
-        String mimeType = mimeTypeDetector.getMimeType(f.getName(), f);
-        if (traversalContext.mimeTypeSupportLevel(mimeType) <= 0) {
-          LOGGER.log(Level.FINER, "Skipping file {0} - unsupported or excluded"
-              + " MIME type: {1}", new Object[] { f.getPath(), mimeType });
-          return false;
-        }
+      } catch (IOException e) {
+        // Could not get lastModified time. That is OK for now.
       }
-      return true;
-    } catch (IOException ioe) {
-      LOGGER.log(Level.WARNING, "Skipping file " + f.getPath() + 
-                 " - access error.", ioe);
-      return false;
     }
+
+    return true;
   }
 
   private List<? extends ReadonlyFile<?>> listFiles(ReadonlyFile<?> dir)
