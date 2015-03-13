@@ -10,6 +10,51 @@ documentation.
 Web Site: http://code.google.com/p/google-enterprise-connector-file-system/
 
 
+Release 3.2.10, 13 March 2015
+=============================
+
+Introduction
+------------
+This is a maintenance release that improves quality without adding any
+new functionality.
+
+Open Issues
+-----------
+8737663 - Inheritance URLs in ACLs in Crawl-time Metadata are not
+          normalized in GSA 7.0. If the Connector Manager host name is
+          uppercase, then a mismatch in case breaks the ACL
+          inheritance chain and access is denied to all documents.
+          This issue is fixed in GSA 7.2.
+
+          Workaround: Edit the feed.contenturl.prefix property in
+          WEB-INF/applicationContext.properties to use a lowercase
+          host name.
+
+Issues Fixed Since 3.2.4
+------------------------
+6094457 - Files with MIME types listed under unsupportedMimeTypes were
+          not fed. This change modifies the connector to conform to
+          the behaviour used by the other connectors. If the MIME type
+          is an unsupportedMimeType or the file exceeds the configured
+          maxDocumentSize, the content will still be ignored, but the
+          metadata is now indexed.
+
+17281043 - In certain circumstances, a crawl request could block
+           indefinitely in jCIFS when connecting to a share, and also
+           block all subsequent crawl requests.
+
+Version Compatibility
+---------------------
+This version of the file system connector requires Connector Manager 3.2.4,
+or later. This version requires GSA 7.2, or 7.0.14.G.216 or later.
+
+Manual upgrade instructions
+---------------------------
+Note that this release includes a new jcifs.jar, which in addition to the new
+connector-filesystem.jar, should be copied to the Tomcat deployment directory:
+webapps/connector-manager/WEB-INF/lib.
+
+
 Release 3.2.4, 16 January 2014
 ==============================
 
