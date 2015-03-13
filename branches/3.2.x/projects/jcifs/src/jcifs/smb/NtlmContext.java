@@ -142,7 +142,7 @@ public class NtlmContext {
                     }
 
                     serverChallenge = msg2.getChallenge();
-                    ntlmsspFlags &= msg2.getFlags();
+                    ntlmsspFlags &= (msg2.getFlags() | NtlmFlags.NTLMSSP_NEGOTIATE_SIGN);
 
 //                  netbiosName = getNtlmsspListItem(token, 0x0001);
 
