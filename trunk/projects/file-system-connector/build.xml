@@ -69,20 +69,12 @@
   <target name="build" depends="init,compile_prod,run_tests,jar_prod">
   </target>
 
-  <target name="init" depends="svn.svn-status,svn.svn-branch-version">
+  <target name="init" depends="svn.svn-branch-version">
     <tstamp />
     <property name="downloads.prefix"
               value="connector-filesystem-${svn.branch}"/>
     <property name="connector-filesystem-src.zip"
               value="${downloads.dir}/${downloads.prefix}-src.zip" />
-
-    <echo message="Note 'svn status' should return no changes to indicate" />
-    <echo message="a client with no changes when building ${jar-prod.file}" />
-    <echo message="and ${connector-filesystem-src.zip} that will be given." />
-    <echo message="to customers.  svn status returned: " />
-    <echo message="${svn.status}" />
-
-    <echo message="svn.branch.version set to '${svn.branch.version}'" />
 
     <mkdir dir="${build.dir}" />
     <mkdir dir="${build-tests.dir}" />
